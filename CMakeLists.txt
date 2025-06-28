@@ -4,9 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(OpenCV REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
-
-# find_package(PkgConfig REQUIRED)
-# pkg_search_module(gstreamer REQUIRED IMPORTED_TARGET libgstreamer1.0-dev)
+find_package(Gstreamer REQUIRED HINTS cmake)
 
 add_executable(main src/main.cpp)
 target_include_directories(main PRIVATE ${OpenCV_INCLUDE_DIRS})
