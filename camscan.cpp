@@ -6,7 +6,6 @@
 #include <libcamera/libcamera.h>
 
 using namespace libcamera;
-using namespace std::chrono_literals;
 
 static std::shared_ptr<Camera> camera;
 
@@ -17,6 +16,8 @@ int main(int argc, char** argv)
 
     for (auto const &camera : cm->cameras())
         std::cout << camera->id() << std::endl;
+    if(cm->cameras().empty())
+        std::cout << "No cameras detected in this system." << std::endl;
 
     return 0;
 }
