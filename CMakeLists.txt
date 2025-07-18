@@ -14,7 +14,7 @@ target_link_libraries(camscan PRIVATE LibCamera ${OpenCV_LIBS})
 add_library(cam_helpers STATIC)
 target_include_directories(cam_helpers PUBLIC include)
 target_link_libraries(cam_helpers PUBLIC LibCamera ${OpenCV_LIBS})
-target_sources(cam_helpers PRIVATE src/CameraWrapper.cpp)
+target_sources(cam_helpers PRIVATE src/CameraWrapper.cpp src/ImageSender.cpp)
 
 # Test for the helper
 add_executable(camwrapper camwrapper.cpp)

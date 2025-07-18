@@ -1,5 +1,6 @@
 # Config files
 .vscode/**
+env/**
 
 # Build files
 build/**
