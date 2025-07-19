@@ -1,31 +1,58 @@
 #include <ImageSender.hpp>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <iostream>
+#include <errno.h>
+
 
 void ImageSender::start()
 {
-    server = socket(AF_INET, SOCK_STREAM, 0);
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = INADDR_ANY;
-
-    bind(server, (const sockaddr*)&addr, sizeof(addr));
-    listen(server, 5);
+    // Open the file and ensure it has enough space
+    size = image.rows*image.cols;
+    std::cout << "Opening " << file << std::endl;
+    fd = open(file, O_RDWR);
+    if(fd == -1)
+    {
+        std::cerr << "Failed to open " << file << ": " << strerror(errno) << std::endl;
+        return;
+    }
+    // if(ftruncate(fd, size) == -1);
+    // {
+    //     std::cerr << "Failed to set file size " << size << ": " << strerror(errno) << std::endl;
+    //     return;
+    // }
+    // Now create the map
+    map = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if(map == MAP_FAILED)
+    {
+        close(fd);
+        std::cerr << "Failed to map memory: " << ": " << strerror(errno) << std::endl;
+        return;
+    }
+    valid = true;
 }
 
 
 void ImageSender::stop()
 {
-    close(server);
+    valid = false;
+    if(munmap(map, size) < 0)
+    {
+        std::cerr << "Failed to unmap memory" << std::endl;
+    }
+    close(fd);
 }
 
 
-void ImageSender::transmit(const cv::Mat& image)
+void ImageSender::transmit()
 {
-    if(!accepted)
-    {
-        client = accept(server, nullptr, nullptr);
-        accepted = true;
-    }
-
-    send(client, image.data, (image.dataend - image.data), 0);
+    ((uint8_t*)map)[0] = 0xFF; // lock
+    uint8_t* start = ((uint8_t*)map)+1;
+    memcpy((void*)start, image.data, size);
+    ((uint8_t*)map)[0] = 0x00; // unlock
 }

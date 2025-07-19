@@ -21,3 +21,9 @@ add_executable(camwrapper camwrapper.cpp)
 target_include_directories(camwrapper PUBLIC include)
 target_link_libraries(camwrapper PRIVATE cam_helpers)
 target_link_options(camwrapper PRIVATE -Wl,--copy-dt-needed-entries)
+
+# Test for the visualization stream
+add_executable(testfeed testfeed.cpp)
+target_include_directories(testfeed PUBLIC include)
+target_link_libraries(testfeed PRIVATE cam_helpers)
+target_link_options(testfeed PRIVATE -Wl,--copy-dt-needed-entries)

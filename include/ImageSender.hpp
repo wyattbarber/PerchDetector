@@ -1,20 +1,20 @@
 #pragma once
 
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <opencv2/core/mat.hpp>
 
-/** Transmits images over sockets for other applications to view.
+/** Transmits images for other applications to view
 */
 class ImageSender
 {
     public:
     /** Create a new image sender.
     
-    @param port Port to listen for clients on
+    @param fd File descriptor for mapped memory region
     */
-    ImageSender(const unsigned port): port(port), accepted(false){}
-
+    ImageSender(const char * file, const cv::Mat& image) : file(file), image(image)
+    {
+        valid = false;
+    }
     /** Starts the server 
     */
     void start();
@@ -27,11 +27,14 @@ class ImageSender
     
     @param image Image data to send
     */
-    void transmit(const cv::Mat& image);
+    void transmit();
+
+    bool valid;
 
     protected:
-    int server, client;
-    sockaddr_in addr;
-    const unsigned port;
-    bool accepted;
+    const char* file;
+    const cv::Mat& image;
+    int fd;
+    void* map;
+    int size;
 };
