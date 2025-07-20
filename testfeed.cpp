@@ -9,7 +9,7 @@
 
 using namespace std::chrono_literals;
 
-ImageSender* sender;
+ImageSender<uint8_t> sender;
 
 struct pixel_op
 {
@@ -19,7 +19,7 @@ struct pixel_op
     }
 };
 
-void rand_fill(cv::Mat& m)
+void rand_fill(cv::Mat* m)
 {
     m.forEach<uchar>(pixel_op());
 }
@@ -45,8 +45,7 @@ int main(int argc, char** argv)
     int height = atoi(argv[2]);
     char * file = argv[3];
 
-    cv::Mat image = cv::Mat::zeros(height, width, CV_8U);
-    sender = new ImageSender(file, image);
+    sender = new ImageSender<uint8_t>(file, height, width);
 
     std::cout << "Starting random image feed" << std::endl;
 
@@ -54,7 +53,7 @@ int main(int argc, char** argv)
 
     sender->start();
 
-    if(!sender->valid)
+    if(!sender->opened())
     {
         std::cerr << "Failed to setup communication channel" << std::endl;
         return -1;
@@ -64,8 +63,9 @@ int main(int argc, char** argv)
     
     while(true)
     {
-        rand_fill(image);
-        sender->transmit();
+        sender->acquire();
+        rand_fill(sender->get_image());
+        sender->release();
         std::this_thread::sleep_for(20ms);
     }
 }
