@@ -9,30 +9,56 @@ import subprocess
 import signal
 import mmap
 
+_cv_type_to_numpy = {
+    0: np.uint8,
+    1: np.int8,
+    2: np.uint16,
+    3: np.int16,
+    4: np.uint32,
+    5: np.int32,
+    6: np.float32,
+    7: np.float64
+}
+
 
 class ImageReader:
-    def __init__(self, width: int, height: int):
+    def __init__(self, name: str, width: int, height: int):
+        self._name = name
         self._file = tempfile.NamedTemporaryFile(mode="wb", delete=True)
-        self._im = np.zeros((height, width), dtype=np.uint8)
+        self._shape = (height, width)
+        self._im = None
         self._data = bytearray(0)
+        self._filename = None
+        self._valid = False
 
     @property
     def file(self):
-        return self._file.name
+        if self._filename is None:
+            # Generate a filename in the tmp directory
+            path = tempfile.gettempdir()
+            prefix = tempfile.gettempprefix()
+            name = self._name
+            self._filename = os.path.join(path, prefix+"_img_stream_mmap_"+self._name)
+        return self._filename
+
+    @property
+    def opened(self):
+        return self._valid
 
     def open(self):
-        self._file = self._file.__enter__()
-        self._file.write(bytes(self._im.size+1))
-        self._mm = mmap.mmap(self._file.fileno(), 0)
+        self._file = open(self.file, "rb")
+        self._mm = mmap.mmap(self._file.fileno(), 0, prot=mmap.PROT_READ)
+        self._valid = True
 
     def close(self):
-        self._file.__exit__(None, None, None)
+        self._valid = False
+        self._file.close()
 
     def update(self):
         while bool(self._mm[0]):
             # wait for region to be unlocked
             time.sleep(0.001)            
-        self._im = np.ndarray(self._im.shape, buffer=self._mm[1:], dtype=np.uint8)
+        self._im = np.ndarray(self._shape, buffer=self._mm[2:], dtype=_cv_type_to_numpy[self._mm[1]])
 
     @property
     def image(self):
@@ -46,8 +72,9 @@ class imgen:
         self.reader = reader
 
     def __call__(self):
-        reader.update()
-        self.img.set_source(Image.fromarray(reader.image))
+        if reader.opened:
+            reader.update()
+            self.img.set_source(Image.fromarray(reader.image))
         ui.timer(0.1, self, once=True)
 
 
@@ -82,9 +109,9 @@ if __name__ in {"__main__", "__mp_main__"}:
     width = 480
     height = 480
 
-    ui.markdown("Test Page\n=========\n\nThis is a test page for [NiceGUI](https://nicegui.io/).\n")
+    ui.markdown("Test Page\n=========\n\nThis is a test page. The below image should display an updating feed of white noise.\n")
     
-    reader = ImageReader(width, height)
+    reader = ImageReader("static", width, height)
     img = ui.interactive_image(Image.fromarray(np.zeros((100, 100), dtype=np.uint8)))
     ui.timer(1.0, imgen(ui, img, reader), once=True)
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <opencv2/core/mat.hpp>
+#include <memory>
 
 /** Transmits images for other applications to view via a memory mapped matrix.
  * 
@@ -25,14 +26,15 @@ class ImageSender
     @param file File name for mapped memory region
     @param width Pixel width of the image
     @param height Pixel height of the image
+    @param elemsize Size in bytes of each pixel
+    @param cvtype OpenCV type id of the pixel elements
     */
-    template<T>
-    ImageSender(const char * file, int width, int height) : 
+    ImageSender(const char * file, int width, int height, size_t elemsize, int cvtype) : 
         file(file),
         width(width),
         height(height),
-        size(width*height*sizeof(T)),
-        cvtype(cv::DataType<T>::type)
+        size(width*height*elemsize),
+        cvtype(cvtype)
     {
         valid = false;
     }
@@ -76,3 +78,18 @@ class ImageSender
     void* map;
     bool valid;
 };
+
+
+/** Creates an ImageSender instance, with OpenCV type ID determined based on C++ datatype.
+
+@tparam T C++ datatype of the image matrix
+
+@param file File name for the mapped memory region
+@param width Pixel width of the mapped matrix
+@param heigth Pixel height of the mapped matrix
+*/
+template<typename T>
+std::unique_ptr<ImageSender> make_sender(const char * file, int width, int height)
+{ 
+    return std::make_unique<ImageSender>(file, width, height, sizeof(T), cv::DataType<T>::type);
+}

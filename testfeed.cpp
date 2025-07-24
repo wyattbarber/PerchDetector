@@ -9,7 +9,7 @@
 
 using namespace std::chrono_literals;
 
-ImageSender<uint8_t> sender;
+std::unique_ptr<ImageSender> sender;
 
 struct pixel_op
 {
@@ -21,14 +21,13 @@ struct pixel_op
 
 void rand_fill(cv::Mat* m)
 {
-    m.forEach<uchar>(pixel_op());
+    m->forEach<uchar>(pixel_op());
 }
 
 
 void sig_handle(int signum)
 {
     sender->stop();
-    delete sender;
     exit(signum);
 }
 
@@ -45,7 +44,7 @@ int main(int argc, char** argv)
     int height = atoi(argv[2]);
     char * file = argv[3];
 
-    sender = new ImageSender<uint8_t>(file, height, width);
+    sender = make_sender<uint8_t>(file, height, width);
 
     std::cout << "Starting random image feed" << std::endl;
 

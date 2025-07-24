@@ -9,12 +9,13 @@ find_package(Gstreamer REQUIRED HINTS cmake)
 # Utility for listing detected cameras
 add_executable(camscan camscan.cpp)
 target_link_libraries(camscan PRIVATE LibCamera ${OpenCV_LIBS})
+target_link_options(camscan PRIVATE -Wl,--copy-dt-needed-entries)
 
 # Library of helpers 
 add_library(cam_helpers STATIC)
 target_include_directories(cam_helpers PUBLIC include)
 target_link_libraries(cam_helpers PUBLIC LibCamera ${OpenCV_LIBS})
-target_sources(cam_helpers PRIVATE src/CameraWrapper.cpp src/ImageSender.cpp)
+target_sources(cam_helpers PRIVATE src/CameraWrapper.cpp src/ImageSender.cpp src/DMAMat.cpp)
 
 # Test for the helper
 add_executable(camwrapper camwrapper.cpp)

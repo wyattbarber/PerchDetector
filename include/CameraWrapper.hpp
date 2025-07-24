@@ -45,11 +45,8 @@ class CameraWrapper
     
     Configures the camera to acquire the desired image size, and also 
     performs frame buffer allocation.
-    
-    @param width Image width to acquire
-    @param height Image height to acquire
     */
-    void configure(unsigned width, unsigned height);
+    void configure();
 
     /** Starts the camera 
     */
@@ -59,23 +56,33 @@ class CameraWrapper
     */
     void stop();
 
-    /** Trigger the capture of a single frame 
+    /** Gets the size of the image
+    
+    @return Image size as a (height, width) pair.
     */
-    void capture_start();
+    std::pair<int, int> shape();
 
-    /** Get the result of the capture.
 
-    Blocks until the frame is available. The returned 
-    pointer will be valid until the next call to 
-    capture_start, after which it may be overwritten.
+    /** Get a pointer to the image data as a memory-mapped array.
+
+    @return start of image data.
     */
-    libcamera::FrameBuffer* capture_wait();
+    void* data();
+
+    /** Get the size of the image data in bytes.
+    
+    @return data size.
+    */
+    size_t size();
 
     protected:
     const std::string name;
     std::shared_ptr<libcamera::Camera> camera;
     std::unique_ptr<libcamera::CameraConfiguration> config;
+    libcamera::FrameBufferAllocator *allocator;
     libcamera::Stream *stream;
     const std::vector<std::unique_ptr<libcamera::FrameBuffer>>* buffers;
     std::vector<std::unique_ptr<libcamera::Request>> requests;
 };
+
+

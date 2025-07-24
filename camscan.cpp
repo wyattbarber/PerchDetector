@@ -37,6 +37,7 @@ void requestComplete(Request *request)
 template<typename T>
 void disp_camera_config(T& camera)
 {
+    camera->acquire();
     std::unique_ptr<CameraConfiguration> config = camera->generateConfiguration( { StreamRole::Viewfinder } );
     StreamConfiguration &streamConfig = config->at(0);
     std::cout << '\t' << "Default viewfinder configuration is: " << streamConfig.toString() << std::endl;
@@ -98,11 +99,11 @@ int main(int argc, char** argv)
     std::unique_ptr<CameraManager> cm = std::make_unique<CameraManager>();
     cm->start();
 
-    for (auto const &camera : cm->cameras())
+    for (auto &camera : cm->cameras())
     {
         std::cout << camera->id() << std::endl;
         // Display data about the cameras default configuration
-        
+        disp_camera_config(camera);
     }
     if(cm->cameras().empty())
         std::cout << "No cameras detected in this system." << std::endl;

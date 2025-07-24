@@ -2,11 +2,13 @@
 #include <csignal>
 #include <functional>
 #include <chrono>
+#include <DMAMat.hpp>
 
 using namespace libcamera;
 
 std::unique_ptr<CameraManager> cm;
 std::unique_ptr<CameraWrapper> wrapper;
+DMAMat mappedmat;
 
 void sig_handle(int signum)
 {
@@ -34,7 +36,9 @@ int main(int argc, char** argv)
     {
         ts = std::chrono::steady_clock::now();
         wrapper->capture_start();
-        n_planes = wrapper->capture_wait()->metadata().planes().size();
+        auto buf = wrapper->capture_wait();
+        mappedmat.set(buf, 480, 640, cv::DataType<uint8_t>::type);
+        n_planes = buf->metadata().planes().size();
         tf = std::chrono::steady_clock::now();
         std::cout << "Main: Captured buffer with " << n_planes << " planes in " 
             << std::chrono::duration_cast<std::chrono::milliseconds>(tf - ts).count() << " ms." << std::endl;

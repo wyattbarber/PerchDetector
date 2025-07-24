@@ -9,15 +9,21 @@
 #include <iostream>
 #include <errno.h>
 
-
 void ImageSender::start()
 {
     // Open the file and ensure it has enough space
     std::cout << "Opening " << file << std::endl;
-    fd = open(file, O_RDWR);
+    // Open file, with permission to create it and resize it, and set mode to allow read/write for self and read for all users
+    fd = open(file, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if(fd == -1)
     {
         std::cerr << "Failed to open " << file << ": " << strerror(errno) << std::endl;
+        return;
+    }
+    // Set the file size
+    if(ftruncate(fd, size+2) == -1)
+    {
+        std::cerr << "Failed to set file size to  " << size+2 << ": " << strerror(errno) << std::endl;
         return;
     }
     // Now create the map
@@ -29,9 +35,9 @@ void ImageSender::start()
         return;
     }
     // Create a matrix mapped to the mapped array
-    ((uint8_t*)map[0]) = 0x00;
-    ((uint8_t*)map[1]) = static_cast<uint8_t>(cvtype);
-    image = cv::Mat(height, width, (void*)((uint8_t*)map+2), cvtype);
+    ((uint8_t*)map)[0] = 0x00;
+    ((uint8_t*)map)[1] = static_cast<uint8_t>(cvtype);
+    image = cv::Mat(height, width, cvtype, (void*)((uint8_t*)map+2));
     valid = true;
 }
 
@@ -44,6 +50,10 @@ void ImageSender::stop()
         std::cerr << "Failed to unmap memory: " << strerror(errno)  << std::endl;
     }
     close(fd);
+    if(remove(file) != 0)
+    {
+        std::cerr << "Failed to delete " << file << ": " << strerror(errno)  << std::endl;
+    }
 }
 
 
@@ -55,13 +65,13 @@ bool ImageSender::opened()
 
 void ImageSender::acquire()
 {
-    ((uint8_t*)map[0]) = 0xFF;
+    ((uint8_t*)map)[0] = 0xFF;
 }
 
 
 void ImageSender::release()
 {
-    ((uint8_t*)map[0]) = 0x00;
+    ((uint8_t*)map)[0] = 0x00;
 }
 
 

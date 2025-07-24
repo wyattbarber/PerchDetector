@@ -12,24 +12,20 @@ void CameraWrapper::acquire()
 
 void CameraWrapper::release()
 {
+    allocator->free(stream);
+    delete allocator;
     camera->release();
     camera.reset();
 }
 
 
-void CameraWrapper::configure(unsigned width, unsigned height)
+void CameraWrapper::configure()
 {
     config = camera->generateConfiguration( { StreamRole::Viewfinder } );
-    StreamConfiguration &streamConfig = config->at(0);
-    std::cout << name << ": Default viewfinder configuration is: " << streamConfig.toString() << std::endl;
+    std::cout << name << ": Default viewfinder configuration is: " << config->at(0).toString(); << std::endl;
+    camera->configure(config->at(0));
 
-    streamConfig.size.width = width;
-    streamConfig.size.height = height;
-    config->validate();
-    std::cout << name << ": Validated viewfinder configuration is: " << streamConfig.toString() << std::endl;
-    camera->configure(config.get());
-
-    FrameBufferAllocator *allocator = new FrameBufferAllocator(camera);
+    allocator = new FrameBufferAllocator(camera);
     for (StreamConfiguration &cfg : *config) {
         int ret = allocator->allocate(cfg.stream());
         if (ret < 0) {
@@ -43,6 +39,12 @@ void CameraWrapper::configure(unsigned width, unsigned height)
 
     stream = streamConfig.stream();
     buffers = &allocator->buffers(stream);
+}
+
+
+void CameraWrapper::start()
+{
+    camera->start();
 
     for (unsigned int i = 0; i < buffers->size(); ++i) {
         std::unique_ptr<Request> request = camera->createRequest();
@@ -62,12 +64,7 @@ void CameraWrapper::configure(unsigned width, unsigned height)
 
         requests.push_back(std::move(request));
     }
-}
-
-
-void CameraWrapper::start()
-{
-    camera->start();
+    camera->queueRequest(requests[0].get());
 }
 
 
@@ -76,24 +73,4 @@ void CameraWrapper::stop()
     camera->stop();
 }
 
-
-void CameraWrapper::capture_start()
-{
-    camera->queueRequest(requests[0].get());
-}
-
-
-FrameBuffer* CameraWrapper::capture_wait()
-{
-    // Block thread until frame is available
-    while(requests[0]->status() != Request::RequestComplete)
-        std::this_thread::sleep_for(10ms);
-
-    const std::map<const Stream *, FrameBuffer *> &buffers = requests[0]->buffers();
-    
-    FrameBuffer* buffer;    
-    for (auto bufferPair : buffers) {
-        buffer = bufferPair.second;
-    }
-    return buffer;
-}   
+   
