@@ -65,13 +65,7 @@ void CameraWrapper::configure()
 
     stream = streamConfig.stream();
     buffers = &allocator->buffers(stream);
-}
-
-
-void CameraWrapper::start()
-{
-    camera->start();
-
+    
     for (unsigned int i = 0; i < buffers->size(); ++i) {
         std::unique_ptr<Request> request = camera->createRequest();
         if (!request)
@@ -90,9 +84,29 @@ void CameraWrapper::start()
         }
 
         requests.push_back(std::move(request));
+
+        FrameBuffer::Plane& plane = buffer->planes(0);
+        std::cout << name << : ": Mapping plane of size " << plane.length << " at offset " << plane.offset << std::endl;
+        void plane_map = mmap(0, plane.length, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), plane.offset);
+        if(map == MAP_FAILED)
+        {
+            std::cerr << name << ": Failed to map memory: " << strerror(errno) << std::endl;
+            return;
+        }
+        map.push_back(plane_map);
     }
-    camera->requestCompleted.connect(requestComplete);
-    camera->queueRequest(requests[0].get());
+
+}
+
+
+void CameraWrapper::start()1
+{
+    camera->start();
+
+    for(auto request : requests)
+    {
+        camera->queueRequest(request.get());
+    }
 }
 
 

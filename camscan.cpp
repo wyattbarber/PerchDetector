@@ -43,6 +43,12 @@ void disp_camera_config(T& camera)
     std::unique_ptr<CameraConfiguration> config = camera->generateConfiguration( { StreamRole::Viewfinder } );
     StreamConfiguration &streamConfig = config->at(0);
     std::cout << '\t' << "Default viewfinder configuration is: " << streamConfig.toString() << std::endl;
+    std::vector<PixelFormat> formats = streamConfig.formats().pixelformats();
+    for (int i = 0; i < formats.size(); i++) {
+       PixelFormat format = formats[i];
+       std::cout << '\t' << "Found pixel format: " << format.toString() << std::endl;
+    }
+    streamConfig.pixelFormat = PixelFormat::fromString("YVU420");    
     camera->configure(config.get());
 
     FrameBufferAllocator *allocator = new FrameBufferAllocator(camera);
@@ -67,9 +73,7 @@ void disp_camera_config(T& camera)
             std::cerr << '\t' << "Can't create request" << std::endl;
             return;
         }
-
-        std::cout << '\t' << "Created request " << request->toString() << std::endl;
-
+	    std::cout << '\t' << "Created request " << request->toString() << std::endl;
         const std::unique_ptr<FrameBuffer> &buffer = buffers[i];
         int ret = request->addBuffer(stream, buffer.get());
         if (ret < 0)

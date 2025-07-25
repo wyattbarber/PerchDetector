@@ -83,6 +83,7 @@ class CameraWrapper
     libcamera::Stream *stream;
     const std::vector<std::unique_ptr<libcamera::FrameBuffer>>* buffers;
     std::vector<std::unique_ptr<libcamera::Request>> requests;
+    std::vector<void*> map;
 };
 
 
