@@ -38,6 +38,18 @@ static uint64_t generate_cookie()
     return out + 1;
 }
 
+
+static void store_cookie(uint64_t cookie, CameraWrapper* camera)
+{
+    cookie_to_camera[cookie] = camera;
+}
+
+
+static CameraWrapper* resolve_cookie(uint64_t cookie)
+{
+    return cookie_to_camera[cookie];
+}
+
 static void delete_cookie(uint64_t cookie)
 {
     cookie_to_camera.erase(cookie);
@@ -49,7 +61,6 @@ static void requestComplete(Request *request)
     if (request->status() == Request::RequestCancelled)
         return;
 
-    CameraWrapper* cam = cookie_to_camera[request->cookie()];
     const std::map<const Stream *, FrameBuffer *> &buffers = request->buffers();
 
     for (auto bufferPair : buffers) {
@@ -69,13 +80,15 @@ static void requestComplete(Request *request)
     }
 
     request->reuse(Request::ReuseBuffers);
-    cam->get_camera()->queueRequest(request);
+    std::cout << "Restarting request" << std::endl;
+    resolve_cookie(request->cookie())->get_camera()->queueRequest(request);
 }
 
 
 void CameraWrapper::acquire()
 {
     cookie = generate_cookie();
+    store_cookie(cookie, this);
     camera->acquire();
 }
 
