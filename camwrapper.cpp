@@ -31,7 +31,11 @@ int main(int argc, char** argv)
     wrapper->start();
 
     std::chrono::steady_clock::time_point ts, tf;
-    std::this_thread::sleep_for(1000ms);
+    cv::Mat m;
+    
+    while(true)
+    
+        std::this_thread::sleep_for(10ms);
     
     return 0;
 }

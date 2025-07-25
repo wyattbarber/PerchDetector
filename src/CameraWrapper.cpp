@@ -16,7 +16,7 @@
 using namespace libcamera;
 using namespace std::chrono_literals;
 
-static std::unordered_map<uint64_t, CameraWrapper*> cookie_to_camera;
+static std::unordered_map<uint64_t, std::pair<CameraWrapper*, uint8_t>> cookie_to_camera;
 
 /** Generates a unique cookie value for a CameraWrapper instance.
 
@@ -39,13 +39,13 @@ static uint64_t generate_cookie()
 }
 
 
-static void store_cookie(uint64_t cookie, CameraWrapper* camera)
+static void store_cookie(uint64_t cookie, CameraWrapper* camera, uint8_t request_id)
 {
-    cookie_to_camera[cookie] = camera;
+    cookie_to_camera[cookie] = std::make_pair(camera, request_id);
 }
 
 
-static CameraWrapper* resolve_cookie(uint64_t cookie)
+static std::pair<CameraWrapper*, uint8_t>& resolve_cookie(uint64_t cookie)
 {
     return cookie_to_camera[cookie];
 }
@@ -61,41 +61,40 @@ static void requestComplete(Request *request)
     if (request->status() == Request::RequestCancelled)
         return;
 
-    const std::map<const Stream *, FrameBuffer *> &buffers = request->buffers();
+    std::pair<CameraWrapper*, uint8_t>& caller = resolve_cookie(request->cookie());
+    FrameBuffer* buffer = request->buffers().begin()->second;
+    const FrameMetadata &metadata = buffer->metadata();
 
-    for (auto bufferPair : buffers) {
-        FrameBuffer *buffer = bufferPair.second;
-        const FrameMetadata &metadata = buffer->metadata();
+    std::cout << '\t' << " seq: " << metadata.sequence << " planes: " << metadata.planes().size() << " bytesused: ";
 
-        std::cout << '\t' << " seq: " << metadata.sequence << " planes: " << metadata.planes().size() << " bytesused: ";
-
-        unsigned int nplane = 0;
-        for (const FrameMetadata::Plane &plane : metadata.planes())
-        {
-            std::cout << plane.bytesused;
-            if (++nplane < metadata.planes().size()) std::cout << "/";
-        }
-
-        std::cout << std::endl;
+    unsigned int nplane = 0;
+    for (const FrameMetadata::Plane &plane : metadata.planes())
+    {
+        std::cout << plane.bytesused;
+        if (++nplane < metadata.planes().size()) std::cout << "/";
     }
+    std::cout << std::endl;
+
+    caller.first->set_freshest(caller.second);
 
     request->reuse(Request::ReuseBuffers);
     std::cout << "Restarting request" << std::endl;
-    resolve_cookie(request->cookie())->get_camera()->queueRequest(request);
+    caller.first->get_camera()->queueRequest(request);
 }
 
 
 void CameraWrapper::acquire()
 {
-    cookie = generate_cookie();
-    store_cookie(cookie, this);
     camera->acquire();
 }
 
 
 void CameraWrapper::release()
 {   
-    delete_cookie(cookie);
+    for(const auto& request : requests)
+    {
+        delete_cookie(request->cookie());
+    }
     allocator->free(stream);
     delete allocator;
     camera->release();
@@ -107,6 +106,11 @@ void CameraWrapper::configure()
 {
     config = camera->generateConfiguration( { StreamRole::Viewfinder } );
     std::cout << name << ": Default viewfinder configuration is: " << config->at(0).toString() << std::endl;
+    config->at(0).pixelFormat = PixelFormat::fromString("YVU420");    
+    width = config->at(0).size.width;
+    height = config->at(0).size.height;
+    config->validate();
+    std::cout << name << ": Validated viewfinder configuration is: " << config->at(0).toString() << std::endl;
     camera->configure(config.get());
 
     allocator = new FrameBufferAllocator(camera);
@@ -125,7 +129,8 @@ void CameraWrapper::configure()
     buffers = &allocator->buffers(stream);
     
     for (unsigned int i = 0; i < buffers->size(); ++i) {
-        std::unique_ptr<Request> request = camera->createRequest(cookie);
+        std::unique_ptr<Request> request = camera->createRequest(generate_cookie());
+        store_cookie(request->cookie(), this, i);
         if (!request)
         {
             std::cerr << name << ": Can't create request" << std::endl;
@@ -144,13 +149,15 @@ void CameraWrapper::configure()
 
         const FrameBuffer::Plane& plane = buffer->planes().at(0);
         std::cout << name << ": Mapping plane of size " << plane.length << " at offset " << plane.offset << std::endl;
-        void* plane_map = mmap(0, plane.length, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), plane.offset);
+        bytes = plane.length;
+        void* plane_map = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), plane.offset);
         if(plane_map == MAP_FAILED)
         {
             std::cerr << name << ": Failed to map memory: " << strerror(errno) << std::endl;
             return;
         }
         map.push_back(plane_map);
+        matrices.push_back(cv::Mat(height, width, cv::DataType<uint8_t>::type, plane_map));
     }
 
     camera->requestCompleted.connect(requestComplete);
@@ -174,8 +181,19 @@ void CameraWrapper::stop()
 }
 
 
-std::shared_ptr<libcamera::Camera> CameraWrapper::get_camera()
-{
-    return camera;
-}
+std::shared_ptr<libcamera::Camera> CameraWrapper::get_camera(){ return camera; }
    
+
+std::pair<size_t, size_t> CameraWrapper::shape(){ return {height, width}; }
+
+
+const cv::Mat& CameraWrapper::data()
+{
+    return matrices[freshest_buffer];
+}
+
+
+size_t CameraWrapper::size(){ return bytes; }
+
+
+void CameraWrapper::set_freshest(uint8_t idx){ freshest_buffer = idx; }
