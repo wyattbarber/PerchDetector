@@ -4,6 +4,32 @@
 using namespace libcamera;
 using namespace std::chrono_literals;
 
+
+static void requestComplete(Request *request)
+{
+    if (request->status() == Request::RequestCancelled)
+        return;
+
+    const std::map<const Stream *, FrameBuffer *> &buffers = request->buffers();
+
+    for (auto bufferPair : buffers) {
+        FrameBuffer *buffer = bufferPair.second;
+        const FrameMetadata &metadata = buffer->metadata();
+
+        std::cout << '\t' << " seq: " << std::setw(6) << std::setfill('0') << metadata.sequence << " planes: " << metadata.planes().size() << " bytesused: ";
+
+        unsigned int nplane = 0;
+        for (const FrameMetadata::Plane &plane : metadata.planes())
+        {
+            std::cout << plane.bytesused;
+            if (++nplane < metadata.planes().size()) std::cout << "/";
+        }
+
+        std::cout << std::endl;
+    }
+}
+
+
 void CameraWrapper::acquire()
 {
     camera->acquire();
@@ -53,6 +79,7 @@ void CameraWrapper::start()
             std::cerr << name << ": Can't create request" << std::endl;
             return;
         }
+        request.setCookie((uint64_t)this); // Set request cookie to be a pointer to self
 
         const std::unique_ptr<FrameBuffer> &buffer = (*buffers)[i];
         int ret = request->addBuffer(stream, buffer.get());
@@ -64,6 +91,7 @@ void CameraWrapper::start()
 
         requests.push_back(std::move(request));
     }
+    camera->requestCompleted.connect(requestComplete);
     camera->queueRequest(requests[0].get());
 }
 

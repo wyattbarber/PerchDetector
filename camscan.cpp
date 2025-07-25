@@ -34,6 +34,8 @@ void requestComplete(Request *request)
     }
 }
 
+
+
 template<typename T>
 void disp_camera_config(T& camera)
 {
@@ -65,6 +67,8 @@ void disp_camera_config(T& camera)
             std::cerr << '\t' << "Can't create request" << std::endl;
             return;
         }
+
+        std::cout << '\t' << "Created request " << request->toString() << std::endl;
 
         const std::unique_ptr<FrameBuffer> &buffer = buffers[i];
         int ret = request->addBuffer(stream, buffer.get());
