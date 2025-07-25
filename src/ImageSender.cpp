@@ -21,9 +21,9 @@ void ImageSender::start()
         return;
     }
     // Set the file size
-    if(ftruncate(fd, size+2) == -1)
+    if(ftruncate(fd, size) == -1)
     {
-        std::cerr << "Failed to set file size to  " << size+2 << ": " << strerror(errno) << std::endl;
+        std::cerr << "Failed to set file size to  " << size << ": " << strerror(errno) << std::endl;
         return;
     }
     // Now create the map
@@ -37,7 +37,11 @@ void ImageSender::start()
     // Create a matrix mapped to the mapped array
     ((uint8_t*)map)[0] = 0x00;
     ((uint8_t*)map)[1] = static_cast<uint8_t>(cvtype);
-    image = cv::Mat(height, width, cvtype, (void*)((uint8_t*)map+2));
+    ((uint8_t*)map)[2] = static_cast<uint8_t>(height & 0x00FF);
+    ((uint8_t*)map)[3] = static_cast<uint8_t>((height & 0xFF00) >> 8);
+    ((uint8_t*)map)[4] = static_cast<uint8_t>(width & 0x00FF);
+    ((uint8_t*)map)[5] = static_cast<uint8_t>((width & 0xFF00) >> 8);
+    image = cv::Mat(height, width, cvtype, (void*)((uint8_t*)map+6), stride);
     valid = true;
 }
 
@@ -75,7 +79,7 @@ void ImageSender::release()
 }
 
 
-cv::Mat* ImageSender::get_image()
+cv::Mat& ImageSender::get_image()
 {
-    return &image;
+    return image;
 }

@@ -22,10 +22,9 @@ _cv_type_to_numpy = {
 
 
 class ImageReader:
-    def __init__(self, name: str, width: int, height: int):
+    def __init__(self, name: str):
         self._name = name
         self._file = tempfile.NamedTemporaryFile(mode="wb", delete=True)
-        self._shape = (height, width)
         self._im = None
         self._data = bytearray(0)
         self._filename = None
@@ -48,6 +47,10 @@ class ImageReader:
     def open(self):
         self._file = open(self.file, "rb")
         self._mm = mmap.mmap(self._file.fileno(), 0, prot=mmap.PROT_READ)
+        self._shape = (
+            int.from_bytes(self._mm[2:4], byteorder='little'), 
+            int.from_bytes(self._mm[4:6], byteorder='little')
+        )
         self._valid = True
 
     def close(self):
@@ -89,9 +92,8 @@ class starter:
         while True:
             line = self.feed[0].stdout.readline().decode()
             print(line)
-            if "Started random image feed" in line:
+            if "Started image feed" in line:
                 break
-
         self.reader.open()
 
 
@@ -106,18 +108,15 @@ class closer:
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    width = 480
-    height = 480
-
-    ui.markdown("Test Page\n=========\n\nThis is a test page. The below image should display an updating feed of white noise.\n")
+    ui.markdown("Test Page\n=========\n\nThis is a test page.\n")
     
-    reader = ImageReader("static", width, height)
+    reader = ImageReader("static")
     img = ui.interactive_image(Image.fromarray(np.zeros((100, 100), dtype=np.uint8)))
     ui.timer(1.0, imgen(ui, img, reader), once=True)
 
     feed = [None]
 
-    app.on_startup(starter(reader, feed, ("./build/testfeed", str(width), str(height), reader.file)))
+    app.on_startup(starter(reader, feed, ("./build/camwrapper", reader.file)))
     app.on_shutdown(closer(reader, feed))
 
     ui.run()

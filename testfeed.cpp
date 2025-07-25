@@ -19,9 +19,9 @@ struct pixel_op
     }
 };
 
-void rand_fill(cv::Mat* m)
+void rand_fill(cv::Mat& m)
 {
-    m->forEach<uchar>(pixel_op());
+    m.forEach<uchar>(pixel_op());
 }
 
 
@@ -34,15 +34,15 @@ void sig_handle(int signum)
 
 int main(int argc, char** argv)
 {
-    if(argc < 4)
+    if(argc < 2)
     {
-        std::cerr << "width, height, and filename must be passed from command line" << std::endl;
+        std::cerr << "filename must be passed from command line" << std::endl;
         return -1;
     }
 
-    int width = atoi(argv[1]);
-    int height = atoi(argv[2]);
-    char * file = argv[3];
+    int width = 500;
+    int height = 500;
+    char * file = argv[1];
 
     sender = make_sender<uint8_t>(file, height, width);
 
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    std::cout << "Started random image feed" << std::endl;
+    std::cout << "Started image feed" << std::endl;
     
     while(true)
     {

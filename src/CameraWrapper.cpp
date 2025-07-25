@@ -65,12 +65,11 @@ static void requestComplete(Request *request)
     FrameBuffer* buffer = request->buffers().begin()->second;
     const FrameMetadata &metadata = buffer->metadata();
 
-    std::cout << '\t' << " seq: " << metadata.sequence << " planes: " << metadata.planes().size() << " bytesused: ";
-
+    std::cout << '\t' << " seq: " << metadata.sequence << " planes: " << metadata.planes().size() << ", bytes used: ";
     unsigned int nplane = 0;
     for (const FrameMetadata::Plane &plane : metadata.planes())
     {
-        std::cout << plane.bytesused;
+        std::cout << plane.bytesused << " (fd " << buffer->planes().at(0).fd.get() << ")";
         if (++nplane < metadata.planes().size()) std::cout << "/";
     }
     std::cout << std::endl;
@@ -106,10 +105,10 @@ void CameraWrapper::configure()
 {
     config = camera->generateConfiguration( { StreamRole::Viewfinder } );
     std::cout << name << ": Default viewfinder configuration is: " << config->at(0).toString() << std::endl;
-    config->at(0).pixelFormat = PixelFormat::fromString("YVU420");    
+    // config->at(0).pixelFormat = PixelFormat::fromString("YVU420"); 
+    config->validate();   
     width = config->at(0).size.width;
     height = config->at(0).size.height;
-    config->validate();
     std::cout << name << ": Validated viewfinder configuration is: " << config->at(0).toString() << std::endl;
     camera->configure(config.get());
 
@@ -157,7 +156,6 @@ void CameraWrapper::configure()
             return;
         }
         map.push_back(plane_map);
-        matrices.push_back(cv::Mat(height, width, cv::DataType<uint8_t>::type, plane_map));
     }
 
     camera->requestCompleted.connect(requestComplete);
@@ -184,12 +182,12 @@ void CameraWrapper::stop()
 std::shared_ptr<libcamera::Camera> CameraWrapper::get_camera(){ return camera; }
    
 
-std::pair<size_t, size_t> CameraWrapper::shape(){ return {height, width}; }
+std::tuple<size_t, size_t, size_t> CameraWrapper::shape(){ return {height, width, stride}; }
 
 
-const cv::Mat& CameraWrapper::data()
+const void* CameraWrapper::data()
 {
-    return matrices[freshest_buffer];
+    return map[freshest_buffer];
 }
 
 
