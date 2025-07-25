@@ -78,8 +78,7 @@ void disp_camera_config(T& camera)
         int ret = request->addBuffer(stream, buffer.get());
         if (ret < 0)
         {
-            std::cerr << '\t' << "Can't set buffer for request"
-                << std::endl;
+            std::cerr << '\t' << "Can't set buffer for request" << std::endl;
             return;
         }
 

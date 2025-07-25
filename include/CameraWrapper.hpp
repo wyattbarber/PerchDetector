@@ -75,8 +75,11 @@ class CameraWrapper
     */
     size_t size();
 
+    std::shared_ptr<libcamera::Camera> get_camera();
+    
     protected:
     const std::string name;
+    uint64_t cookie;
     std::shared_ptr<libcamera::Camera> camera;
     std::unique_ptr<libcamera::CameraConfiguration> config;
     libcamera::FrameBufferAllocator *allocator;
