@@ -76,9 +76,9 @@ static void requestComplete(Request *request)
 
     caller.first->set_freshest(caller.second);
 
-    request->reuse(Request::ReuseBuffers);
-    std::cout << "Restarting request" << std::endl;
-    caller.first->get_camera()->queueRequest(request);
+    // request->reuse(Request::ReuseBuffers);
+    // std::cout << "Restarting request" << std::endl;
+    // caller.first->get_camera()->queueRequest(request);
 }
 
 
@@ -167,11 +167,7 @@ void CameraWrapper::configure()
 void CameraWrapper::start()
 {
     camera->start();
-
-    for(const auto& request : requests)
-    {
-        camera->queueRequest(request.get());
-    }
+    camera->queueRequest(requests[0].get());
 }
 
 
@@ -189,12 +185,45 @@ std::tuple<size_t, size_t, size_t> CameraWrapper::shape(){ return {height, width
 
 void* CameraWrapper::data()
 {
-    return map[freshest_buffer];
+    return map[locked_idx];
+}
+
+
+cv::Mat* CameraWrapper::image()
+{
+    return &matrices[locked_idx];
 }
 
 
 size_t CameraWrapper::size(){ return bytes; }
 
 
-void CameraWrapper::set_freshest(uint8_t idx){ freshest_buffer = idx; }
+void CameraWrapper::set_freshest(uint8_t idx)
+{ 
+    freshest_buffer = idx; 
+    uint8_t next = idx+1;
+    if( next == locked_idx)
+    {
+        next += 1;
+    }
+    if( next >= requests.size() )
+    {
+        next = (locked_idx == 0) ? 1 : 0;
+    }    
 
+    requests[next]->reuse(Request::ReuseBuffers);
+    std::cout << "Request " << (int)idx << " finished, restarting request " << (int)next << std::endl;
+    camera->queueRequest(requests[next].get());
+}
+
+
+void CameraWrapper::lock()
+{
+    locked_idx = freshest_buffer;
+}
+
+
+void CameraWrapper::unlock()
+{
+    freshest_buffer = -1;
+}

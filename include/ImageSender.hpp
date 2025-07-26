@@ -33,12 +33,11 @@ class ImageSender
     @param elemsize Size in bytes of each pixel
     @param cvtype OpenCV type id of the pixel elements
     */
-    ImageSender(const char * file, int width, int height, int stride, size_t elemsize, int cvtype) : 
+    ImageSender(const char * file, int width, int height, size_t elemsize, int cvtype) : 
         file(file),
         width(width),
         height(height),
-        stride(std::max(width,stride)),
-        size((std::max(width,stride)*height*elemsize)+6),
+        size((width*height*elemsize)+6),
         cvtype(cvtype)
     {
         valid = false;
@@ -76,7 +75,7 @@ class ImageSender
     
     protected:
     const char* file;
-    const int width, height, stride, size;
+    const int width, height, size;
     const int cvtype;
     cv::Mat image;
     int fd;
@@ -94,7 +93,7 @@ class ImageSender
 @param heigth Pixel height of the mapped matrix
 */
 template<typename T>
-std::unique_ptr<ImageSender> make_sender(const char * file, int width, int height, int stride=0)
+std::unique_ptr<ImageSender> make_sender(const char * file, int width, int height)
 { 
-    return std::make_unique<ImageSender>(file, width, height, stride, sizeof(T), cv::DataType<T>::type);
+    return std::make_unique<ImageSender>(file, width, height, sizeof(T), cv::DataType<T>::type);
 }

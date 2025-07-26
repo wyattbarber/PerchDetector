@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 
     char * file = argv[1];
     sender = make_sender<uint8_t>(file, 
-        std::get<0>(wrapper->shape()), std::get<1>(wrapper->shape()), std::get<2>(wrapper->shape()));
+        std::get<1>(wrapper->shape()), std::get<0>(wrapper->shape()));
     sender->start();
     if(!sender->opened())
     {
@@ -53,15 +53,19 @@ int main(int argc, char** argv)
     wrapper->start();
 
     std::cout << "Started image feed" << std::endl;
+    cv::Mat placeholder(std::get<0>(wrapper->shape()), std::get<1>(wrapper->shape()), cv::DataType<uint8_t>::type);
     
     while(true)
     {        
         std::cout << "Writing one frame to the display" << std::endl;
+        wrapper->lock();
+        wrapper->image()->copyTo(placeholder);
+        wrapper->unlock();
         sender->acquire();
-        memcpy(sender->get_image().data, wrapper->data(), wrapper->size());
+        memcpy(sender->get_image().data, placeholder.data, placeholder.total() * placeholder.elemSize());
         sender->release();
-        // cv::imwrite("testim.png", sender->get_image());
-        std::this_thread::sleep_for(100ms);
+        cv::imwrite("testim.png", placeholder);
+        std::this_thread::sleep_for(1s);
     }
 
     return 0;

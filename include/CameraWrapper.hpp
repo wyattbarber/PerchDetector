@@ -70,6 +70,8 @@ class CameraWrapper
     */
     void* data();
 
+    cv::Mat* image();
+
     /** Get the size of the image data in bytes.
     
     @return data size.
@@ -79,6 +81,10 @@ class CameraWrapper
     std::shared_ptr<libcamera::Camera> get_camera();
 
     void set_freshest(uint8_t);
+
+    void lock();
+
+    void unlock();
 
     protected:
     const std::string name;
@@ -93,6 +99,7 @@ class CameraWrapper
     std::vector<cv::Mat> matrices;
     size_t bytes, width, height, stride;
     size_t freshest_buffer;
+    uint16_t locked_idx;
 };
 
 

@@ -51,6 +51,7 @@ class ImageReader:
             int.from_bytes(self._mm[2:4], byteorder='little'), 
             int.from_bytes(self._mm[4:6], byteorder='little')
         )
+        print(f"Opened memory map for image of size {self._shape}")
         self._valid = True
 
     def close(self):
@@ -60,9 +61,8 @@ class ImageReader:
     def update(self):
         while bool(self._mm[0]):
             # wait for region to be unlocked
-            time.sleep(0.001)            
-        self._im = np.ndarray(self._shape, buffer=self._mm[2:], dtype=_cv_type_to_numpy[self._mm[1]])
-
+            time.sleep(0.001)        
+        self._im = np.ndarray(self._shape, buffer=self._mm[6:], dtype=_cv_type_to_numpy[self._mm[1]])
     @property
     def image(self):
         return self._im

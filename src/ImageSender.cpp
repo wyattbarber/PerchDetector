@@ -41,7 +41,7 @@ void ImageSender::start()
     ((uint8_t*)map)[3] = static_cast<uint8_t>((height & 0xFF00) >> 8);
     ((uint8_t*)map)[4] = static_cast<uint8_t>(width & 0x00FF);
     ((uint8_t*)map)[5] = static_cast<uint8_t>((width & 0xFF00) >> 8);
-    image = cv::Mat(height, width, cvtype, (void*)((uint8_t*)map+6), stride);
+    image = cv::Mat(height, width, cvtype, (void*)((uint8_t*)map+6));
     valid = true;
 }
 
