@@ -37,8 +37,8 @@ class ImageSender
         file(file),
         width(width),
         height(height),
-        stride(stride),
-        size((width*height*elemsize)+6),
+        stride(std::max(width,stride)),
+        size((std::max(width,stride)*height*elemsize)+6),
         cvtype(cvtype)
     {
         valid = false;

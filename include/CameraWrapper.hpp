@@ -2,6 +2,7 @@
 
 #include <libcamera/libcamera.h>
 #include <memory>
+#include <opencv2/core/mat.hpp>
 
 class CameraWrapper
 {
@@ -67,7 +68,7 @@ class CameraWrapper
 
     @return start of image data.
     */
-    const void* data();
+    void* data();
 
     /** Get the size of the image data in bytes.
     
@@ -78,7 +79,7 @@ class CameraWrapper
     std::shared_ptr<libcamera::Camera> get_camera();
 
     void set_freshest(uint8_t);
-    
+
     protected:
     const std::string name;
     uint64_t cookie;
@@ -89,6 +90,7 @@ class CameraWrapper
     const std::vector<std::unique_ptr<libcamera::FrameBuffer>>* buffers;
     std::vector<std::unique_ptr<libcamera::Request>> requests;
     std::vector<void*> map;
+    std::vector<cv::Mat> matrices;
     size_t bytes, width, height, stride;
     size_t freshest_buffer;
 };

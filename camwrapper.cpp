@@ -57,11 +57,10 @@ int main(int argc, char** argv)
     while(true)
     {        
         std::cout << "Writing one frame to the display" << std::endl;
-        cv::InputArray arr{(uint8_t*)wrapper->data(), wrapper->size()};
         sender->acquire();
-        // memcpy(sender->get_image().data, wrapper->data().data, wrapper->size());
-        cv::imdecode(arr, cv::IMREAD_COLOR, &sender->get_image());
+        memcpy(sender->get_image().data, wrapper->data(), wrapper->size());
         sender->release();
+        // cv::imwrite("testim.png", sender->get_image());
         std::this_thread::sleep_for(100ms);
     }
 

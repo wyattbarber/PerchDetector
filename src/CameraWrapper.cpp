@@ -105,7 +105,7 @@ void CameraWrapper::configure()
 {
     config = camera->generateConfiguration( { StreamRole::Viewfinder } );
     std::cout << name << ": Default viewfinder configuration is: " << config->at(0).toString() << std::endl;
-    // config->at(0).pixelFormat = PixelFormat::fromString("YVU420"); 
+    config->at(0).pixelFormat = PixelFormat::fromString("YVU420"); 
     config->validate();   
     width = config->at(0).size.width;
     height = config->at(0).size.height;
@@ -126,7 +126,8 @@ void CameraWrapper::configure()
 
     stream = config->at(0).stream();
     buffers = &allocator->buffers(stream);
-    
+    stride = stream->configuration().stride;
+
     for (unsigned int i = 0; i < buffers->size(); ++i) {
         std::unique_ptr<Request> request = camera->createRequest(generate_cookie());
         store_cookie(request->cookie(), this, i);
@@ -149,13 +150,14 @@ void CameraWrapper::configure()
         const FrameBuffer::Plane& plane = buffer->planes().at(0);
         std::cout << name << ": Mapping plane of size " << plane.length << " at offset " << plane.offset << std::endl;
         bytes = plane.length;
-        void* plane_map = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), plane.offset);
+        void* plane_map = mmap(0, bytes, PROT_READ , MAP_SHARED, plane.fd.get(), plane.offset);
         if(plane_map == MAP_FAILED)
         {
             std::cerr << name << ": Failed to map memory: " << strerror(errno) << std::endl;
             return;
         }
         map.push_back(plane_map);
+        matrices.push_back(cv::Mat(height, width, cv::DataType<uint8_t>::type, plane_map, std::max(stride, width)));
     }
 
     camera->requestCompleted.connect(requestComplete);
@@ -185,7 +187,7 @@ std::shared_ptr<libcamera::Camera> CameraWrapper::get_camera(){ return camera; }
 std::tuple<size_t, size_t, size_t> CameraWrapper::shape(){ return {height, width, stride}; }
 
 
-const void* CameraWrapper::data()
+void* CameraWrapper::data()
 {
     return map[freshest_buffer];
 }
@@ -195,3 +197,4 @@ size_t CameraWrapper::size(){ return bytes; }
 
 
 void CameraWrapper::set_freshest(uint8_t idx){ freshest_buffer = idx; }
+
