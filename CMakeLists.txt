@@ -17,11 +17,11 @@ target_include_directories(cam_helpers PUBLIC include)
 target_link_libraries(cam_helpers PUBLIC LibCamera ${OpenCV_LIBS})
 target_sources(cam_helpers PRIVATE src/CameraWrapper.cpp src/ImageSender.cpp)
 
-# Test for the helper
-add_executable(camwrapper camwrapper.cpp)
-target_include_directories(camwrapper PUBLIC include)
-target_link_libraries(camwrapper PRIVATE cam_helpers)
-target_link_options(camwrapper PRIVATE -Wl,--copy-dt-needed-entries)
+# Main testing program
+add_executable(main main.cpp gui.cpp headless.cpp)
+target_include_directories(main PUBLIC include)
+target_link_libraries(main PRIVATE cam_helpers)
+target_link_options(main PRIVATE -Wl,--copy-dt-needed-entries)
 
 # Test for the visualization stream
 add_executable(testfeed testfeed.cpp)

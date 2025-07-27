@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <iostream>
 
 /** Helper class to parse the expected arguments from the command line
  * 
@@ -32,33 +33,83 @@ class ArgParser
     public:
     ArgParser(int argc, char** argv)
     {
+        bool log_def, stats_def, image_def, depth_def, data_def = false;
+        int i = 1;
+        while(i < argc)
+        {
+            if(strcmp(argv[i], "--log-file"))
+            {
+                _log_file = argv[i+1];
+                log_def = true;
+                i += 2;
+            }
+            else if(strcmp(argv[i], "--stats-file"))
+            {
+                _stats_file = argv[i+1];
+                stats_def = true;
+                i += 2;
+            }
+            else if(strcmp(argv[i], "--image-file"))
+            {
+                _image_map = argv[i+1];
+                image_def = true;
+                i += 2;
+            }
+            else if(strcmp(argv[i], "--depth-file"))
+            {
+                _depth_map = argv[i+1];
+                depth_def = true;
+                i += 2;
+            }
+            else if(strcmp(argv[i], "--data-file"))
+            {
+                _data_map = argv[i+1];
+                data_def = true;
+                i += 2;
+            }
+            else
+            {
+                i += 1;
+            }
+        }
 
+        if(image_def || depth_def || data_def)
+        {
+            _headless = true;
+            _valid = image_def && depth_def;
+            if(!_valid) std::cerr << "Image and depth mapping files must be specified in GUI mode." << std::endl;
+        }
+        else
+        {
+            _headless = false;
+            _valid = true;
+        }
     }
 
     /** Provided arguments give a valid application configuration. */
-    bool valid();
+    bool valid(){ return _valid; }
 
     /** Provided arguments are for headless operation. */
-    bool headless();
+    bool headless(){ return _headless; }
 
     /** Filename for memory mapped image visualization. */
-    const char* image_map_file();
+    const char* image_map_file(){ return _image_map; }
 
     /** Filename for memory mapped depth visualization. */
-    const char* depth_map_file();
+    const char* depth_map_file(){ return _depth_map; }
 
     /** Filename for memory mapped numeric data display. */
-    const char* data_map_file();
+    const char* data_map_file(){ return _data_map; }
 
     /** Filename for text logs. */
-    const char* log_file();
+    const char* log_file(){ return _log_file; }
 
     /** Filename for numeric logs. */
-    const char* stats_file();
+    const char* stats_file(){ return _stats_file; }
 
     protected:
-
-    char* _image_map, _depth_map, _data_map;
-    char* _log_file, _stats_file;
+    bool _valid, _headless;
+    char* _image_map, * _depth_map, * _data_map;
+    char* _log_file, * _stats_file;
 
 };
