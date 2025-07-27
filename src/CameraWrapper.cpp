@@ -11,20 +11,33 @@
 #include <iostream>
 #include <errno.h>
 #include <cstring>
+#include <tuple>
 
 
 using namespace libcamera;
 using namespace std::chrono_literals;
 
+/** Map of libcamera::Request cookie values to CameraWrapper instances and Request numbers.
+ * 
+ * Since the request completion callback doesn't know which camera a request came from,
+ * additional data is needed to map the completed request signal into the correct context.
+ * This map is used to store these accosiations, and is interacted with through the following
+ * functions:
+ * 
+ * * generate_cookie(): Creates and reserves a new unique cookie value
+ * 
+ * * store_cookie(): Associates a created cookie to a CameraWrapper and Request number
+ * 
+ * * resolve_cookie(): Get the assiciated pointer and number for a cookie
+ * 
+ * * delete_cookie(): Removes a cookie and its associations from the map
+ * 
+ * This variable and the above functions are only used by the camera driver, and are not 
+ * needed in application code.
+ */
 static std::unordered_map<uint64_t, std::pair<CameraWrapper*, uint8_t>> cookie_to_camera;
 
-/** Generates a unique cookie value for a CameraWrapper instance.
 
-The callers should cleanup the generated cookie with delete_cookie
-when they go out of scope.
-
-@return New cookie value
-*/
 static uint64_t generate_cookie()
 {
     uint64_t out = 0;
@@ -35,7 +48,8 @@ static uint64_t generate_cookie()
             out = it.first;
         }
     }
-    return out + 1;
+    cookie_to_camera[out+1] = std::make_pair(nullptr, 0); // reserve the new cookie
+    return out+1;
 }
 
 
@@ -50,35 +64,30 @@ static std::pair<CameraWrapper*, uint8_t>& resolve_cookie(uint64_t cookie)
     return cookie_to_camera[cookie];
 }
 
+
 static void delete_cookie(uint64_t cookie)
 {
     cookie_to_camera.erase(cookie);
 }
 
 
+/** Callback for the completion of frame buffer requests. 
+ * 
+ * Setup and called by the camera driver. Uses cookie_to_camera and
+ * its associated functions to determine which CameraWrapper instance
+ * a completed request is associated to.
+ */
 static void requestComplete(Request *request)
 {
     if (request->status() == Request::RequestCancelled)
         return;
 
-    std::pair<CameraWrapper*, uint8_t>& caller = resolve_cookie(request->cookie());
-    FrameBuffer* buffer = request->buffers().begin()->second;
-    const FrameMetadata &metadata = buffer->metadata();
-
-    std::cout << '\t' << " seq: " << metadata.sequence << " planes: " << metadata.planes().size() << ", bytes used: ";
-    unsigned int nplane = 0;
-    for (const FrameMetadata::Plane &plane : metadata.planes())
-    {
-        std::cout << plane.bytesused << " (fd " << buffer->planes().at(0).fd.get() << ")";
-        if (++nplane < metadata.planes().size()) std::cout << "/";
-    }
-    std::cout << std::endl;
-
-    caller.first->set_freshest(caller.second);
-
-    // request->reuse(Request::ReuseBuffers);
-    // std::cout << "Restarting request" << std::endl;
-    // caller.first->get_camera()->queueRequest(request);
+    // Get the associated CameraWrapper and the index of this request in its request vector
+    CameraWrapper* camera;
+    uint8_t req_idx;
+    std::tie(camera, req_idx) = resolve_cookie(request->cookie());
+    // Tell the wrapper that this index is the latest and the next should be queued for updating.
+    camera->set_freshest(req_idx);
 }
 
 
@@ -103,6 +112,10 @@ void CameraWrapper::release()
 
 void CameraWrapper::configure()
 {
+    // Generate the default configuration and change pixel format to YVU.
+    // This provides a 3 plane formate with intensity in plane 0, so that
+    // extracting grayscale is fast and simple.
+
     config = camera->generateConfiguration( { StreamRole::Viewfinder } );
     std::cout << name << ": Default viewfinder configuration is: " << config->at(0).toString() << std::endl;
     config->at(0).pixelFormat = PixelFormat::fromString("YVU420"); 
@@ -112,6 +125,7 @@ void CameraWrapper::configure()
     std::cout << name << ": Validated viewfinder configuration is: " << config->at(0).toString() << std::endl;
     camera->configure(config.get());
 
+    // Allocate all buffers for this config. The number of buffers used is defined by the configuration.
     allocator = new FrameBufferAllocator(camera);
     for (StreamConfiguration &cfg : *config) {
         int ret = allocator->allocate(cfg.stream());
@@ -128,6 +142,8 @@ void CameraWrapper::configure()
     buffers = &allocator->buffers(stream);
     stride = stream->configuration().stride;
 
+    // Create a request object for each buffer, which will be used to 
+    // trigger the camera to fill the buffer with new data.
     for (unsigned int i = 0; i < buffers->size(); ++i) {
         std::unique_ptr<Request> request = camera->createRequest(generate_cookie());
         store_cookie(request->cookie(), this, i);
@@ -147,6 +163,8 @@ void CameraWrapper::configure()
 
         requests.push_back(std::move(request));
 
+        // Create a memory mapped array from the planes file descriptor.
+        // Only plane 0 is used from each buffer, since we are only using grayscale images.
         const FrameBuffer::Plane& plane = buffer->planes().at(0);
         std::cout << name << ": Mapping plane of size " << plane.length << " at offset " << plane.offset << std::endl;
         bytes = plane.length;
@@ -177,37 +195,18 @@ void CameraWrapper::stop()
 }
 
 
-std::shared_ptr<libcamera::Camera> CameraWrapper::get_camera(){ return camera; }
-   
-
-std::tuple<size_t, size_t, size_t> CameraWrapper::shape(){ return {height, width, stride}; }
-
-
-void* CameraWrapper::data()
-{
-    return map[locked_idx];
-}
-
-
-cv::Mat* CameraWrapper::image()
-{
-    return &matrices[locked_idx];
-}
-
-
-size_t CameraWrapper::size(){ return bytes; }
-
-
 void CameraWrapper::set_freshest(uint8_t idx)
 { 
     freshest_buffer = idx; 
     uint8_t next = idx+1;
     if( next == locked_idx)
     {
+        // Skip this buffer if it is locked.
         next += 1;
     }
     if( next >= requests.size() )
     {
+        // Loop around the end of the request vector, skipping index 0 if it is locked.
         next = (locked_idx == 0) ? 1 : 0;
     }    
 

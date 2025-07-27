@@ -64,7 +64,7 @@ class ImageSender
      * 
      * @return Pointer to matrix.
      */
-    cv::Mat& get_image();
+    cv::Mat* get_image();
 
     /** Check if the mapped memory has successully been initialized.
      * 

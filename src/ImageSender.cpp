@@ -79,7 +79,7 @@ void ImageSender::release()
 }
 
 
-cv::Mat& ImageSender::get_image()
+cv::Mat* ImageSender::get_image()
 {
-    return image;
+    return &image;
 }

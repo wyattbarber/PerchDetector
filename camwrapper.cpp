@@ -41,8 +41,7 @@ int main(int argc, char** argv)
     wrapper->configure();
 
     char * file = argv[1];
-    sender = make_sender<uint8_t>(file, 
-        std::get<1>(wrapper->shape()), std::get<0>(wrapper->shape()));
+    sender = make_sender<wrapper->type>(file, wrapper->get_width(), wrapper->get_height());
     sender->start();
     if(!sender->opened())
     {
@@ -53,7 +52,7 @@ int main(int argc, char** argv)
     wrapper->start();
 
     std::cout << "Started image feed" << std::endl;
-    cv::Mat placeholder(std::get<0>(wrapper->shape()), std::get<1>(wrapper->shape()), cv::DataType<uint8_t>::type);
+    cv::Mat placeholder(wrapper->get_height(), wrapper->get_width(), wrapper->cvtype);
     
     while(true)
     {        
@@ -62,7 +61,7 @@ int main(int argc, char** argv)
         wrapper->image()->copyTo(placeholder);
         wrapper->unlock();
         sender->acquire();
-        memcpy(sender->get_image().data, placeholder.data, placeholder.total() * placeholder.elemSize());
+        memcpy(sender->get_image()->data, placeholder.data, placeholder.total() * placeholder.elemSize());
         sender->release();
         cv::imwrite("testim.png", placeholder);
         std::this_thread::sleep_for(1s);
