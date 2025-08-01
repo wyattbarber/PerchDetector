@@ -14,8 +14,8 @@ class CameraWrapper
 {
     public:
 
-    using type = uint8_t; /// Datatype of pixel intensity values
-    static const auto cvtype = cv::DataType<type>::type; // OpenCV type ID of pixel intensity values
+    typedef uint8_t dtype; /// Datatype of pixel intensity values
+    static const auto cvtype = cv::DataType<dtype>::type; // OpenCV type ID of pixel intensity values
 
     /** Create a new wrapper for one camera on the system. 
 
@@ -105,7 +105,7 @@ class CameraWrapper
      * 
      * @return image
     */
-    cv::Mat* image(){ return matrices[locked_idx]; }
+    cv::Mat* image(){ return &matrices[locked_idx]; }
 
     /** Get the size of the image data in bytes.
     

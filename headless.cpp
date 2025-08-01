@@ -8,11 +8,23 @@
 using namespace libcamera;
 using namespace std::chrono_literals;
 
-std::unique_ptr<CameraManager> cm;
-std::unique_ptr<CameraWrapper> camera_left, camera_right;
+static std::unique_ptr<CameraManager> cm;
+static std::unique_ptr<CameraWrapper> camera_left, camera_right;
 
-bool id_cam_left(const std::string& id){return false;}
-bool id_cam_right(const std::string& id){return false;}
+static bool id_cam_left(const std::string& id){return false;}
+static bool id_cam_right(const std::string& id){return false;}
+
+
+static void sig_handle(int signum)
+{
+    camera_left->stop();
+    camera_left->release();
+    camera_right->stop();
+    camera_right->release();
+    cm->stop();
+    exit(signum);
+}
+
 
 int main_headless(ArgParser& args)
 {

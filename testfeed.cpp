@@ -19,9 +19,9 @@ struct pixel_op
     }
 };
 
-void rand_fill(cv::Mat& m)
+void rand_fill(cv::Mat* m)
 {
-    m.forEach<uchar>(pixel_op());
+    m->forEach<uchar>(pixel_op());
 }
 
 

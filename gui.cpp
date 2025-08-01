@@ -2,6 +2,7 @@
 #include <ImageSender.hpp>
 #include <ArgParser.hpp>
 #include <functional>
+#include <csignal>
 #include <chrono>
 #include <thread>
 #include <opencv2/core/mat.hpp>
@@ -9,17 +10,32 @@
 using namespace libcamera;
 using namespace std::chrono_literals;
 
-std::unique_ptr<CameraManager> cm;
-std::unique_ptr<CameraWrapper> camera_left, camera_right;
+static std::unique_ptr<CameraManager> cm;
+static std::unique_ptr<CameraWrapper> camera_left, camera_right;
+static cv::Mat im_placeholder;
+static std::unique_ptr<ImageSender> image_send, depth_send;
 
-cv::Mat im_placeholder;
-std::unique_ptr<ImageSender> image_send, depth_send;
+static bool id_cam_left(const std::string& id){return false;}
+static bool id_cam_right(const std::string& id){return false;}
 
-bool id_cam_left(const std::string& id){return false;}
-bool id_cam_right(const std::string& id){return false;}
+
+static void sig_handle(int signum)
+{
+    image_send->stop();
+    depth_send->stop();
+    camera_left->stop();
+    camera_left->release();
+    camera_right->stop();
+    camera_right->release();
+    cm->stop();
+    exit(signum);
+}
+
 
 int main_gui(ArgParser& args)
 {
+    signal(SIGINT, sig_handle);
+
     cm = std::make_unique<CameraManager>();
     cm->start();
     camera_left = std::make_unique<CameraWrapper>("testcamera", cm, id_cam_left);
@@ -30,9 +46,9 @@ int main_gui(ArgParser& args)
     camera_right->acquire();
     camera_right->configure();
 
-    im_placeholder  cv::Mat(camera_left->get_height(), camera_left->get_width(), camera_left->cvtype)
+    im_placeholder = cv::Mat(camera_left->get_height(), camera_left->get_width(), camera_left->cvtype);
 
-    image_send = make_sender<camera_left->type>(
+    image_send = make_sender<CameraWrapper::dtype>(
         args.image_map_file(), camera_left->get_width(), camera_left->get_height()
     );
     image_send->start();
@@ -42,8 +58,8 @@ int main_gui(ArgParser& args)
         return -1;
     }
 
-    depth_send = make_sender<camera_left->type>(
-        args.image_depth_file(), camera_left->get_width(), camera_left->get_height()
+    depth_send = make_sender<CameraWrapper::dtype>(
+        args.depth_map_file(), camera_left->get_width(), camera_left->get_height()
     );
     depth_send->start();
     if(!depth_send->opened())
