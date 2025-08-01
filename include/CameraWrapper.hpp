@@ -43,6 +43,11 @@ class CameraWrapper
         std::cerr << name << ": No camera matching the given criteria was detected." << std::endl;
     }
 
+    CameraWrapper(CameraWrapper& other) :
+        name(other.name),
+        camera(other.camera)    
+    { }
+
     /** Acquires control of the wrapped camera 
     */
     void acquire();
