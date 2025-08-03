@@ -1,5 +1,5 @@
 #include <visualization.hpp>
-
+#include <Depth.hpp>
 
 std::unique_ptr<ImageSender> visualization::image, visualization::depth;
 
@@ -16,7 +16,7 @@ int visualization::setup(ArgParser& args, std::shared_ptr<CameraWrapper> camera_
         return -1;
     }
 
-    depth = make_sender<CameraWrapper::dtype>(
+    depth = make_sender<DepthCamera::dtype>(
         args.depth_map_file(), camera_left->get_width(), camera_left->get_height()
     );
     depth->start();

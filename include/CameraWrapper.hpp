@@ -15,7 +15,7 @@ class CameraWrapper
     public:
 
     typedef uint8_t dtype; /// Datatype of pixel intensity values
-    static const auto cvtype = cv::DataType<dtype>::type; // OpenCV type ID of pixel intensity values
+    static constexpr auto cvtype = cv::DataType<dtype>::type; // OpenCV type ID of pixel intensity values
 
     /** Create a new wrapper for one camera on the system. 
 

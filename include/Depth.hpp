@@ -10,6 +10,9 @@
 class DepthCamera
 {
 public:
+    typedef float dtype; /// Datatype used for depth of each pixel
+    static constexpr auto cvtype = cv::DataType<dtype>::type; // OpenCV type ID of pixel depth values
+
     /** Construct a new depth camera
     
     @param left Left camera wrapper
@@ -64,9 +67,9 @@ protected:
     int locked_idx;
     size_t latest_idx;
     cv::Mat _disparity[N];
-    // Camera parameters (TODO)
-    static constexpr float f = 1;
-    static constexpr float B = 10;
+    // Camera parameters (distance units ar cm)
+    static constexpr float f = 0.304; 
+    static constexpr float B = 7.3;
     static constexpr int n_disparity = 128; 
     static constexpr float M = f * B * static_cast<float>(n_disparity) * float(16.0);
 };

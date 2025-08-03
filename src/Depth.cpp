@@ -5,7 +5,7 @@ void DepthCamera::initialize()
 {
     for(int i = 0; i < N; ++i)
     {
-        _disparity[i] = cv::Mat(left->get_height(), left->get_width(), CV_16S);
+        _disparity[i] = cv::Mat(left->get_height(), left->get_width(), cvtype);
     }
 }
 
@@ -58,8 +58,8 @@ struct disp_conv
 const cv::Mat DepthCamera::depth()
 {
     std::cout << "Calculating depth" << std::endl;
-    cv::Mat disp(disparity()->rows, disparity()->cols, CV_32F);
-    disparity()->convertTo(disp, CV_32F, 1.0);
+    cv::Mat disp(disparity()->rows, disparity()->cols, cvtype);
+    disparity()->convertTo(disp, cvtype, 1.0);
     disp_conv converter;
     converter.M = M;
     disp.forEach<float>(converter);

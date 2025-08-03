@@ -6,8 +6,8 @@ std::shared_ptr<DepthCamera> stereo::depth;
 
 // CAM1: /base/soc/i2c0mux/i2c@1/imx219@10 
 // CAM0: /base/soc/i2c0mux/i2c@0/imx219@10
-static bool id_cam_left(const std::string& id){return id.find("i2c@0") != std::string::npos;}
-static bool id_cam_right(const std::string& id){return id.find("i2c@1") != std::string::npos;}
+static bool id_cam_left(const std::string& id){return id.find("i2c@0/imx219@10") != std::string::npos;}
+static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10") != std::string::npos;}
 
 void stereo::setup()
 {
