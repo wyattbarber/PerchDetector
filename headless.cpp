@@ -11,8 +11,11 @@ using namespace std::chrono_literals;
 static std::unique_ptr<CameraManager> cm;
 static std::unique_ptr<CameraWrapper> camera_left, camera_right;
 
-static bool id_cam_left(const std::string& id){return false;}
-static bool id_cam_right(const std::string& id){return false;}
+
+// CAM1: /base/soc/i2c0mux/i2c@1/imx219@10 
+// CAM0: /base/soc/i2c0mux/i2c@0/imx219@10
+static bool id_cam_left(const std::string& id){return id.find("i2c@0") != std::string::npos;}
+static bool id_cam_right(const std::string& id){return id.find("i2c@1") != std::string::npos;}
 
 
 static void sig_handle(int signum)
