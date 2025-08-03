@@ -1,5 +1,6 @@
 #include <CameraWrapper.hpp>
 #include <ArgParser.hpp>
+#include <Depth.hpp>
 #include <functional>
 #include <chrono>
 #include <thread>
@@ -9,8 +10,8 @@ using namespace libcamera;
 using namespace std::chrono_literals;
 
 static std::unique_ptr<CameraManager> cm;
-static std::unique_ptr<CameraWrapper> camera_left, camera_right;
-
+static std::shared_ptr<CameraWrapper> camera_left, camera_right;
+static std::shared_ptr<DepthCamera> depth;
 
 // CAM1: /base/soc/i2c0mux/i2c@1/imx219@10 
 // CAM0: /base/soc/i2c0mux/i2c@0/imx219@10
@@ -33,13 +34,16 @@ int main_headless(ArgParser& args)
 {
     cm = std::make_unique<CameraManager>();
     cm->start();
-    camera_left = std::make_unique<CameraWrapper>("testcamera", cm, id_cam_left);
-    camera_right = std::make_unique<CameraWrapper>("testcamera", cm, id_cam_right);
+    camera_left = std::make_shared<CameraWrapper>("left-camera", cm, id_cam_left);
+    camera_right = std::make_shared<CameraWrapper>("right-camera", cm, id_cam_right);
+    depth = std::make_shared<DepthCamera>(camera_left, camera_right);
     
     camera_left->acquire();
     camera_left->configure();
     camera_right->acquire();
     camera_right->configure();
+
+    depth->initialize();
 
     camera_left->start();
     camera_right->start();
@@ -47,7 +51,10 @@ int main_headless(ArgParser& args)
     while(true)
     {        
         std::cout << "Stereo cameras running..." << std::endl;
-        std::this_thread::sleep_for(1s);
+        depth->update();
+        depth->lock();
+        auto x = depth->depth();
+        depth->unlock();
     }
 
     return 0;

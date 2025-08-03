@@ -224,5 +224,5 @@ void CameraWrapper::lock()
 
 void CameraWrapper::unlock()
 {
-    freshest_buffer = -1;
+    locked_idx = -1;
 }

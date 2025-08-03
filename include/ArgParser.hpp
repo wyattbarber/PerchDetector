@@ -33,35 +33,36 @@ class ArgParser
     public:
     ArgParser(int argc, char** argv)
     {
-        bool log_def, stats_def, image_def, depth_def, data_def = false;
+        bool log_def = false, stats_def = false, image_def = false, depth_def = false, data_def = false;
         int i = 1;
         while(i < argc)
         {
-            if(strcmp(argv[i], "--log-file"))
+            std::cout << "Argument " << argv[i] << " is " << argv[i+1] << std::endl;
+            if(strcmp(argv[i], "--log-file") == 0)
             {
                 _log_file = argv[i+1];
                 log_def = true;
                 i += 2;
             }
-            else if(strcmp(argv[i], "--stats-file"))
+            else if(strcmp(argv[i], "--stats-file") == 0)
             {
                 _stats_file = argv[i+1];
                 stats_def = true;
                 i += 2;
             }
-            else if(strcmp(argv[i], "--image-file"))
+            else if(strcmp(argv[i], "--image-file") == 0)
             {
                 _image_map = argv[i+1];
                 image_def = true;
                 i += 2;
             }
-            else if(strcmp(argv[i], "--depth-file"))
+            else if(strcmp(argv[i], "--depth-file") == 0)
             {
                 _depth_map = argv[i+1];
                 depth_def = true;
                 i += 2;
             }
-            else if(strcmp(argv[i], "--data-file"))
+            else if(strcmp(argv[i], "--data-file") == 0)
             {
                 _data_map = argv[i+1];
                 data_def = true;
@@ -75,13 +76,13 @@ class ArgParser
 
         if(image_def || depth_def || data_def)
         {
-            _headless = true;
+            _headless = false;
             _valid = image_def && depth_def;
             if(!_valid) std::cerr << "Image and depth mapping files must be specified in GUI mode." << std::endl;
         }
         else
         {
-            _headless = false;
+            _headless = true;
             _valid = true;
         }
     }

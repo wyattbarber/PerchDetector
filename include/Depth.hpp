@@ -2,6 +2,8 @@
 
 #include <CameraWrapper.hpp>
 #include <opencv2/calib3d.hpp>
+#include <memory>
+
 
 /** Manages getting grayscale frames from two cameras and maintaining a buffer of depth maps.
 */
@@ -13,11 +15,11 @@ public:
     @param left Left camera wrapper
     @param right Right camera wrapper
     */  
-    DepthCamera(CameraWrapper& left, CameraWrapper& right) : 
+    DepthCamera(std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
         left(left),
-        right(right),
-        stereo(cv::StereoBM::create(n_disparity))
+        right(right)
     {
+        stereo = cv::StereoBM::create(n_disparity);
         locked_idx = 0;
     }
 
@@ -47,8 +49,15 @@ public:
     */
     const cv::Mat depth();
 
+    /** Initalizes data arrays.
+    
+    Should be called after cameras are initialized and their shape data
+    is available.
+    */
+    void initialize();
+
 protected:
-    CameraWrapper& left, right;
+    std::shared_ptr<CameraWrapper> left, right;
     cv::Ptr<cv::StereoBM> stereo;
     // Data buffer
     static constexpr size_t N = 4;
