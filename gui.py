@@ -116,7 +116,7 @@ if __name__ in {"__main__", "__mp_main__"}:
 
     feed = [None]
 
-    app.on_startup(starter(reader, feed, ("./build/camwrapper", reader.file)))
+    app.on_startup(starter(reader, feed, ("./build/main", "--image-map", reader.file)))
     app.on_shutdown(closer(reader, feed))
 
     ui.run()

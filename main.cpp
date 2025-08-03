@@ -11,9 +11,10 @@ using namespace libcamera;
 using namespace std::chrono_literals;
 
 
-// Extern main functions for the two operation modes
+// Externally linked main functions for the two operation modes
 int main_headless(ArgParser&);
 int main_gui(ArgParser&);
+
 
 int main(int argc, char** argv)
 {    
