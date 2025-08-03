@@ -32,7 +32,10 @@ void DepthCamera::update()
     auto l = left->image();
     std::cout << "Getting right image " << std::endl;
     auto r = right->image();
-    stereo->compute(*l, *r, _disparity[target_idx]);
+    std::cout << "Getting result buffer" << std::endl;
+    auto d = &_disparity[target_idx];
+    std::cout << "Computing disparity" << std::endl;
+    stereo->compute(*l, *r, *d);
     left->unlock();
     right->unlock();
 

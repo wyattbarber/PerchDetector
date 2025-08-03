@@ -48,6 +48,7 @@ int main_headless(ArgParser& args)
     camera_left->start();
     camera_right->start();
 
+    std::this_thread::sleep_for(100ms);
     while(true)
     {        
         std::cout << "Stereo cameras running..." << std::endl;
@@ -55,6 +56,7 @@ int main_headless(ArgParser& args)
         depth->lock();
         auto x = depth->depth();
         depth->unlock();
+        std::this_thread::sleep_for(100ms);
     }
 
     return 0;
