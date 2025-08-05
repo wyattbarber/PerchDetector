@@ -186,11 +186,13 @@ void CameraWrapper::start()
 {
     camera->start();
     camera->queueRequest(requests[0].get());
+    running = true;
 }
 
 
 void CameraWrapper::stop()
 {
+    running = false;
     camera->stop();
 }
 
@@ -211,8 +213,11 @@ void CameraWrapper::set_freshest(uint8_t idx)
     }    
 
     requests[next]->reuse(Request::ReuseBuffers);
-    // std::cout << "Request " << (int)idx << " finished, restarting request " << (int)next << std::endl;
-    camera->queueRequest(requests[next].get());
+    if(running)
+    {
+        // std::cout << "Request " << (int)idx << " finished, restarting request " << (int)next << std::endl;
+        camera->queueRequest(requests[next].get());
+    }
 }
 
 

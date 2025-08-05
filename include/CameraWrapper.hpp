@@ -29,6 +29,7 @@ class CameraWrapper
     CameraWrapper(const std::string name, const std::unique_ptr<libcamera::CameraManager>& cm, bool(*check)(const std::string&)) :
         name(name)
     {
+        running = false;
         // Check all cameras
         for (auto const &camera : cm->cameras())
         {
@@ -46,7 +47,9 @@ class CameraWrapper
     CameraWrapper(CameraWrapper& other) :
         name(other.name),
         camera(other.camera)    
-    { }
+    { 
+        running = false;
+    }
 
     /** Acquires control of the wrapped camera 
     */
@@ -164,6 +167,7 @@ class CameraWrapper
     size_t bytes, width, height, stride;
     size_t freshest_buffer;
     uint16_t locked_idx;
+    bool running;
 };
 
 

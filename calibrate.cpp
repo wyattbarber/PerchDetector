@@ -3,34 +3,42 @@
 #include <chrono>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 #include <thread>
 #include <vector>
+#include <cstdio>
+#include <cmath>
+#include <iostream>
+#include <fstream>
+
 
 using namespace std::chrono_literals;
 
+// Results
+char outfile[100];
+bool calibrated;
+cv::Mat right_camera_mat = cv::Mat::eye(3, 3, CV_32FC1);
+cv::Mat left_camera_mat = cv::Mat::eye(3, 3, CV_32FC1);
+cv::Mat  left_dist_coef, right_dist_coef, R, T, E, F;
 
 const int N = 10;
 const auto find_flags = cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_FAST_CHECK | cv::CALIB_CB_NORMALIZE_IMAGE;
 const auto calib_flags = cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_SAME_FOCAL_LENGTH | 
                     cv::CALIB_RATIONAL_MODEL | cv::CALIB_FIX_K3 | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5;
 
-const int checker_width = 3;
-const int checker_height = 4;
-const float checker_size = 6.0;
-
-
-std::vector<cv::Mat> left_camera_matrices, right_camera_matrices, left_dist_coeffs, right_dist_coeffs, Rs, Ts, Es, Fs;
+const int checker_width = 10;
+const int checker_height = 7;
+const float checker_size = 1.5;
 
 
 auto make_object_points()
 {
     std::vector<cv::Point3f> out;
-
-    for(int w = 0; w < checker_width; ++w)
+    for(int h = 0; h < checker_height; ++h)
     {
-        for(int h = 0; h < checker_height; ++h)
+        for(int w = 0; w < checker_width; ++w)
         {
-            out.push_back({w*checker_size, h*checker_size, 0});
+            out.push_back({h*checker_size, w*checker_size, 0.0});
         }
     }
 
@@ -40,6 +48,23 @@ auto make_object_points()
 
 void stop()
 {   
+    std::cout << "Ending calibration program" << std::endl;
+    if(calibrated)
+    {
+        std::cout << "Writing calibration results" << std::endl;
+        std::ofstream file;
+        file.open(outfile);
+        file << "Stereo camera calibration results" << std::endl;
+        file << "Left Intrinsic (cvtype " << left_camera_mat.type() << "): " << left_camera_mat << std::endl;
+        file << "Left Distortion (cvtype " << left_dist_coef.type() << "): " << left_dist_coef << std::endl;
+        file << "Right Intrinsic (cvtype " << right_camera_mat.type() << "): " << right_camera_mat << std::endl;
+        file << "Right Distortion (cvtype " << right_dist_coef.type() << "): " << right_dist_coef << std::endl;
+        file << "R (cvtype " << R.type() << "): " << R << std::endl;
+        file << "T (cvtype " << T.type() << "): " << T << std::endl;
+        file << "E (cvtype " << E.type() << "): " << E << std::endl;
+        file << "F (cvtype " << F.type() << "): " << F << std::endl;
+        file.close();
+    }
     stereo::stop();
     stereo::teardown();
 }
@@ -54,17 +79,26 @@ static void sig_handle(int signum)
 
 int main(int argc, char** argv)
 {
+    if(argc < 2)
+    {
+        std::cerr << "Output file required" << std::endl;
+        return -1;
+    }
+    strcpy(outfile, argv[1]);
+    calibrated = false;
+
     stereo::setup();
     stereo::start();
     auto obj_points = make_object_points();
     std::this_thread::sleep_for(1s); // Makes sure image data is populated before calibrating
     
-    cv::Mat left_points = cv::Mat::zeros(checker_height*checker_width,2,CV_32FC1);
-    cv::Mat right_points = cv::Mat::zeros(checker_height*checker_width,2,CV_32FC1);
-    cv::Mat right_camera_mat = cv::Mat::zeros(3,3,CV_64F);
-    cv::Mat left_camera_mat = cv::Mat::zeros(3,3,CV_64F);
-    cv::Mat left_dist_coef, right_dist_coef, R, T, E, F;
     bool left_checker_ok = false, right_checker_ok = false;
+
+    std::vector<std::vector<cv::Point2f>> all_left_points, all_right_points;
+    std::vector<decltype(obj_points)> all_obj_points;
+    cv::Size size;
+    
+    cv::Mat left_im, right_im;
 
     int i = 0;
     while(i < N)
@@ -73,37 +107,53 @@ int main(int argc, char** argv)
         
         stereo::left->lock();
         stereo::right->lock();
-        left_checker_ok = cv::findChessboardCorners(*stereo::left->image(), cv::Size(checker_width, checker_height), left_points, find_flags);
-        right_checker_ok = cv::findChessboardCorners(*stereo::right->image(), cv::Size(checker_width, checker_height), right_points, find_flags);
-        cv::Size size = stereo::left->image()->size();
+        left_im = stereo::left->image()->clone();
+        right_im = stereo::right->image()->clone();
+        size = stereo::left->image()->size();
         stereo::left->unlock();
         stereo::right->unlock();
+        
+        std::vector<cv::Point2f> left_points, right_points;
+        left_checker_ok = cv::findChessboardCorners(left_im, cv::Size(checker_width, checker_height), left_points, find_flags);
+        right_checker_ok = cv::findChessboardCorners(right_im, cv::Size(checker_width, checker_height), right_points, find_flags);
+
+        auto left_im_draw = left_im.clone();
+        cv::drawChessboardCorners(left_im_draw, cv::Size(checker_width, checker_height), left_points, left_checker_ok);
+        char fname[50];
+        sprintf(fname, "checker-%d.png", i+1);
+        cv::imwrite(fname, left_im_draw);
 
         if(!(left_checker_ok && right_checker_ok))
         {
-            std::cout << "Failed to identify checkerboard pattern. Trying again." << std::endl;
+            std::cout << "Failed to identify valid checkerboard pattern. Trying again." << std::endl;
         }
         else
         {
-            double rms = cv::stereoCalibrate(obj_points, left_points, right_points,
+            std::cout << "Checkerboard identified, refining corner positions." << std::endl;
+            cv::cornerSubPix(left_im, left_points, cv::Size(11,11), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 30, 0.001));
+            cv::cornerSubPix(right_im, right_points, cv::Size(11,11), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 30, 0.001));
+            std::cout << "Saving calibration pattern" << std::endl;
+            all_right_points.push_back(right_points);
+            all_left_points.push_back(left_points);
+            all_obj_points.push_back(obj_points);
+        }
+        i += 1;
+        std::this_thread::sleep_for(100ms); 
+    }
+
+    std::vector<cv::Mat> rvecsl, tvecsl, rvecsr, tvecsr;
+    std::cout << "Calculating left calibration results." << std::endl;
+    double rms_l = cv::calibrateCamera(all_obj_points, all_left_points, size, left_camera_mat, left_dist_coef, rvecsl, tvecsl, calib_flags);
+    std::cout << "Calculating right calibration results." << std::endl;
+    double rms_r = cv::calibrateCamera(all_obj_points, all_right_points, size, right_camera_mat, right_dist_coef, rvecsr, tvecsr, calib_flags);
+    std::cout << "Calculating stereo calibration results." << std::endl;
+    double rms = cv::stereoCalibrate(all_obj_points, all_left_points, all_right_points,
                 left_camera_mat, left_dist_coef, right_camera_mat, right_dist_coef, size,
                 R, T, E, F,
                 calib_flags
             );
-            left_camera_matrices.push_back(left_camera_mat);
-            right_camera_matrices.push_back(right_camera_mat);
-            left_dist_coeffs.push_back(left_dist_coef);
-            right_dist_coeffs.push_back(right_dist_coef);
-            Rs.push_back(R);
-            Ts.push_back(T);
-            Es.push_back(E);
-            Fs.push_back(F);
-
-            std::cout << "Collected calibration sample " << i+1 << " with RMS " << rms << std::endl;
-        }
-
-        std::this_thread::sleep_for(1s); 
-    }
+    std::cout << "Calibration done, RMS " << std::round(rms) << " total, " << std::round(rms_l) << " left, " << std::round(rms_r) << " right." << std::endl;
+    calibrated = true;
 
     stop();
     return 0;
