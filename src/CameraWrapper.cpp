@@ -211,7 +211,7 @@ void CameraWrapper::set_freshest(uint8_t idx)
     }    
 
     requests[next]->reuse(Request::ReuseBuffers);
-    std::cout << "Request " << (int)idx << " finished, restarting request " << (int)next << std::endl;
+    // std::cout << "Request " << (int)idx << " finished, restarting request " << (int)next << std::endl;
     camera->queueRequest(requests[next].get());
 }
 

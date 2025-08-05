@@ -7,9 +7,6 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-using namespace libcamera;
-using namespace std::chrono_literals;
-
 
 // Externally linked main functions for the two operation modes
 int main_headless(ArgParser&);
