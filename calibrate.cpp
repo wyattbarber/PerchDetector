@@ -55,14 +55,14 @@ void stop()
         std::ofstream file;
         file.open(outfile);
         file << "Stereo camera calibration results" << std::endl;
-        file << "Left Intrinsic (cvtype " << left_camera_mat.type() << "): " << left_camera_mat << std::endl;
-        file << "Left Distortion (cvtype " << left_dist_coef.type() << "): " << left_dist_coef << std::endl;
-        file << "Right Intrinsic (cvtype " << right_camera_mat.type() << "): " << right_camera_mat << std::endl;
-        file << "Right Distortion (cvtype " << right_dist_coef.type() << "): " << right_dist_coef << std::endl;
-        file << "R (cvtype " << R.type() << "): " << R << std::endl;
-        file << "T (cvtype " << T.type() << "): " << T << std::endl;
-        file << "E (cvtype " << E.type() << "): " << E << std::endl;
-        file << "F (cvtype " << F.type() << "): " << F << std::endl;
+        file << "Left Intrinsic (cvtype " << left_camera_mat.type() << ", size " << left_camera_mat.size() << "): " << left_camera_mat << std::endl;
+        file << "Left Distortion (cvtype " << left_dist_coef.type() << ", size " << left_dist_coef.size() << "): " << left_dist_coef << std::endl;
+        file << "Right Intrinsic (cvtype " << right_camera_mat.type() << ", size " << right_camera_mat.size() << "): " << right_camera_mat << std::endl;
+        file << "Right Distortion (cvtype " << right_dist_coef.type() << ", size " << right_dist_coef.size() << "): " << right_dist_coef << std::endl;
+        file << "R (cvtype " << R.type() << ", size " << R.size() << "): " << R << std::endl;
+        file << "T (cvtype " << T.type() << ", size " << T.size() << "): " << T << std::endl;
+        file << "E (cvtype " << E.type() << ", size " << E.size() << "): " << E << std::endl;
+        file << "F (cvtype " << F.type() << ", size " << F.size() << "): " << F << std::endl;
         file.close();
     }
     stereo::stop();
