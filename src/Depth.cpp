@@ -1,5 +1,6 @@
 #include <Depth.hpp>
 #include <opencv2/imgproc.hpp>
+#include <limits>
 
 
 void DepthCamera::initialize()
@@ -55,12 +56,11 @@ void DepthCamera::update()
     right->lock();
     auto l = left->image();
     auto r = right->image();
-    auto d = &_disparity[target_idx];
     cv::undistort(*l, rect_l, left_intr, left_dist);
     cv::undistort(*r, rect_r, right_intr, right_dist);
     left->unlock();
     right->unlock();
-    stereo->compute(rect_l, rect_r, *d);
+    stereo->compute(rect_l, rect_r, _disparity[target_idx]);
 
     // Update indices
     latest_idx = target_idx;
@@ -73,7 +73,7 @@ struct disp_conv
 
     void operator()(float& p, const int* idx) const
     {
-        p = M / p;
+        p = M / (p + std::numeric_limits<float>::epsilon());
     }
 };
 

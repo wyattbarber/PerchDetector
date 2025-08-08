@@ -4,7 +4,10 @@
 std::unique_ptr<ImageSender> visualization::image, visualization::depth;
 
 
-int visualization::setup(ArgParser& args, std::shared_ptr<CameraWrapper> camera_left, std::shared_ptr<CameraWrapper> camera_right)
+int visualization::setup(
+    ArgParser& args, 
+    std::shared_ptr<CameraWrapper> camera_left, 
+    std::shared_ptr<CameraWrapper> camera_right)
 {
     image = make_sender<CameraWrapper::dtype>(
         args.image_map_file(), camera_left->get_width(), camera_left->get_height()
