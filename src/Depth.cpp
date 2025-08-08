@@ -82,6 +82,5 @@ cv::Mat DepthCamera::depth()
 {
     cv::Mat out(disparity()->rows, disparity()->cols, CV_32F);
     disparity()->convertTo(out, CV_32F);
-    out.forEach<float>(disp_conv());
     return out;
 }

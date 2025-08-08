@@ -136,9 +136,10 @@ int main(int argc, char** argv)
             all_right_points.push_back(right_points);
             all_left_points.push_back(left_points);
             all_obj_points.push_back(obj_points);
+            
+            i += 1;
         }
-        i += 1;
-        std::this_thread::sleep_for(100ms); 
+        std::this_thread::sleep_for(5s); 
     }
 
     std::vector<cv::Mat> rvecsl, tvecsl, rvecsr, tvecsr;
@@ -152,7 +153,7 @@ int main(int argc, char** argv)
                 R, T, E, F,
                 calib_flags
             );
-    std::cout << "Calibration done, RMS " << std::round(rms) << " total, " << std::round(rms_l) << " left, " << std::round(rms_r) << " right." << std::endl;
+    std::cout << "Calibration done, RMS " << std::round(rms * 100.0) / 100.0 << " total, " << std::round(rms_l * 100.0) / 100.0 << " left, " << std::round(rms_r * 100.0) / 100.0 << " right." << std::endl;
     calibrated = true;
 
     stop();
