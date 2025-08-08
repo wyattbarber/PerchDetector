@@ -11,29 +11,28 @@ void DepthCamera::initialize()
     }
 
     // Initialize stereo calibration data
-    // cv::Mat _Rl, _Rr, _Pl, _Pr;
-    // std::cout << "Computing stereo rectification" << std::endl;
-    // cv::stereoRectify(
-    //     left_intr, left_dist,
-    //     right_intr, right_dist,
-    //     cv::Size(left->get_height(), left->get_width()),
-    //     R, T, 
-    //     _Rl, _Rr, _Pl, _Pr,
-    //     Q
-    // );
-    // cv::Mat intr_l2, intr_r2;
-    // std::cout << "Computing left remap" << std::endl;
-    // cv::initUndistortRectifyMap(
-    //     left_intr, left_dist, _Rl, intr_l2,
-    //     cv::Size(left->get_height(), left->get_width()),
-    //     CV_16SC2, mapl1, mapl2
-    // );    
-    // std::cout << "Computing right remap" << std::endl;
-    // cv::initUndistortRectifyMap(
-    //     right_intr, right_dist, _Rr, intr_r2,
-    //     cv::Size(left->get_height(), left->get_width()),
-    //     CV_16SC2, mapr1, mapr2
-    // );
+    cv::Mat _Rl, _Rr, _Pl, _Pr;
+    std::cout << "Computing stereo rectification" << std::endl;
+    cv::stereoRectify(
+        left_intr, left_dist,
+        right_intr, right_dist,
+        cv::Size(left->get_width(), left->get_height()),
+        R, T, 
+        _Rl, _Rr, _Pl, _Pr,
+        Q
+    );
+    std::cout << "Computing left remap" << std::endl;
+    cv::initUndistortRectifyMap(
+        left_intr, left_dist, _Rl, _Pl,
+        cv::Size(left->get_width(), left->get_height()),
+        CV_16SC2, mapl1, mapl2
+    );    
+    std::cout << "Computing right remap" << std::endl;
+    cv::initUndistortRectifyMap(
+        right_intr, right_dist, _Rr, _Pr,
+        cv::Size(left->get_width(), left->get_height()),
+        CV_16SC2, mapr1, mapr2
+    );
 }
 
 
@@ -54,10 +53,8 @@ void DepthCamera::update()
     
     left->lock(); 
     right->lock();
-    auto l = left->image();
-    auto r = right->image();
-    cv::undistort(*l, rect_l, left_intr, left_dist);
-    cv::undistort(*r, rect_r, right_intr, right_dist);
+    cv::remap(*left->image(), rect_l, mapl1, mapl2, cv::INTER_LINEAR);
+    cv::remap(*right->image(), rect_r, mapr1, mapr2, cv::INTER_LINEAR);
     left->unlock();
     right->unlock();
     stereo->compute(rect_l, rect_r, _disparity[target_idx]);

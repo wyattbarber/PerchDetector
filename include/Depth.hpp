@@ -23,10 +23,10 @@ public:
         right(right),
         left_intr(3,3,CV_64F,(void*)_left_intrinsic), 
         right_intr(3,3,CV_64F,(void*)_right_intrinsic), 
-        left_dist(14,1,CV_64F,(void*)_left_distortion), 
-        right_dist(14,1,CV_64F,(void*)_right_distortion), 
+        left_dist(1,5,CV_64F,(void*)_left_distortion), 
+        right_dist(1,5,CV_64F,(void*)_right_distortion), 
         R(3,3,CV_64F,(void*)_R), 
-        T(1,3,CV_64F,(void*)_T)
+        T(3,1,CV_64F,(void*)_T)
     {
         stereo = cv::StereoSGBM::create(
             	0, // minDisparity
