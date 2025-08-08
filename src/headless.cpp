@@ -26,7 +26,6 @@ int main_headless(ArgParser& args)
     while(true)
     {        
         std::cout << "Stereo cameras running..." << std::endl;
-        stereo::depth->update();
         stereo::depth->lock();
         auto x = stereo::depth->depth();
         stereo::depth->unlock();

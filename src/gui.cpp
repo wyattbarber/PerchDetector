@@ -56,7 +56,6 @@ int main_gui(ArgParser& args)
         memcpy(visualization::image->get_image()->data, im_placeholder.data, im_placeholder.total() * im_placeholder.elemSize());
         visualization::image->release();
         // Write depth image
-        stereo::depth->update();
         stereo::depth->lock();
         auto d = stereo::depth->depth();
         memcpy(visualization::depth->get_image()->data, d.data, d.total() * d.elemSize());
