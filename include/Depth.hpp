@@ -85,6 +85,21 @@ protected:
     size_t latest_idx;
     cv::Mat _disparity[N];
     cv::Mat rect_l, rect_r;
+
+    struct disp_conv
+    {
+        float M;
+
+        void operator()(float& p, const int* idx) const
+        {
+            if(std::abs(p) < 1e-3)
+                p = 0.0;
+            else
+                p = M / (p + std::numeric_limits<float>::epsilon());
+        }
+    };
+    struct disp_conv converter;
+
     // Camera parameters (distance units are cm)
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;
     static constexpr int n_disparity = 128; 

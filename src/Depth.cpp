@@ -33,6 +33,16 @@ void DepthCamera::initialize()
         cv::Size(left->get_width(), left->get_height()),
         CV_16SC2, mapr1, mapr2
     );
+
+    /* Initialize disparity to depth conversion
+        Conversion factor is Z = B*f / disparity, and opencv disparity
+        is scaled up by 15. The matrix Q is expected, for horizontal 
+        stereo cameras, to have f at element (2,3), and -1/B at element
+        (3,2)
+    */
+    converter.M =  static_cast<float>(Q.at<double>(2,3) / (16.0 * std::abs(Q.at<double>(3,2))));
+    std::cout << "Q: " << Q << std::endl;
+    std::cout << "Set disparity to depth conversion to " << converter.M << std::endl;
 }
 
 
@@ -64,20 +74,10 @@ void DepthCamera::update()
 }
 
 
-struct disp_conv
-{
-    double M = 5.0;
-
-    void operator()(float& p, const int* idx) const
-    {
-        p = M / (p + std::numeric_limits<float>::epsilon());
-    }
-};
-
-
 cv::Mat DepthCamera::depth()
 {
     cv::Mat out(disparity()->rows, disparity()->cols, CV_32F);
     disparity()->convertTo(out, CV_32F);
+    out.forEach<float>(converter);
     return out;
 }
