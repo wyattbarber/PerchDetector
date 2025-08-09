@@ -71,6 +71,72 @@ class ImageReader:
             return self._im
 
 
+class ParameterServer:
+    _positions = {
+            "minDisparity": 1,
+            "numDisparities": 2,
+            "blockSize": 4,
+            "P1": 4,
+            "P2": 4,
+            "disp12MaxDiff": 4,
+            "preFilterCap": 4,
+            "uniquenessRatio": 4,
+            "speckleWindowSize": 4,
+            "speckleRange": 4
+        }    
+    _sizes = {
+            "minDisparity": 1,
+            "numDisparities": 2,
+            "blockSize": 2,
+            "P1": 2,
+            "P2": 2,
+            "disp12MaxDiff": 2,
+            "preFilterCap": 2,
+            "uniquenessRatio": 2,
+            "speckleWindowSize": 2,
+            "speckleRange": 2
+        }
+
+    def __init__(self):
+        self._filename = None
+        self._valid = False
+        self._defaults = {}
+
+    def open(self):
+        self._file = open(self.file, "rb+")
+        self._mm = mmap.mmap(self._file.fileno(), 0, prot=mmap.PROT_READ | mmap.PROT_WRITE)
+        print(f"Opened parameter memory map")
+        self._valid = True
+
+    def close(self):
+        self._valid = False
+        self._file.close()
+
+    @property
+    def file(self):
+        if self._filename is None:
+            # Generate a filename in the tmp directory
+            path = tempfile.gettempdir()
+            prefix = tempfile.gettempprefix()
+            self._filename = os.path.join(path, prefix+"_img_stream_mmap_params")
+        return self._filename
+
+    def set_default(self, name: str, value: int):
+        self._defaults[name] = value
+
+    def set(self, name: str, value: int):
+        print(f"Setting {name} to {value}")
+        while self._mm[0] != 0:
+            time.sleep(0.01)# Wait for map to become available
+
+        self._mm[0] = 0xFF
+        start = self._positions[name]
+        end = start + self._sizes[name]
+        self._mm[start:end] = value.to_bytes(length=self._sizes[name], byteorder='little', signed=False)  
+        time.sleep(0.25) # Ensure falling edge of lock can be detected
+        self._mm[0] = 0
+        
+
 class imgen:
     def __init__(self, ui, img, reader):
         self.ui = ui
@@ -126,6 +192,33 @@ def make_subtitle(subtitle):
     return ui.markdown(f"{subtitle}\n{''.join(['-'] * len(subtitle))}\n\n")
 
 
+def _make_slider_callback(param, param_mapper):
+    def _inner(event):
+        param_mapper.set(param, int(event.value))
+    return _inner
+
+
+def _make_min_check(min):
+    def _inner(e):
+        return int(e) >= min
+    return _inner
+
+def _make_max_check(max):
+    def _inner(e):
+        return int(e) <= max
+    return _inner
+
+
+def make_slider(name, min, max, init, param_mapper):
+    param_mapper.set_default(name, init)
+    ui.input(label=name, placeholder=str(init), on_change=_make_slider_callback(name, param_mapper),
+        validation = {
+            "Too Low": _make_min_check(min),
+            "Too High": _make_max_check(max)
+        }
+    )
+
+
 def float_rescale(im):
     out = im.copy()
     out[np.isnan(out)] = 0
@@ -137,6 +230,20 @@ def float_rescale(im):
 
 if __name__ in {"__main__", "__mp_main__"}:
     make_title("Perch Detector Test and Visualization")
+    
+    params = ParameterServer()
+    with ui.row():
+        make_slider("minDisparity", 0, 100, 0, params)
+        make_slider("numDisparities", 0, 500, 256, params)
+        make_slider("blockSize", 0, 21, 5, params)
+        make_slider("P1", 0, 1000, 0, params)
+        make_slider("P2", 0, 1000, 0, params)    
+    with ui.row():
+        make_slider("disp12MaxDiff", -1, 100, -1, params)
+        make_slider("preFilterCap", 0, 100, 31, params)
+        make_slider("uniquenessRatio", 0, 100, 20, params)
+        make_slider("speckleWindowSize", 0, 500, 0, params)
+        make_slider("speckleRange", 0, 100, 0, params)
     
     with ui.row():
         with ui.column():            
@@ -153,7 +260,8 @@ if __name__ in {"__main__", "__mp_main__"}:
 
     processes = []
 
-    app.on_startup(starter((image_reader, depth_reader), processes, ("./build/main", "--image-file", image_reader.file, "--depth-file", depth_reader.file)))
-    app.on_shutdown(closer((image_reader, depth_reader), processes))
+    app.on_startup(starter((image_reader, depth_reader, params), processes, 
+        ("./build/main", "--image-file", image_reader.file, "--depth-file", depth_reader.file, "--parameter-file", params.file)))
+    app.on_shutdown(closer((image_reader, depth_reader, params), processes))
 
     ui.run()

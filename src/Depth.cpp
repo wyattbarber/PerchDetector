@@ -1,6 +1,10 @@
 #include <Depth.hpp>
 #include <opencv2/imgproc.hpp>
 #include <limits>
+#include <thread>
+
+
+using namespace std::chrono_literals;
 
 
 void DepthCamera::initialize()
@@ -67,7 +71,10 @@ void DepthCamera::update()
     cv::remap(*right->image(), rect_r, mapr1, mapr2, cv::INTER_LINEAR);
     left->unlock();
     right->unlock();
+    
+    _stereo_locked = true;
     stereo->compute(rect_l, rect_r, _disparity[target_idx]);
+    _stereo_locked = false;
 
     // Update indices
     latest_idx = target_idx;
@@ -80,4 +87,32 @@ cv::Mat DepthCamera::depth()
     disparity()->convertTo(out, CV_32F);
     out.forEach<float>(converter);
     return out;
+}
+
+
+void DepthCamera::set_params(int minDisparity,
+                    int	numDisparities,
+                    int	blockSize,
+                    int	P1,
+                    int	P2,
+                    int	disp12MaxDiff,
+                    int	preFilterCap,
+                    int	uniquenessRatio,
+                    int	speckleWindowSize,
+                    int	speckleRange)
+{
+    while(_stereo_locked)
+    {
+        // Ensure any parameter changes are done, should be a very short wait
+        std::this_thread::sleep_for(100ms);
+    }
+    stereo->setMinDisparity(minDisparity);
+    stereo->setNumDisparities(numDisparities);
+    stereo->setP1(P1);
+    stereo->setP2(P2);
+    stereo->setDisp12MaxDiff(disp12MaxDiff);
+    stereo->setPreFilterCap(preFilterCap);
+    stereo->setUniquenessRatio(uniquenessRatio);
+    stereo->setSpeckleWindowSize(speckleWindowSize);
+    stereo->setSpeckleRange(speckleRange);
 }

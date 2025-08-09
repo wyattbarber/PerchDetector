@@ -30,16 +30,17 @@ public:
     {
         stereo = cv::StereoSGBM::create(
             	0, // minDisparity
-                n_disparity, // numDisparities
-                7, // blockSize
+                256, // numDisparities
+                5, // blockSize
                 0, // P1
                 0, // P2
-                0, // disp12MaxDiff
-                0, // preFilterCap
-                0, // uniquenessRatio
-                150, // speckleWindowSize
-                2 // speckleRange
+                -1, // disp12MaxDiff
+                31, // preFilterCap
+                20, // uniquenessRatio
+                0, // speckleWindowSize
+                0 // speckleRange
             );
+        _stereo_locked = false;
         locked_idx = 0;
     }
 
@@ -76,9 +77,25 @@ public:
     */
     void initialize();
 
+    /** Changes the parameters for StereoSGBM.
+     
+    */
+    void set_params(int	minDisparity,
+                    int	numDisparities,
+                    int	blockSize,
+                    int	P1,
+                    int	P2,
+                    int	disp12MaxDiff,
+                    int	preFilterCap,
+                    int	uniquenessRatio,
+                    int	speckleWindowSize,
+                    int	speckleRange);
+
 protected:
     std::shared_ptr<CameraWrapper> left, right;
     cv::Ptr<cv::StereoSGBM> stereo;
+    bool _stereo_locked;
+
     // Data buffer
     static constexpr size_t N = 4;
     int locked_idx;
@@ -102,12 +119,11 @@ protected:
 
     // Camera parameters (distance units are cm)
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;
-    static constexpr int n_disparity = 128; 
     const cv::Mat left_intr, right_intr, left_dist, right_dist, R, T;
-    static constexpr double _left_intrinsic[] = {629.9333903041515, 0, 405.2045199935685, 0, 629.9333903041515, 318.0172477395962, 0, 0, 1};
-    static constexpr double _left_distortion[] = {0.141697251352411, -0.1700086026438087, 0, 0, 0, 0, 0, 0.3306948327230533, 0, 0, 0, 0, 0, 0};
-    static constexpr double _right_intrinsic[] = {629.9333903041515, 0, 404.147042716075, 0, 629.9333903041515, 308.7248574850515, 0, 0, 1};
-    static constexpr double _right_distortion[] = {0.1603950071594413, -0.148940226425748, 0, 0, 0, 0, 0, 0.5399694529707213, 0, 0, 0, 0, 0, 0};
-    static constexpr double _R[] = {0.9989588969333708, -0.04343256770475815, -0.01395472322314447, 0.04347647946309361, 0.9990503606365717, 0.002858783907747735, 0.0138173069430395, -0.003462509856678753, 0.9998985413802414}; 
-    static constexpr double _T[] = {-5.47029237377605, -0.01683788389047397, 0.08469902480152951}; 
+    static constexpr double _left_intrinsic[] = {581.0291623263779, 0, 402.6076033373866, 0, 581.0291623263779, 321.8633871605039, 0, 0, 1};
+    static constexpr double _left_distortion[] = {0.1070047468526379, -0.275348362674357, 0, 0, 0, 0, 0, -0.07797686695310302, 0, 0, 0, 0, 0, 0};
+    static constexpr double _right_intrinsic[] = {581.0291623263779, 0, 406.3044950461705, 0, 581.0291623263779, 317.2505827088175, 0, 0, 1};
+    static constexpr double _right_distortion[] = {0.07495053383740824, -0.0534409532722507, 0, 0, 0, 0, 0, 0.2097640304756714, 0, 0, 0, 0, 0, 0};
+    static constexpr double _R[] = {0.9967761808393969, -0.07640703898491494, -0.02447876027873495, 0.07639049952632984, 0.9970766745111561, -0.001611436592591298, 0.02453032599342867, -0.0002637031130498094, 0.9996990514986619}; 
+    static constexpr double _T[] = {-5.516592004583581, -0.2893022456287973, 0.0009606096523024099}; 
 };

@@ -33,7 +33,7 @@ class ArgParser
     public:
     ArgParser(int argc, char** argv)
     {
-        bool log_def = false, stats_def = false, image_def = false, depth_def = false, data_def = false;
+        bool log_def = false, stats_def = false, image_def = false, depth_def = false, data_def = false, param_def = false;
         int i = 1;
         while(i < argc)
         {
@@ -68,6 +68,12 @@ class ArgParser
                 data_def = true;
                 i += 2;
             }
+            else if (strcmp(argv[i], "--parameter-file") == 0)
+            {
+                _param_map = argv[i+1];
+                param_def = true;
+                i += 2;
+            }
             else
             {
                 i += 1;
@@ -77,8 +83,8 @@ class ArgParser
         if(image_def || depth_def || data_def)
         {
             _headless = false;
-            _valid = image_def && depth_def;
-            if(!_valid) std::cerr << "Image and depth mapping files must be specified in GUI mode." << std::endl;
+            _valid = image_def && depth_def && param_def;
+            if(!_valid) std::cerr << "Image, depth, and parameter mapping files must be specified in GUI mode." << std::endl;
         }
         else
         {
@@ -102,6 +108,9 @@ class ArgParser
     /** Filename for memory mapped numeric data display. */
     const char* data_map_file(){ return _data_map; }
 
+    /** Filename for memory mapped runtime parameters. */
+    const char* parameter_map_file(){ return _param_map; }
+
     /** Filename for text logs. */
     const char* log_file(){ return _log_file; }
 
@@ -110,7 +119,7 @@ class ArgParser
 
     protected:
     bool _valid, _headless;
-    char* _image_map, * _depth_map, * _data_map;
+    char* _image_map, * _depth_map, * _data_map, *_param_map;
     char* _log_file, * _stats_file;
 
 };

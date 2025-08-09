@@ -143,17 +143,13 @@ int main(int argc, char** argv)
     }
 
     std::vector<cv::Mat> rvecsl, tvecsl, rvecsr, tvecsr;
-    std::cout << "Calculating left calibration results." << std::endl;
-    double rms_l = cv::calibrateCamera(all_obj_points, all_left_points, size, left_camera_mat, left_dist_coef, rvecsl, tvecsl, calib_flags);
-    std::cout << "Calculating right calibration results." << std::endl;
-    double rms_r = cv::calibrateCamera(all_obj_points, all_right_points, size, right_camera_mat, right_dist_coef, rvecsr, tvecsr, calib_flags);
     std::cout << "Calculating stereo calibration results." << std::endl;
     double rms = cv::stereoCalibrate(all_obj_points, all_left_points, all_right_points,
                 left_camera_mat, left_dist_coef, right_camera_mat, right_dist_coef, size,
                 R, T, E, F,
                 calib_flags
             );
-    std::cout << "Calibration done, RMS " << std::round(rms * 100.0) / 100.0 << " total, " << std::round(rms_l * 100.0) / 100.0 << " left, " << std::round(rms_r * 100.0) / 100.0 << " right." << std::endl;
+    std::cout << "Calibration done, RMS " << std::round(rms * 1000.0) / 1000.0 << std::endl;
     calibrated = true;
 
     stop();

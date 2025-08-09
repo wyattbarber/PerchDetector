@@ -57,10 +57,28 @@ int main_gui(ArgParser& args)
         visualization::image->release();
         // Write depth image
         stereo::depth->lock();
-        auto d = stereo::depth->depth();
+        auto d = *stereo::depth->disparity();
         memcpy(visualization::depth->get_image()->data, d.data, d.total() * d.elemSize());
         stereo::depth->unlock();
         std::this_thread::sleep_for(100ms);
+        if(visualization::params->check())
+        {
+            std::cerr << "Changing stereo camera parameters" << std::endl;
+            visualization::params->lock();
+            stereo::depth->set_params(
+                visualization::params->minDisparity(),
+                visualization::params->numDisparities(),
+                visualization::params->blockSize(),
+                visualization::params->P1(),
+                visualization::params->P2(),
+                visualization::params->disp12MaxDiff(),
+                visualization::params->preFilterCap(),
+                visualization::params->uniquenessRatio(),
+                visualization::params->speckleWindowSize(),
+                visualization::params->speckleRange()
+            );
+            visualization::params->unlock();
+        }
     }
 
     return 0;
