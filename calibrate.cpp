@@ -4,6 +4,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/objdetect/aruco_board.hpp>
 #include <thread>
 #include <vector>
 #include <cstdio>
@@ -13,6 +14,9 @@
 
 
 using namespace std::chrono_literals;
+using namespace std;
+using namespace cv;
+
 
 // Results
 char outfile[100];
@@ -21,29 +25,27 @@ cv::Mat right_camera_mat = cv::Mat::eye(3, 3, CV_32FC1);
 cv::Mat left_camera_mat = cv::Mat::eye(3, 3, CV_32FC1);
 cv::Mat  left_dist_coef, right_dist_coef, R, T, E, F;
 
+// Settings
 const int N = 10;
 const auto find_flags = cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_FAST_CHECK | cv::CALIB_CB_NORMALIZE_IMAGE;
 const auto calib_flags = cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_SAME_FOCAL_LENGTH | 
                     cv::CALIB_RATIONAL_MODEL | cv::CALIB_FIX_K3 | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5;
 
-const int checker_width = 10;
-const int checker_height = 7;
-const float checker_size = 1.5;
+// Create charuco board object and CharucoDetector
+float squareLength = 15.0 // mm
+float markerLength = 11.0;// mm
+int squaresX = 15;
+int squaresY = 8;
+aruco::Dictionary dictLeft, dictRight;
+aruco::CharucoBoard boardLeft(Size(squaresX, squaresY), squareLength, markerLength, dictLeft);
+aruco::CharucoDetector detectorLeft(board, charucoParams, detectorParams);
+aruco::CharucoBoard boardRight(Size(squaresX, squaresY), squareLength, markerLength, dictRight);
+aruco::CharucoDetector detectorRight(board, charucoParams, detectorParams);
 
-
-auto make_object_points()
-{
-    std::vector<cv::Point3f> out;
-    for(int h = 0; h < checker_height; ++h)
-    {
-        for(int w = 0; w < checker_width; ++w)
-        {
-            out.push_back({h*checker_size, w*checker_size, 0.0});
-        }
-    }
-
-    return out;
-}
+// Collect data from each frame
+vector<Mat> allCharucoCornersLeft, allCharucoIdsLeft, allCharucoCornersRight, allCharucoIdsRight;
+vector<vector<Point2f>> allImagePointsLeft, allImagePointsRight;
+vector<vector<Point3f>> allObjectPointsLeft, allObjectPointsRight;
 
 
 void stop()
@@ -89,16 +91,10 @@ int main(int argc, char** argv)
 
     stereo::setup();
     stereo::start();
-    auto obj_points = make_object_points();
     std::this_thread::sleep_for(1s); // Makes sure image data is populated before calibrating
-    
-    bool left_checker_ok = false, right_checker_ok = false;
-
-    std::vector<std::vector<cv::Point2f>> all_left_points, all_right_points;
-    std::vector<decltype(obj_points)> all_obj_points;
-    cv::Size size;
-    
-    cv::Mat left_im, right_im;
+        
+    Mat left_im, right_im;
+    Size size;
 
     int i = 0;
     while(i < N)
@@ -113,30 +109,54 @@ int main(int argc, char** argv)
         stereo::left->unlock();
         stereo::right->unlock();
         
-        std::vector<cv::Point2f> left_points, right_points;
-        left_checker_ok = cv::findChessboardCorners(left_im, cv::Size(checker_width, checker_height), left_points, find_flags);
-        right_checker_ok = cv::findChessboardCorners(right_im, cv::Size(checker_width, checker_height), right_points, find_flags);
+        vector<int> markerIdsLeft, markerIdsRight;
+        vector<vector<Point2f>> markerCornersLeft, markerCornersRight;
+        Mat currentCharucoCornersLeft, currentCharucoIdsLeft, currentCharucoCornersRight, currentCharucoIdsRight;
+        vector<Point3f> currentObjectPointsLeft, currentObjectPointsRight;
+        vector<Point2f> currentImagePointsLeft, currentImagePointsRight;
+ 
+        // Detect ChArUco board
+        detectorLeft.detectBoard(left_im, currentCharucoCornersLeft, currentCharucoIdsLeft);
+        detectorRight.detectBoard(right_im, currentCharucoCornersRight, currentCharucoIdsRight);
 
-        auto left_im_draw = left_im.clone();
-        cv::drawChessboardCorners(left_im_draw, cv::Size(checker_width, checker_height), left_points, left_checker_ok);
-        char fname[50];
-        sprintf(fname, "checker-%d.png", i+1);
-        cv::imwrite(fname, left_im_draw);
-
-        if(!(left_checker_ok && right_checker_ok))
+        if((currentCharucoCornersLeft.total() <= 3) || (currentCharucoCornersRight.total() <= 3))
         {
             std::cout << "Failed to identify valid checkerboard pattern. Trying again." << std::endl;
         }
         else
         {
-            std::cout << "Checkerboard identified, refining corner positions." << std::endl;
-            cv::cornerSubPix(left_im, left_points, cv::Size(11,11), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 30, 0.001));
-            cv::cornerSubPix(right_im, right_points, cv::Size(11,11), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 30, 0.001));
-            std::cout << "Saving calibration pattern" << std::endl;
-            all_right_points.push_back(right_points);
-            all_left_points.push_back(left_points);
-            all_obj_points.push_back(obj_points);
-            
+            boardLeft.matchImagePoints( currentCharucoCornersLeft, 
+                                        currentCharucoIdsLeft, 
+                                        currentObjectPointsLeft, 
+                                        currentImagePointsLeft
+                                    );
+            boardRight.matchImagePoints(currentCharucoCornersRight, 
+                                        currentCharucoIdsRight, 
+                                        currentObjectPointsRight, 
+                                        currentImagePointsRight
+                                    );
+            if(currentImagePointsLeft.empty() || currentObjectPointsLeft.empty()) {
+                cout << "Left image point matching failed, try again." << endl;
+                continue;
+            }
+            if(currentImagePointsRight.empty() || currentObjectPointsRight.empty()) {
+                cout << "Right image point matching failed, try again." << endl;
+                continue;
+            }            
+ 
+            cout << "Frame captured" << endl;
+ 
+            allCharucoCornersLeft.push_back(currentCharucoCornersLeft);
+            allCharucoIdsLeft.push_back(currentCharucoIdsLeft);
+            allImagePointsLeft.push_back(currentImagePointsLeft);
+            allObjectPointsLeft.push_back(currentObjectPointsLeft);
+            allCharucoCornersRight.push_back(currentCharucoCornersRight);
+            allCharucoIdsRight.push_back(currentCharucoIdsRight);
+            allImagePointsRight.push_back(currentImagePointsRight);
+            allObjectPointsRight.push_back(currentObjectPointsRight);
+ 
+            size = image.size();
+
             i += 1;
         }
         std::this_thread::sleep_for(5s); 
@@ -144,12 +164,12 @@ int main(int argc, char** argv)
 
     std::vector<cv::Mat> rvecsl, tvecsl, rvecsr, tvecsr;
     std::cout << "Calculating stereo calibration results." << std::endl;
-    double rms = cv::stereoCalibrate(all_obj_points, all_left_points, all_right_points,
+    double rms = cv::stereoCalibrate(allObjectPointsLeft, allImagePointsLeft, allImagePointsRight,
                 left_camera_mat, left_dist_coef, right_camera_mat, right_dist_coef, size,
                 R, T, E, F,
                 calib_flags
             );
-    std::cout << "Calibration done, RMS " << std::round(rms * 1000.0) / 1000.0 << std::endl;
+    std::cout << "Calibration done, reprojection error: " << std::round(rms * 1000.0) / 1000.0 << std::endl;
     calibrated = true;
 
     stop();
