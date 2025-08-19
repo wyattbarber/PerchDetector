@@ -5,6 +5,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect/aruco_board.hpp>
+#include <opencv2/objdetect/charuco_detector.hpp>
+#include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <thread>
 #include <vector>
 #include <cstdio>
@@ -32,15 +34,15 @@ const auto calib_flags = cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIS
                     cv::CALIB_RATIONAL_MODEL | cv::CALIB_FIX_K3 | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5;
 
 // Create charuco board object and CharucoDetector
-float squareLength = 15.0 // mm
+float squareLength = 15.0; // mm
 float markerLength = 11.0;// mm
 int squaresX = 15;
 int squaresY = 8;
 aruco::Dictionary dictLeft, dictRight;
 aruco::CharucoBoard boardLeft(Size(squaresX, squaresY), squareLength, markerLength, dictLeft);
-aruco::CharucoDetector detectorLeft(board, charucoParams, detectorParams);
+aruco::CharucoDetector detectorLeft(boardLeft);
 aruco::CharucoBoard boardRight(Size(squaresX, squaresY), squareLength, markerLength, dictRight);
-aruco::CharucoDetector detectorRight(board, charucoParams, detectorParams);
+aruco::CharucoDetector detectorRight(boardRight);
 
 // Collect data from each frame
 vector<Mat> allCharucoCornersLeft, allCharucoIdsLeft, allCharucoCornersRight, allCharucoIdsRight;
@@ -155,7 +157,7 @@ int main(int argc, char** argv)
             allImagePointsRight.push_back(currentImagePointsRight);
             allObjectPointsRight.push_back(currentObjectPointsRight);
  
-            size = image.size();
+            size = left_im.size();
 
             i += 1;
         }
