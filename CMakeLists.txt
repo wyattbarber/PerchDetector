@@ -29,6 +29,12 @@ target_include_directories(calibrate PUBLIC include)
 target_link_libraries(calibrate PRIVATE cam_helpers)
 target_link_options(calibrate PRIVATE -Wl,--copy-dt-needed-entries)
 
+# Rectified image grabber
+add_executable(capture_rectify capture_rectify.cpp src/stereocam.cpp)
+target_include_directories(capture_rectify PUBLIC include)
+target_link_libraries(capture_rectify PRIVATE cam_helpers)
+target_link_options(capture_rectify PRIVATE -Wl,--copy-dt-needed-entries)
+
 # Main testing program
 add_executable(main main.cpp src/gui.cpp src/headless.cpp src/stereocam.cpp src/visualization.cpp)
 target_include_directories(main PUBLIC include)

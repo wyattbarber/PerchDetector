@@ -34,11 +34,12 @@ const auto calib_flags = cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIS
                     cv::CALIB_RATIONAL_MODEL | cv::CALIB_FIX_K3 | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5;
 
 // Create charuco board object and CharucoDetector
-float squareLength = 15.0; // mm
-float markerLength = 11.0;// mm
-int squaresX = 15;
-int squaresY = 8;
-aruco::Dictionary dictLeft, dictRight;
+float squareLength = 3.40; // cm
+float markerLength = 2.50; // cm
+int squaresX = 6;
+int squaresY = 4;
+aruco::Dictionary dictLeft = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+aruco::Dictionary dictRight = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
 aruco::CharucoBoard boardLeft(Size(squaresX, squaresY), squareLength, markerLength, dictLeft);
 aruco::CharucoDetector detectorLeft(boardLeft);
 aruco::CharucoBoard boardRight(Size(squaresX, squaresY), squareLength, markerLength, dictRight);
@@ -85,11 +86,22 @@ int main(int argc, char** argv)
 {
     if(argc < 2)
     {
-        std::cerr << "Output file required" << std::endl;
-        return -1;
+        Mat board_out;
+        boardLeft.generateImage(Size(800, 600), board_out);
+        imwrite("charuco-board.png", board_out);
+        return 0;
     }
     strcpy(outfile, argv[1]);
     calibrated = false;
+
+    allCharucoCornersLeft.reserve(N);
+    allCharucoIdsLeft.reserve(N);
+    allImagePointsLeft.reserve(N);
+    allObjectPointsLeft.reserve(N);
+    allCharucoCornersRight.reserve(N);
+    allCharucoIdsRight.reserve(N);
+    allImagePointsRight.reserve(N);
+    allObjectPointsRight.reserve(N);
 
     stereo::setup();
     stereo::start();
@@ -110,6 +122,9 @@ int main(int argc, char** argv)
         size = stereo::left->image()->size();
         stereo::left->unlock();
         stereo::right->unlock();
+
+        imwrite("left.png", left_im);
+        imwrite("right.png", right_im);
         
         vector<int> markerIdsLeft, markerIdsRight;
         vector<vector<Point2f>> markerCornersLeft, markerCornersRight;
@@ -121,7 +136,10 @@ int main(int argc, char** argv)
         detectorLeft.detectBoard(left_im, currentCharucoCornersLeft, currentCharucoIdsLeft);
         detectorRight.detectBoard(right_im, currentCharucoCornersRight, currentCharucoIdsRight);
 
-        if((currentCharucoCornersLeft.total() <= 3) || (currentCharucoCornersRight.total() <= 3))
+        if(
+            (currentCharucoCornersLeft.total() < boardLeft.getObjPoints().size())  || 
+            (currentCharucoCornersRight.total() < boardRight.getObjPoints().size()) 
+        )
         {
             std::cout << "Failed to identify valid checkerboard pattern. Trying again." << std::endl;
         }
@@ -137,14 +155,19 @@ int main(int argc, char** argv)
                                         currentObjectPointsRight, 
                                         currentImagePointsRight
                                     );
-            if(currentImagePointsLeft.empty() || currentObjectPointsLeft.empty()) {
+            if(currentImagePointsLeft.size() != currentObjectPointsLeft.size()) {
                 cout << "Left image point matching failed, try again." << endl;
                 continue;
             }
-            if(currentImagePointsRight.empty() || currentObjectPointsRight.empty()) {
+            if(currentImagePointsRight.size() != currentObjectPointsRight.size()) {
                 cout << "Right image point matching failed, try again." << endl;
                 continue;
             }            
+            if(currentImagePointsLeft.size() != currentImagePointsRight.size())
+            {
+                cout << "Right and left point sets do not match" << endl;
+                continue;
+            }
  
             cout << "Frame captured" << endl;
  

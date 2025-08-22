@@ -64,16 +64,15 @@ void DepthCamera::update()
         target_idx = (locked_idx == 0) ? 1 : 0;
     }
 
-    
+    cv::Mat right_im, left_im, left_rect, right_rect;
     left->lock(); 
     right->lock();
-    cv::remap(*left->image(), rect_l, mapl1, mapl2, cv::INTER_LINEAR);
-    cv::remap(*right->image(), rect_r, mapr1, mapr2, cv::INTER_LINEAR);
+    rectify(*left->image(), *right->image(), left_rect, right_rect);
     left->unlock();
     right->unlock();
-    
+
     _stereo_locked = true;
-    stereo->compute(rect_l, rect_r, _disparity[target_idx]);
+    stereo->compute(left_rect, right_rect, _disparity[target_idx]);
     _stereo_locked = false;
 
     // Update indices
@@ -87,6 +86,13 @@ cv::Mat DepthCamera::depth()
     disparity()->convertTo(out, CV_32F);
     out.forEach<float>(converter);
     return out;
+}
+
+
+void DepthCamera::rectify(cv::Mat& left_in, cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out)
+{
+    cv::remap(left_in, left_out, mapl1, mapl2, cv::INTER_LINEAR);
+    cv::remap(right_in, right_out, mapr1, mapr2, cv::INTER_LINEAR);
 }
 
 
@@ -108,8 +114,8 @@ void DepthCamera::set_params(int minDisparity,
     }
     stereo->setMinDisparity(minDisparity);
     stereo->setNumDisparities(numDisparities);
-    stereo->setP1(P1);
-    stereo->setP2(P2);
+    // stereo->setP1(P1);
+    // stereo->setP2(P2);
     stereo->setDisp12MaxDiff(disp12MaxDiff);
     stereo->setPreFilterCap(preFilterCap);
     stereo->setUniquenessRatio(uniquenessRatio);

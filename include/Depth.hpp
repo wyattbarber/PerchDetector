@@ -28,18 +28,25 @@ public:
         R(3,3,CV_64F,(void*)_R), 
         T(3,1,CV_64F,(void*)_T)
     {
-        stereo = cv::StereoSGBM::create(
-            	0, // minDisparity
-                256, // numDisparities
-                5, // blockSize
-                0, // P1
-                0, // P2
-                -1, // disp12MaxDiff
-                31, // preFilterCap
-                20, // uniquenessRatio
-                0, // speckleWindowSize
-                0 // speckleRange
-            );
+        // stereo = cv::StereoSGBM::create(
+        //     	0, // minDisparity
+        //         16*5, // numDisparities
+        //         7, // blockSize
+        //         1, // P1
+        //         8, // P2
+        //         -1, // disp12MaxDiff
+        //         0, // preFilterCap
+        //         10, // uniquenessRatio
+        //         50, // speckleWindowSize
+        //         1 // speckleRange
+        //     );
+        stereo = cv::StereoBM::create(0, 16*6);
+        stereo->setBlockSize(15);
+        // stereo->setUniquenessRatio(1);
+        // stereo->setSpeckleWindowSize(50);
+        // stereo->setSpeckleRange(1);
+        // stereo->setTextureThreshold(0);
+
         _stereo_locked = false;
         locked_idx = 0;
     }
@@ -90,10 +97,15 @@ public:
                     int	uniquenessRatio,
                     int	speckleWindowSize,
                     int	speckleRange);
+    
+    /** Applies rectification from the calibration data to a pair of images.
+    
+    */
+    void rectify(cv::Mat& left_in, cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out);
 
 protected:
     std::shared_ptr<CameraWrapper> left, right;
-    cv::Ptr<cv::StereoSGBM> stereo;
+    cv::Ptr<cv::StereoBM> stereo;
     bool _stereo_locked;
 
     // Data buffer
@@ -120,10 +132,10 @@ protected:
     // Camera parameters (distance units are cm)
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;
     const cv::Mat left_intr, right_intr, left_dist, right_dist, R, T;
-    static constexpr double _left_intrinsic[] = {581.0291623263779, 0, 402.6076033373866, 0, 581.0291623263779, 321.8633871605039, 0, 0, 1};
-    static constexpr double _left_distortion[] = {0.1070047468526379, -0.275348362674357, 0, 0, 0, 0, 0, -0.07797686695310302, 0, 0, 0, 0, 0, 0};
-    static constexpr double _right_intrinsic[] = {581.0291623263779, 0, 406.3044950461705, 0, 581.0291623263779, 317.2505827088175, 0, 0, 1};
-    static constexpr double _right_distortion[] = {0.07495053383740824, -0.0534409532722507, 0, 0, 0, 0, 0, 0.2097640304756714, 0, 0, 0, 0, 0, 0};
-    static constexpr double _R[] = {0.9967761808393969, -0.07640703898491494, -0.02447876027873495, 0.07639049952632984, 0.9970766745111561, -0.001611436592591298, 0.02453032599342867, -0.0002637031130498094, 0.9996990514986619}; 
-    static constexpr double _T[] = {-5.516592004583581, -0.2893022456287973, 0.0009606096523024099}; 
+    static constexpr double _left_intrinsic[] = {635.1785761582178, 0, 403.9176435893709, 0, 635.1785761582178, 315.6895331764429, 0, 0, 1};
+    static constexpr double _left_distortion[] = {0.06425766346938531, 0.2803647129199536, 0, 0, 0, 0, 0, 0.8826899528336022, 0, 0, 0, 0, 0, 0};
+    static constexpr double _right_intrinsic[] = {635.1785761582178, 0, 402.351935054699, 0, 635.1785761582178, 315.7204369891957, 0, 0, 1};
+    static constexpr double _right_distortion[] = {0.07421160862648429, 0.5709942396909135, 0, 0, 0, 0, 0, 2.225296151452876, 0, 0, 0, 0, 0, 0};
+    static constexpr double _R[] = {0.9996814737070656, -0.01851791283139589, -0.01714753717705048, 0.01817539854252873, 0.9996363685898212, -0.01991947490209907, 0.01751016889380995, 0.01960146670338558, 0.9996545285689383}; 
+    static constexpr double _T[] = {-7.302706912589366, 0.2571508864407846, -0.137874049067649}; 
 };
