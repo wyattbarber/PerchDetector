@@ -73,6 +73,8 @@ void DepthCamera::update()
 
     _stereo_locked = true;
     stereo->compute(left_rect, right_rect, _disparity[target_idx]);
+    if(_disparity[target_idx].empty())
+        std::cout << "Empty disparity map produced" << std::endl;
     _stereo_locked = false;
 
     // Update indices

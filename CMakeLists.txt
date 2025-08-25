@@ -6,6 +6,9 @@ find_package(OpenCV REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
 find_package(Gstreamer REQUIRED HINTS cmake)
 
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g")
+set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
+
 # Utility for listing detected cameras
 add_executable(camscan camscan.cpp)
 target_link_libraries(camscan PRIVATE LibCamera ${OpenCV_LIBS})

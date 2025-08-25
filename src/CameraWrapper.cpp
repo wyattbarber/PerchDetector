@@ -80,8 +80,12 @@ static void delete_cookie(uint64_t cookie)
 static void requestComplete(Request *request)
 {
     if (request->status() == Request::RequestCancelled)
+    {
+        std::cout << "Request cancelled" << std::endl;
         return;
-
+    }
+    std::cout << "Request completed" << std::endl;
+    
     // Get the associated CameraWrapper and the index of this request in its request vector
     CameraWrapper* camera;
     uint8_t req_idx;

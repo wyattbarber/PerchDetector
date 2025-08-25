@@ -36,6 +36,8 @@ void stereo::setup()
     running = false;
 
     cm = std::make_unique<libcamera::CameraManager>();
+    cm->cameraAdded.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ std::cout << cam->id() << " connected." << std::endl; });
+    cm->cameraRemoved.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ std::cout << cam->id() << " removed." << std::endl; });
     cm->start();
     left = std::make_shared<CameraWrapper>("left-camera", cm, id_cam_left);
     right = std::make_shared<CameraWrapper>("right-camera", cm, id_cam_right);
