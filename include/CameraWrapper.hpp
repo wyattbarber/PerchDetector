@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Logging.hpp>
 #include <libcamera/libcamera.h>
 #include <memory>
 #include <opencv2/core/mat.hpp>
@@ -36,7 +37,7 @@ class CameraWrapper
             if(check(camera->id()))
             {
                 // This cameras id matches what this wrapper should attach to
-                std::cout << name << ": Attaching to detected camera " << camera->id() << std::endl;
+                Logger::instance() << name << ": Attaching to detected camera " << camera->id() << std::endl;
                 this->camera = cm->get(camera->id());
                 return;
             }

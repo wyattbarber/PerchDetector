@@ -1,7 +1,7 @@
 #pragma once
 #include <CameraWrapper.hpp>
 #include <Depth.hpp>
-
+#include <Logging.hpp>
 /** Helper functions for initializing and destroying global camera wrappers.
 
 */

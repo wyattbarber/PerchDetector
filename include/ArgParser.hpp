@@ -31,7 +31,13 @@
 class ArgParser
 {
     public:
-    ArgParser(int argc, char** argv)
+    ArgParser(int argc, char** argv) :
+        _image_map(nullptr),
+        _depth_map(nullptr), 
+        _data_map(nullptr), 
+        _param_map(nullptr),
+        _log_file(nullptr), 
+        _stats_file(nullptr)
     {
         bool log_def = false, stats_def = false, image_def = false, depth_def = false, data_def = false, param_def = false;
         int i = 1;

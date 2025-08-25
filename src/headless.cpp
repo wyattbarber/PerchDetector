@@ -1,6 +1,7 @@
 #include <CameraWrapper.hpp>
 #include <ArgParser.hpp>
 #include <Depth.hpp>
+#include <Logging.hpp>
 #include <stereocam.hpp>
 #include <functional>
 #include <chrono>
@@ -28,7 +29,7 @@ int main_headless(ArgParser& args)
     std::this_thread::sleep_for(100ms); // Makes sure image data is populated before calculating depth
     while(true)
     {        
-        std::cout << "Stereo cameras running..." << std::endl;
+        Logger::instance() << "Stereo cameras running..." << std::endl;
         std::this_thread::sleep_for(100ms);
     }
 

@@ -1,4 +1,5 @@
 #include <CameraWrapper.hpp>
+#include <Logging.hpp>
 #include <thread>
 #include <unordered_map>
 #include <stdio.h>
@@ -81,10 +82,10 @@ static void requestComplete(Request *request)
 {
     if (request->status() == Request::RequestCancelled)
     {
-        std::cout << "Request cancelled" << std::endl;
+        Logger::instance() << "Request cancelled" << std::endl;
         return;
     }
-    std::cout << "Request completed" << std::endl;
+    Logger::instance() << "Request completed" << std::endl;
     
     // Get the associated CameraWrapper and the index of this request in its request vector
     CameraWrapper* camera;
@@ -121,12 +122,12 @@ void CameraWrapper::configure()
     // extracting grayscale is fast and simple.
 
     config = camera->generateConfiguration( { StreamRole::Viewfinder } );
-    std::cout << name << ": Default viewfinder configuration is: " << config->at(0).toString() << std::endl;
+    Logger::instance() << name << ": Default viewfinder configuration is: " << config->at(0).toString() << std::endl;
     config->at(0).pixelFormat = PixelFormat::fromString("YVU420"); 
     config->validate();   
     width = config->at(0).size.width;
     height = config->at(0).size.height;
-    std::cout << name << ": Validated viewfinder configuration is: " << config->at(0).toString() << std::endl;
+    Logger::instance() << name << ": Validated viewfinder configuration is: " << config->at(0).toString() << std::endl;
     camera->configure(config.get());
 
     // Allocate all buffers for this config. The number of buffers used is defined by the configuration.
@@ -139,7 +140,7 @@ void CameraWrapper::configure()
         }
 
         size_t allocated = allocator->buffers(cfg.stream()).size();
-        std::cout << name << ": Allocated " << allocated << " buffers for stream" << std::endl;
+        Logger::instance() << name << ": Allocated " << allocated << " buffers for stream" << std::endl;
     }
 
     stream = config->at(0).stream();
@@ -170,7 +171,7 @@ void CameraWrapper::configure()
         // Create a memory mapped array from the planes file descriptor.
         // Only plane 0 is used from each buffer, since we are only using grayscale images.
         const FrameBuffer::Plane& plane = buffer->planes().at(0);
-        std::cout << name << ": Mapping plane of size " << plane.length << " at offset " << plane.offset << std::endl;
+        Logger::instance() << name << ": Mapping plane of size " << plane.length << " at offset " << plane.offset << std::endl;
         bytes = plane.length;
         void* plane_map = mmap(0, bytes, PROT_READ , MAP_SHARED, plane.fd.get(), plane.offset);
         if(plane_map == MAP_FAILED)
@@ -219,7 +220,7 @@ void CameraWrapper::set_freshest(uint8_t idx)
     requests[next]->reuse(Request::ReuseBuffers);
     if(running)
     {
-        // std::cout << "Request " << (int)idx << " finished, restarting request " << (int)next << std::endl;
+        // Logger::instance() << "Request " << (int)idx << " finished, restarting request " << (int)next << std::endl;
         camera->queueRequest(requests[next].get());
     }
 }

@@ -1,4 +1,5 @@
 #include <Depth.hpp>
+#include <Logging.hpp>
 #include <opencv2/imgproc.hpp>
 #include <limits>
 #include <thread>
@@ -16,7 +17,7 @@ void DepthCamera::initialize()
 
     // Initialize stereo calibration data
     cv::Mat _Rl, _Rr, _Pl, _Pr;
-    std::cout << "Computing stereo rectification" << std::endl;
+    Logger::instance() << "Computing stereo rectification" << std::endl;
     cv::stereoRectify(
         left_intr, left_dist,
         right_intr, right_dist,
@@ -25,13 +26,13 @@ void DepthCamera::initialize()
         _Rl, _Rr, _Pl, _Pr,
         Q
     );
-    std::cout << "Computing left remap" << std::endl;
+    Logger::instance() << "Computing left remap" << std::endl;
     cv::initUndistortRectifyMap(
         left_intr, left_dist, _Rl, _Pl,
         cv::Size(left->get_width(), left->get_height()),
         CV_16SC2, mapl1, mapl2
     );    
-    std::cout << "Computing right remap" << std::endl;
+    Logger::instance() << "Computing right remap" << std::endl;
     cv::initUndistortRectifyMap(
         right_intr, right_dist, _Rr, _Pr,
         cv::Size(left->get_width(), left->get_height()),
@@ -45,15 +46,15 @@ void DepthCamera::initialize()
         (3,2)
     */
     converter.M =  static_cast<float>(Q.at<double>(2,3) / (16.0 * std::abs(Q.at<double>(3,2))));
-    std::cout << "Q: " << Q << std::endl;
-    std::cout << "Set disparity to depth conversion to " << converter.M << std::endl;
+    Logger::instance() << "Q: " << Q << std::endl;
+    Logger::instance() << "Set disparity to depth conversion to " << converter.M << std::endl;
 }
 
 
 void DepthCamera::update()
 {
     // Determine the next buffer to update
-    std::cout << "Depth index updating" << std::endl;
+    Logger::instance() << "Depth index updating" << std::endl;
     size_t target_idx = latest_idx + 1;
     if(target_idx == locked_idx)
     {
@@ -74,7 +75,7 @@ void DepthCamera::update()
     _stereo_locked = true;
     stereo->compute(left_rect, right_rect, _disparity[target_idx]);
     if(_disparity[target_idx].empty())
-        std::cout << "Empty disparity map produced" << std::endl;
+        Logger::instance() << "Empty disparity map produced" << std::endl;
     _stereo_locked = false;
 
     // Update indices

@@ -1,4 +1,5 @@
 #include <ImageSender.hpp>
+#include <Logging.hpp>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -12,7 +13,7 @@
 void ImageSender::start()
 {
     // Open the file and ensure it has enough space
-    std::cout << "Opening " << file << std::endl;
+    Logger::instance() << "Opening " << file << std::endl;
     // Open file, with permission to create it and resize it, and set mode to allow read/write for self and read for all users
     fd = open(file, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if(fd == -1)

@@ -1,6 +1,7 @@
 #include <CameraWrapper.hpp>
 #include <ImageSender.hpp>
 #include <ArgParser.hpp>
+#include <Logging.hpp>
 #include <stereocam.hpp>
 #include <visualization.hpp>
 #include <functional>
@@ -42,12 +43,12 @@ int main_gui(ArgParser& args)
     }
 
     stereo::start();
-    std::cout << "Started image feed" << std::endl;
+    std::cout << "Started image feed" << std::endl; // This is alwasy logged to cout as it is the signal to the python GUI that this program is started
     std::this_thread::sleep_for(100ms); // Makes sure image data is populated before calculating depth
 
     while(true)
     {        
-        std::cout << "Writing one frame to the display" << std::endl;
+        Logger::instance() << "Writing one frame to the display" << std::endl;
         // Write grayscale image
         stereo::left->lock();
         stereo::left->image()->copyTo(im_placeholder);

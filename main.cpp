@@ -1,6 +1,7 @@
 #include <CameraWrapper.hpp>
 #include <ImageSender.hpp>
 #include <ArgParser.hpp>
+#include <Logging.hpp>
 #include <functional>
 #include <chrono>
 #include <thread>
@@ -20,6 +21,12 @@ int main(int argc, char** argv)
     {
         std::cerr << "Provided arguments invalid." << std::endl;
         return -1;
+    }
+    
+    if(args.log_file() != nullptr)
+    {
+        // Enable file output for logging
+        Logger::instance().set_file(args.log_file());
     }
     
     if(args.headless())
