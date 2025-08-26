@@ -261,7 +261,7 @@ if __name__ in {"__main__", "__mp_main__"}:
     processes = []
 
     app.on_startup(starter((image_reader, depth_reader, params), processes, 
-        ("./build/main", "--image-file", image_reader.file, "--depth-file", depth_reader.file, "--parameter-file", params.file)))
+        ("./build/main", "--image-file", image_reader.file, "--depth-file", depth_reader.file, "--parameter-file", params.file, "--log-file", "log.txt")))
     app.on_shutdown(closer((image_reader, depth_reader, params), processes))
 
     ui.run()
