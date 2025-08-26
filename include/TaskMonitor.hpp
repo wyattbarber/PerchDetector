@@ -47,17 +47,10 @@ public:
     @return Rate, in Hz
     */
     float rate(){ return _rate_est; }
-    
-    /** Provides an estimate of the standard deviation
-        of the monitored tasks rate 
-
-    @return Estimated standard deviation
-    */
-    float dev() = delete; // Not yet implemented
 
     /** Checks if the measured cycle time is near the expected rate.
     
-    Uses the latest estimate of the average update rate as the real value,
+    Uses the latest estimate of the update rate as the real value,
     and checks if the difference between that and the expected value
     given to the constructor is less than the specified tolerance.
 

@@ -28,6 +28,11 @@ int main(int argc, char** argv)
         // Enable file output for logging
         Logger::instance().set_file(args.log_file());
     }
+    if(args.stats_file() != nullptr)
+    {
+        // Enable file output for data logging
+        DataLogger::instance().set_file(args.stats_file());
+    }
     
     if(args.headless())
     {

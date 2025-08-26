@@ -6,6 +6,7 @@
 #include <opencv2/imgproc.hpp>
 #include <thread>
 #include <vector>
+#include <csignal>
 #include <cstdio>
 #include <cmath>
 #include <iostream>
@@ -36,6 +37,8 @@ Mat left_im, right_im, left_im_rect, right_im_rect;
 
 int main(int argc, char** argv)
 {
+    signal(SIGINT, sig_handle);
+
     stereo::setup();
     stereo::start();
     this_thread::sleep_for(1s); // Makes sure image data is populated before calibrating
