@@ -24,11 +24,14 @@ class CameraWrapper
     is the id of a camera detected on the system, and return a boolean indicating
     if that id matches the camera that this wrapper should attach itself to. 
 
+    @param name Camera name, for logging
     @param cm Global camera manager instance
     @param check Function to check the string id of a detected camera    
+    @param color Use RGB color format instead of grayscale.
     */
-    CameraWrapper(const std::string name, const std::unique_ptr<libcamera::CameraManager>& cm, bool(*check)(const std::string&)) :
-        name(name)
+    CameraWrapper(const std::string name, const std::unique_ptr<libcamera::CameraManager>& cm, bool(*check)(const std::string&), bool color = false) :
+        name(name),
+        color(color)
     {
         running = false;
         // Check all cameras
@@ -47,7 +50,8 @@ class CameraWrapper
 
     CameraWrapper(CameraWrapper& other) :
         name(other.name),
-        camera(other.camera)    
+        camera(other.camera),
+        color(other.color)    
     { 
         running = false;
     }
@@ -169,6 +173,7 @@ class CameraWrapper
     size_t freshest_buffer;
     uint16_t locked_idx;
     bool running;
+    const bool color;
 };
 
 

@@ -10,7 +10,7 @@ namespace stereo
     extern std::unique_ptr<libcamera::CameraManager> cm;
     extern std::shared_ptr<CameraWrapper> left, right;
     extern std::shared_ptr<DepthCamera> depth;
-    void setup();
+    void setup(bool depth_on, bool color = false);
     void start();
     void stop();
     void teardown();

@@ -16,6 +16,7 @@ static bool id_cam_left(const std::string& id){return id.find("i2c@0/imx219@10")
 static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10") != std::string::npos;}
 
 static bool running, shutdown;
+static bool _depth_on;
 static std::thread depth_thread;
 
 
@@ -31,8 +32,9 @@ static void depth_thread_f()
 }
 
 
-void stereo::setup()
+void stereo::setup(bool depth_on, bool color)
 {
+    _depth_on = depth_on;
     shutdown = false;
     running = false;
 
@@ -40,17 +42,20 @@ void stereo::setup()
     cm->cameraAdded.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ Logger::instance() << cam->id() << " connected." << std::endl; });
     cm->cameraRemoved.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ Logger::instance() << cam->id() << " removed." << std::endl; });
     cm->start();
-    left = std::make_shared<CameraWrapper>("left-camera", cm, id_cam_left);
-    right = std::make_shared<CameraWrapper>("right-camera", cm, id_cam_right);
-    depth = std::make_shared<DepthCamera>(left, right);
+    left = std::make_shared<CameraWrapper>("left-camera", cm, id_cam_left, color);
+    right = std::make_shared<CameraWrapper>("right-camera", cm, id_cam_right, color);
     
     left->acquire();
     left->configure();
     right->acquire();
     right->configure();
 
-    depth->initialize();
-    depth_thread = std::thread(depth_thread_f);
+    if(_depth_on)
+    {
+        depth = std::make_shared<DepthCamera>(left, right);
+        depth->initialize();
+        depth_thread = std::thread(depth_thread_f);
+    }
 }
 
 void stereo::start()
@@ -73,7 +78,10 @@ void stereo::stop()
 void stereo::teardown()
 {
     shutdown = true;
-    depth_thread.join();
+    if(_depth_on)
+    {
+        depth_thread.join();
+    }
     left->release();
     right->release();
     cm->stop();

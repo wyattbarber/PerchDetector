@@ -13,6 +13,7 @@
 #include <cmath>
 #include <iostream>
 #include <fstream>
+#include <Logging.hpp>
 
 
 using namespace std::chrono_literals;
@@ -30,8 +31,8 @@ cv::Mat  left_dist_coef, right_dist_coef, R, T, E, F;
 // Settings
 const int N = 10;
 const auto find_flags = cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_FAST_CHECK | cv::CALIB_CB_NORMALIZE_IMAGE;
-const auto calib_flags = cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_SAME_FOCAL_LENGTH | 
-                    cv::CALIB_RATIONAL_MODEL | cv::CALIB_FIX_K3 | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5;
+// const auto calib_flags = cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_SAME_FOCAL_LENGTH | 
+//                     cv::CALIB_RATIONAL_MODEL | cv::CALIB_FIX_K3 | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5;
 
 // Create charuco board object and CharucoDetector
 float squareLength = 3.40; // cm
@@ -84,6 +85,8 @@ static void sig_handle(int signum)
 
 int main(int argc, char** argv)
 {
+    Logger::instance().set_file("calibration-log.txt");
+
     if(argc < 2)
     {
         Mat board_out;
@@ -191,8 +194,7 @@ int main(int argc, char** argv)
     std::cout << "Calculating stereo calibration results." << std::endl;
     double rms = cv::stereoCalibrate(allObjectPointsLeft, allImagePointsLeft, allImagePointsRight,
                 left_camera_mat, left_dist_coef, right_camera_mat, right_dist_coef, size,
-                R, T, E, F,
-                calib_flags
+                R, T, E, F
             );
     std::cout << "Calibration done, reprojection error: " << std::round(rms * 1000.0) / 1000.0 << std::endl;
     calibrated = true;
