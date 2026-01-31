@@ -29,14 +29,16 @@
 typedef struct
 {
     int fd; /// File descriptor of the SPI port, opened in read/write mode
-	const int wordsize = 8; /// Bits per word
-	const int freq = 1000000; /// 1 MHz speed
-	const int spimode = 0; 
-	const int spidelay = 0;
+	const int wordsize;
+	const int freq;
+	const int spimode; 
+	const int delay;
 } VL53L8CX_Platform;
 
 
 /** Opens communication to a new SPI device.
+
+If opening the file fails, will return nullptr.
 
 @param fname Filename of the SPI interface
 
