@@ -14,11 +14,25 @@ set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
 # target_link_libraries(camscan PRIVATE LibCamera ${OpenCV_LIBS})
 # target_link_options(camscan PRIVATE -Wl,--copy-dt-needed-entries)
 
+# VL53L8CX API library
+add_library(stsw_img040 STATIC 
+    STSW_IMG040/Platform/platform.cpp
+    STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_detection_thresholds.c
+    STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_motion_indicator.c
+    STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_xtalk.c
+)
+target_include_directories(stsw_img040 PRIVATE include STSW_IMG040/Platform)
+target_include_directories(stsw_img040 PUBLIC STSW_IMG040/VL53L8CX_ULD_API/inc)
+
 # Library of helpers 
-add_library(cam_helpers STATIC)
+add_library(cam_helpers STATIC
+    src/CameraWrapper.cpp 
+    src/ImageSender.cpp 
+    src/Depth.cpp
+)
 target_include_directories(cam_helpers PUBLIC include)
 target_link_libraries(cam_helpers PUBLIC LibCamera ${OpenCV_LIBS})
-target_sources(cam_helpers PRIVATE src/CameraWrapper.cpp src/ImageSender.cpp src/Depth.cpp)
+
 
 # # Test for the visualization stream
 # add_executable(testfeed testfeed.cpp)
