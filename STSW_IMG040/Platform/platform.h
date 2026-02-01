@@ -29,22 +29,20 @@
 typedef struct
 {
     int fd; /// File descriptor of the SPI port, opened in read/write mode
-	const int wordsize;
-	const int freq;
-	const int spimode; 
-	const int delay;
+	int address; /// Unused with SPI, but needed for API code to compile
+	int wordsize;
+	int freq;
+	int spimode; 
+	int delay;
 } VL53L8CX_Platform;
 
 
 /** Opens communication to a new SPI device.
 
-If opening the file fails, will return nullptr.
-
 @param fname Filename of the SPI interface
-
-@return new description of the opened interface
+@param dev Device description struct to populate
 */
-VL53L8CX_Platform* open_VL53L8CX(const char* fname);
+void open_VL53L8CX(const char* fname, VL53L8CX_Platform* dev);
 
 
 /** Closes SPI device interface.

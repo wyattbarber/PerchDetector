@@ -17,12 +17,21 @@ set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
 # VL53L8CX API library
 add_library(stsw_img040 STATIC 
     STSW_IMG040/Platform/platform.cpp
+    STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_api.c
     STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_detection_thresholds.c
     STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_motion_indicator.c
     STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_xtalk.c
 )
-target_include_directories(stsw_img040 PRIVATE include STSW_IMG040/Platform)
-target_include_directories(stsw_img040 PUBLIC STSW_IMG040/VL53L8CX_ULD_API/inc)
+set_source_files_properties(
+    STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_api.c
+    STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_detection_thresholds.c
+    STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_motion_indicator.c
+    STSW_IMG040/VL53L8CX_ULD_API/src/vl53l8cx_plugin_xtalk.c
+
+    PROPERTIES LANGUAGE CXX
+)
+target_include_directories(stsw_img040 PRIVATE include)
+target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/VL53L8CX_ULD_API/inc)
 
 # Library of helpers 
 add_library(cam_helpers STATIC
@@ -46,10 +55,10 @@ target_link_libraries(cam_helpers PUBLIC LibCamera ${OpenCV_LIBS})
 # target_link_libraries(calibrate PRIVATE cam_helpers)
 # target_link_options(calibrate PRIVATE -Wl,--copy-dt-needed-entries)
 
-add_executable(capture capture.cpp src/stereocam.cpp)
-target_include_directories(capture PUBLIC include)
-target_link_libraries(capture PRIVATE cam_helpers)
-target_link_options(capture PRIVATE -Wl,--copy-dt-needed-entries)
+# add_executable(capture capture.cpp src/stereocam.cpp)
+# target_include_directories(capture PUBLIC include)
+# target_link_libraries(capture PRIVATE cam_helpers)
+# target_link_options(capture PRIVATE -Wl,--copy-dt-needed-entries)
 
 # # Rectified image grabber
 # add_executable(capture_rectify capture_rectify.cpp src/stereocam.cpp)
@@ -63,3 +72,7 @@ target_link_options(capture PRIVATE -Wl,--copy-dt-needed-entries)
 # target_link_libraries(main PRIVATE cam_helpers)
 # target_link_options(main PRIVATE -Wl,--copy-dt-needed-entries)
 
+# Test program for SPI tof sensor
+add_executable(spi spitest.cpp)
+target_link_libraries(spi PRIVATE stsw_img040)
+target_link_options(spi PRIVATE -Wl,--copy-dt-needed-entries)

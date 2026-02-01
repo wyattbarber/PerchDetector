@@ -24,31 +24,35 @@
 
 #include "Logging.hpp"
 
-VL53L8CX_Platform* open_VL53L8CX(const char* fname)
+void open_VL53L8CX(const char* fname, VL53L8CX_Platform* dev)
 {
-	auto dev = new VL53L8CX_Platform{8, 3000000, 0, 0}; // 8 bits per word, 3 MHz, mode 0, delay 0
+	dev->wordsize = 8;
+	dev->freq = 100000;
+	dev->spimode = 0;
+	dev->delay = 0;
+
 	dev->fd = open(fname, O_RDWR);
 	if(dev->fd < 0)
 	{
 		Logger::instance() << "[ERROR][VL53L8CX] Failed to open SPI device " << fname << std::endl;
-		return nullptr;
+		return;
 	}
 
 	if(ioctl(dev->fd, SPI_IOC_WR_BITS_PER_WORD, &dev->spimode) < 0)
 	{
 		Logger::instance() << "[ERROR][VL53L8CX] Failed to set SPI mode to " << dev->spimode << std::endl;
 		close(dev->fd);
-		return nullptr;
+		return;
 	}
 
 	if(ioctl(dev->fd, SPI_IOC_WR_MAX_SPEED_HZ, &dev->freq) < 0)
 	{
 		Logger::instance() << "[ERROR][VL53L8CX] Failed to set SPI frequency to " << dev->freq << std::endl;
 		close(dev->fd);
-		return nullptr;
+		return;
 	}
 
-	return dev;
+	Logger::instance() << "[INFO][VL53L8CX] Opened SPI device " << fname << std::endl;
 }
 
 
@@ -83,6 +87,10 @@ uint8_t VL53L8CX_RdByte(
 	if(ioctl(p_platform->fd, SPI_IOC_MESSAGE(2), &xfer) < 0)
 	{
 		Logger::instance() << "[ERROR][VL53L8CX] Failed to read from register " << RegisterAdress << std::endl;
+	}
+	else
+	{
+		status = 0;
 	}
 
 	return status;
@@ -141,6 +149,10 @@ uint8_t VL53L8CX_WrMulti(
 	{
 		Logger::instance() << "[ERROR][VL53L8CX] Failed to write to register " << RegisterAdress << std::endl;
 	}	
+	else
+	{
+		status = 0;
+	}
 
 	return status;
 }
@@ -171,6 +183,10 @@ uint8_t VL53L8CX_RdMulti(
 	{
 		Logger::instance() << "[ERROR][VL53L8CX] Failed to read from register " << RegisterAdress << std::endl;
 	}	
+	else
+	{
+		status = 0;
+	}
 	
 	return status;
 }
