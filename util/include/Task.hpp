@@ -99,10 +99,10 @@ protected:
 
 /** Container for executing tasks.
 
-Maps task names to pairs of task, thread, 
+Maps task names to sets of task, thread, kill flag
 where the thread is the thread in which the task is executing.
 */
-typedef std::pair<Task*, std::thread*> task_executor;
+typedef std::map<std::string, std::tuple<Task*, std::thread*, bool*>> task_executor;
 
 
 /** Starts tasks in new threads.
