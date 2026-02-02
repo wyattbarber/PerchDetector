@@ -84,34 +84,13 @@ static void requestComplete(Request *request)
     {
         Logger::instance() << "Request cancelled" << std::endl;
         return;
-    }
-    Logger::instance() << "Request completed" << std::endl;
-    
+    }    
     // Get the associated CameraWrapper and the index of this request in its request vector
     CameraWrapper* camera;
     uint8_t req_idx;
     std::tie(camera, req_idx) = resolve_cookie(request->cookie());
     // Tell the wrapper that this index is the latest and the next should be queued for updating.
     camera->set_freshest(req_idx);
-}
-
-
-void CameraWrapper::acquire()
-{
-    camera->acquire();
-}
-
-
-void CameraWrapper::release()
-{   
-    for(const auto& request : requests)
-    {
-        delete_cookie(request->cookie());
-    }
-    allocator->free(stream);
-    delete allocator;
-    camera->release();
-    camera.reset();
 }
 
 
@@ -122,12 +101,13 @@ void CameraWrapper::configure()
     // extracting grayscale is fast and simple.
 
     config = camera->generateConfiguration( { StreamRole::Viewfinder } );
-    Logger::instance() << name << ": Default viewfinder configuration is: " << config->at(0).toString() << std::endl;
+    info("Default viewfinder configuration is: ", config->at(0).toString());
+
     config->at(0).pixelFormat = PixelFormat::fromString("YVU420"); 
     config->validate();   
     width = config->at(0).size.width;
     height = config->at(0).size.height;
-    Logger::instance() << name << ": Validated viewfinder configuration is: " << config->at(0).toString() << std::endl;
+    info("Validated viewfinder configuration is: ", config->at(0).toString());
     camera->configure(config.get());
 
     // Allocate all buffers for this config. The number of buffers used is defined by the configuration.
@@ -135,12 +115,12 @@ void CameraWrapper::configure()
     for (StreamConfiguration &cfg : *config) {
         int ret = allocator->allocate(cfg.stream());
         if (ret < 0) {
-            std::cerr << name << ": Can't allocate buffers" << std::endl;
+            error(name, ": Can't allocate buffers");
             return;
         }
 
         size_t allocated = allocator->buffers(cfg.stream()).size();
-        Logger::instance() << name << ": Allocated " << allocated << " buffers for stream" << std::endl;
+        info("Allocated ", allocated, " buffers for stream");
     }
 
     stream = config->at(0).stream();
@@ -154,7 +134,7 @@ void CameraWrapper::configure()
         store_cookie(request->cookie(), this, i);
         if (!request)
         {
-            std::cerr << name << ": Can't create request" << std::endl;
+            error("Can't create request");
             return;
         }
 
@@ -162,7 +142,7 @@ void CameraWrapper::configure()
         int ret = request->addBuffer(stream, buffer.get());
         if (ret < 0)
         {
-            std::cerr << name << ": Can't set buffer for request" << std::endl;
+            error("Can't set buffer for request");
             return;
         }
 
@@ -171,12 +151,12 @@ void CameraWrapper::configure()
         // Create a memory mapped array from the planes file descriptor.
         // Only plane 0 is used from each buffer, since we are only using grayscale images.
         const FrameBuffer::Plane& plane = buffer->planes().at(0);
-        Logger::instance() << name << ": Mapping plane of size " << plane.length << " at offset " << plane.offset << std::endl;
+        info("Mapping plane of size ", plane.length, " at offset ", plane.offset);
         bytes = plane.length;
         void* plane_map = mmap(0, bytes, PROT_READ , MAP_SHARED, plane.fd.get(), plane.offset);
         if(plane_map == MAP_FAILED)
         {
-            std::cerr << name << ": Failed to map memory: " << strerror(errno) << std::endl;
+            error("Failed to map memory: ", strerror(errno));
             return;
         }
         map.push_back(plane_map);
@@ -187,18 +167,27 @@ void CameraWrapper::configure()
 }
 
 
-void CameraWrapper::start()
+bool CameraWrapper::start_impl()
 {
+    camera->acquire();
+    configure();
     camera->start();
     camera->queueRequest(requests[0].get());
-    running = true;
+    return true;
 }
 
 
-void CameraWrapper::stop()
+void CameraWrapper::stop_impl()
 {
-    running = false;
     camera->stop();
+    for(const auto& request : requests)
+    {
+        delete_cookie(request->cookie());
+    }
+    allocator->free(stream);
+    delete allocator;
+    camera->release();
+    camera.reset();
 }
 
 
@@ -218,9 +207,8 @@ void CameraWrapper::set_freshest(uint8_t idx)
     }    
 
     requests[next]->reuse(Request::ReuseBuffers);
-    if(running)
+    if(is_alive())
     {
-        // Logger::instance() << "Request " << (int)idx << " finished, restarting request " << (int)next << std::endl;
         camera->queueRequest(requests[next].get());
     }
 }

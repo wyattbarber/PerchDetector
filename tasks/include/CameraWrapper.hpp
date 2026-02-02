@@ -4,6 +4,9 @@
 #include <libcamera/libcamera.h>
 #include <memory>
 #include <opencv2/core/mat.hpp>
+#include "Task.hpp"
+#include <atomic>
+
 
 /** Wrapper to simplify reading grayscale images from a libcamera::Camera.
  * 
@@ -11,7 +14,7 @@
  * format, mapping DMA buffers to memory, and keeping data in scope as the application needs.
  * 
  */
-class CameraWrapper
+class CameraWrapper : public Task
 {
     public:
 
@@ -29,11 +32,10 @@ class CameraWrapper
     @param check Function to check the string id of a detected camera    
     @param color Use RGB color format instead of grayscale.
     */
-    CameraWrapper(const std::string name, const std::unique_ptr<libcamera::CameraManager>& cm, bool(*check)(const std::string&), bool color = false) :
-        name(name),
+    CameraWrapper(const char* name, const std::unique_ptr<libcamera::CameraManager>& cm, bool(*check)(const std::string&), bool color = false) :
+        Task(name),
         color(color)
     {
-        running = false;
         // Check all cameras
         for (auto const &camera : cm->cameras())
         {
@@ -49,20 +51,11 @@ class CameraWrapper
     }
 
     CameraWrapper(CameraWrapper& other) :
-        name(other.name),
+        Task(other.name),
         camera(other.camera),
         color(other.color)    
-    { 
-        running = false;
-    }
+    {}
 
-    /** Acquires control of the wrapped camera 
-    */
-    void acquire();
-    
-    /** Releases control of the wrapped camera and frees resources
-    */
-    void release();
 
     /** Sets the camera configuration
     
@@ -73,11 +66,13 @@ class CameraWrapper
 
     /** Starts the camera 
     */
-    void start();
+    bool start_impl();
 
     /** Stops the camera 
     */
-    void stop();
+    void stop_impl();
+
+    void step(){}
 
     /** Image width
      * 
@@ -159,7 +154,6 @@ class CameraWrapper
 
 
     protected:
-    const std::string name;
     uint64_t cookie;
     std::shared_ptr<libcamera::Camera> camera;
     std::unique_ptr<libcamera::CameraConfiguration> config;
@@ -172,7 +166,6 @@ class CameraWrapper
     size_t bytes, width, height, stride;
     size_t freshest_buffer;
     uint16_t locked_idx;
-    bool running;
     const bool color;
 };
 

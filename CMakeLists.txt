@@ -14,6 +14,13 @@ set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
 # target_link_libraries(camscan PRIVATE LibCamera ${OpenCV_LIBS})
 # target_link_options(camscan PRIVATE -Wl,--copy-dt-needed-entries)
 
+
+# Generic logging task interface library
+add_library(util STATIC
+    util/src/Task.cpp
+)
+target_include_directories(util PUBLIC util/include)
+
 # VL53L8CX API library
 add_library(stsw_img040 STATIC 
     STSW_IMG040/Platform/platform.cpp
@@ -30,49 +37,21 @@ set_source_files_properties(
 
     PROPERTIES LANGUAGE CXX
 )
-target_include_directories(stsw_img040 PRIVATE include)
+target_link_libraries(stsw_img040 PRIVATE util)
 target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/VL53L8CX_ULD_API/inc)
 
-# Library of helpers 
-add_library(cam_helpers STATIC
-    src/CameraWrapper.cpp 
-    src/ImageSender.cpp 
-    src/Depth.cpp
+# Library of specific task types
+add_library(tasks STATIC 
+    tasks/src/CameraWrapper.cpp
 )
-target_include_directories(cam_helpers PUBLIC include)
-target_link_libraries(cam_helpers PUBLIC LibCamera ${OpenCV_LIBS})
+target_link_libraries(tasks PRIVATE util LibCamera ${OpenCV_LIBS})
+target_include_directories(tasks PUBLIC tasks/include)
 
-
-# # Test for the visualization stream
-# add_executable(testfeed testfeed.cpp)
-# target_include_directories(testfeed PUBLIC include)
-# target_link_libraries(testfeed PRIVATE cam_helpers)
-# target_link_options(testfeed PRIVATE -Wl,--copy-dt-needed-entries)
-
-# # Calibration data collector
-# add_executable(calibrate calibrate.cpp src/stereocam.cpp)
-# target_include_directories(calibrate PUBLIC include)
-# target_link_libraries(calibrate PRIVATE cam_helpers)
-# target_link_options(calibrate PRIVATE -Wl,--copy-dt-needed-entries)
-
-# add_executable(capture capture.cpp src/stereocam.cpp)
-# target_include_directories(capture PUBLIC include)
-# target_link_libraries(capture PRIVATE cam_helpers)
-# target_link_options(capture PRIVATE -Wl,--copy-dt-needed-entries)
-
-# # Rectified image grabber
-# add_executable(capture_rectify capture_rectify.cpp src/stereocam.cpp)
-# target_include_directories(capture_rectify PUBLIC include)
-# target_link_libraries(capture_rectify PRIVATE cam_helpers)
-# target_link_options(capture_rectify PRIVATE -Wl,--copy-dt-needed-entries)
-
-# # Main testing program
-# add_executable(main main.cpp src/gui.cpp src/headless.cpp src/stereocam.cpp src/visualization.cpp)
-# target_include_directories(main PUBLIC include)
-# target_link_libraries(main PRIVATE cam_helpers)
-# target_link_options(main PRIVATE -Wl,--copy-dt-needed-entries)
-
-# Test program for SPI tof sensor
-add_executable(spi spitest.cpp)
-target_link_libraries(spi PRIVATE stsw_img040)
-target_link_options(spi PRIVATE -Wl,--copy-dt-needed-entries)
+# # Library of helpers 
+# add_library(cam_helpers STATIC
+#     src/CameraWrapper.cpp 
+#     src/ImageSender.cpp 
+#     src/Depth.cpp
+# )
+# target_include_directories(cam_helpers PUBLIC include)
+# target_link_libraries(cam_helpers PUBLIC LibCamera ${OpenCV_LIBS})
