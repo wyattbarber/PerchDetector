@@ -94,6 +94,24 @@ static void requestComplete(Request *request)
 }
 
 
+bool CameraWrapper::connect()
+{
+    // Check all cameras
+    for (auto const &camera : cm->manager()->cameras())
+    {
+        if(check(camera->id()))
+        {
+            // This cameras id matches what this wrapper should attach to
+            info(name, ": Attaching to detected camera ", camera->id() );
+            this->camera = cm->manager()->get(camera->id());
+            return true;
+        }
+    }
+    error(name, ": No camera matching the given criteria was detected.");
+    return false;
+}
+
+
 void CameraWrapper::configure()
 {
     // Generate the default configuration and change pixel format to YVU.
@@ -169,6 +187,8 @@ void CameraWrapper::configure()
 
 bool CameraWrapper::start_impl()
 {
+    if(!connect()) return false;
+
     camera->acquire();
     configure();
     camera->start();

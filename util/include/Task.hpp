@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include "Logging.hpp"
 #include <map>
@@ -102,7 +104,7 @@ protected:
 Maps task names to sets of task, thread, kill flag
 where the thread is the thread in which the task is executing.
 */
-typedef std::map<std::string, std::tuple<Task*, std::thread*, bool*>> task_executor;
+typedef std::map<std::string, std::tuple<std::shared_ptr<Task>, std::unique_ptr<std::thread>, bool*>> task_executor;
 
 
 /** Starts tasks in new threads.
@@ -112,7 +114,7 @@ a map of task names to tasks and threads.
 
 @param tasks Pointers to tasks to execute.
 */
-task_executor run_tasks(std::initializer_list<Task*> tasks);
+task_executor launch_tasks(std::initializer_list<std::shared_ptr<Task>> tasks);
 
 
 /** Kills all tasks.

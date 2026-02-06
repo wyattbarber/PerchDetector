@@ -1,45 +1,179 @@
+#include <CameraManager.hpp>
 #include <CameraWrapper.hpp>
-#include <ImageSender.hpp>
-#include <ArgParser.hpp>
-#include <Logging.hpp>
+#include <Depth.hpp>
 #include <functional>
-#include <chrono>
-#include <thread>
+#include <cstring>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <iostream>
+#include <string>
+#include <csignal>
+#include <vector>
+#include <algorithm>
 
 
-// Externally linked main functions for the two operation modes
-int main_headless(ArgParser&);
-int main_gui(ArgParser&);
+// Parameters and Defaults //
+char logfile[] = "logout.txt"; // Default log file
+
+
+// Task Definitions //
+std::shared_ptr<CameraManagerTask> cam_manager;
+// CAM1: /base/soc/i2c0mux/i2c@1/imx219@10 
+// CAM0: /base/soc/i2c0mux/i2c@0/imx219@10
+static bool id_cam_left(const std::string& id){return id.find("i2c@0/imx219@10") != std::string::npos;}
+static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10") != std::string::npos;}
+std::shared_ptr<CameraWrapper> cam_left, cam_right;
+std::shared_ptr<DepthCamera> depth;
+
+
+// Helper Functions //
+
+void sig_handle(int signum)
+{
+    exit(signum);
+}
+
+void make_tasks()
+{
+    cam_manager = std::make_shared<CameraManagerTask>();
+    
+    cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, false);
+    cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, false);
+    
+    depth = std::make_shared<DepthCamera>("stereo", cam_left, cam_right);
+}
+
+void list_tasks(const char* line_start, task_executor& tasks)
+{
+    for(const auto& pair : tasks)
+    {
+        std::cout << line_start << pair.first << ": " << (std::get<0>(pair.second)->is_alive() ? "started" : "stopped") << std::endl;
+    }
+}
 
 
 int main(int argc, char** argv)
 {    
-    ArgParser args(argc, argv);
-    if(!args.valid())
+    std::cout << "Starting main" << std::endl;
+
+    signal(SIGINT, sig_handle);
+
+    // Process arguments
+    std::cout << "Reading args" << std::endl;
+
+    int i = 1;
+    while(i < argc)
     {
-        std::cerr << "Provided arguments invalid." << std::endl;
-        return -1;
+        if(strcmp(argv[i], "--logfile") == 0) // Set logfile name
+        {
+            strcpy(logfile, argv[i+1]);
+            i += 2;
+        }
+        else
+        {
+            i++;
+        }
     }
+
+    // Configure execution based on arguments
+    Logger::instance().set_file(logfile);
+
+    // Construct tasts
+    std::cout << "Constructing tasks" << std::endl;
+    make_tasks();    
+
+    // Launch all tasks
+    std::cout << "Launching tasks" << std::endl;
+    auto tasks = launch_tasks({
+        cam_manager,
+        cam_left,
+        cam_right,
+        depth
+    });
     
-    if(args.log_file() != nullptr)
-    {
-        // Enable file output for logging
-        Logger::instance().set_file(args.log_file());
+    // Start base tasks that should be run without user input
+    std::cout << "Starting core tasks" << std::endl;
+    cam_manager->start();
+
+    // Main program started, continue on user input
+    bool running = true;
+    std::string line, word;
+    std::stringstream input;
+    std::vector<std::string> cmd;
+    while(running)
+    {   
+        // Get user command and split on spaces
+        std::cout << ">>> ";
+        std::getline(std::cin, line);
+        input = std::stringstream(line);
+        while(input >> word){ cmd.push_back(word); }
+        if(cmd.size() == 0)
+        {
+            // Empty command
+            continue;
+        }
+
+        // Match command to operation and execute
+        if(cmd[0] == "list")
+        {
+            // List all tasks and status
+            list_tasks("\t", tasks);
+        }
+        else if(cmd[0] == "start")
+        {
+            // Start a task
+            if(tasks.find(cmd[1]) == tasks.end())
+            {
+                std::cout << "Task " << cmd[1] << " is not defined." << std::endl;
+                continue;
+            }
+            if(std::get<0>(tasks[cmd[1]])->is_alive())
+            {
+                std::cout << "Task " << cmd[1] << " is already started." << std::endl;
+                continue;
+            }
+
+            if(std::get<0>(tasks[cmd[1]])->start())
+            {
+                std::cout << "Task " << cmd[1] << " has been started." << std::endl;
+            }
+            else
+            {
+                std::cout << "Task " << cmd[1] << " failed to start." << std::endl;
+            }
+        }
+        else if(cmd[0] == "stop")
+        {
+            // Stop a task
+            if(tasks.find(cmd[1]) == tasks.end())
+            {
+                std::cout << "Task " << cmd[1] << " is not defined." << std::endl;
+                continue;
+            }
+            if(!std::get<0>(tasks[cmd[1]])->is_alive())
+            {
+                std::cout << "Task " << cmd[1] << " is already stopped." << std::endl;
+                continue;
+            }
+
+            std::get<0>(tasks[cmd[1]])->stop();
+            std::cout << "Stopped task " << cmd[1] << std::endl;
+        }
+        else if(cmd[0] == "exit")
+        {
+            running = false;
+        }
+        else
+        {
+            std::cout << "Command " << cmd[0] << " is not recognized." << std::endl;
+        }
+
+        // Reset inputs
+        cmd.clear();
     }
-    if(args.stats_file() != nullptr)
-    {
-        // Enable file output for data logging
-        DataLogger::instance().set_file(args.stats_file());
-    }
-    
-    if(args.headless())
-    {
-        return main_headless(args);
-    }
-    else
-    {
-        return main_gui(args);
-    }
+
+    // Shutdown and exit
+    kill_tasks(tasks);
+
+    return 0;
 }

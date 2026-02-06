@@ -9,12 +9,6 @@ find_package(Gstreamer REQUIRED HINTS cmake)
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
 
-# # Utility for listing detected cameras
-# add_executable(camscan camscan.cpp)
-# target_link_libraries(camscan PRIVATE LibCamera ${OpenCV_LIBS})
-# target_link_options(camscan PRIVATE -Wl,--copy-dt-needed-entries)
-
-
 # Generic logging task interface library
 add_library(util STATIC
     util/src/Task.cpp
@@ -43,15 +37,12 @@ target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/V
 # Library of specific task types
 add_library(tasks STATIC 
     tasks/src/CameraWrapper.cpp
+    tasks/src/Depth.cpp
 )
 target_link_libraries(tasks PRIVATE util LibCamera ${OpenCV_LIBS})
 target_include_directories(tasks PUBLIC tasks/include)
 
-# # Library of helpers 
-# add_library(cam_helpers STATIC
-#     src/CameraWrapper.cpp 
-#     src/ImageSender.cpp 
-#     src/Depth.cpp
-# )
-# target_include_directories(cam_helpers PUBLIC include)
-# target_link_libraries(cam_helpers PUBLIC LibCamera ${OpenCV_LIBS})
+# Main executable
+add_executable(main main.cpp)
+target_link_libraries(main PRIVATE util tasks ${OpenCV_LIBS} LibCamera)
+target_link_options(main PRIVATE -Wl,--copy-dt-needed-entries)

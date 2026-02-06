@@ -22,7 +22,7 @@ void Task::stop()
 }
 
 
-void _task_runner(Task* task, bool* alive)
+void _task_runner(std::shared_ptr<Task> task, bool* alive)
 {
     while(*alive)
     {
@@ -31,15 +31,15 @@ void _task_runner(Task* task, bool* alive)
 }
 
 
-task_executor run_tasks(std::initializer_list<Task*> tasks)
+task_executor launch_tasks(std::initializer_list<std::shared_ptr<Task>> tasks)
 {   
     task_executor out;
 
     for (auto task : tasks)
     {
         auto b = new bool(true);
-        auto t = new std::thread(_task_runner, task, b);
-        out[task->name] = {task, t, b};
+        auto t = std::make_unique<std::thread>(_task_runner, task, b);
+        out[task->name] = {task, std::move(t), b};
     }
 
     return out;
@@ -69,7 +69,6 @@ void kill_tasks(task_executor& exe)
     for (auto& pair : exe)
     {
         std::get<1>(pair.second)->join();
-        delete std::get<1>(pair.second);
         delete std::get<2>(pair.second);
     }
 }

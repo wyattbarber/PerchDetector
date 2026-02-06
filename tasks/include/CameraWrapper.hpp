@@ -5,8 +5,7 @@
 #include <memory>
 #include <opencv2/core/mat.hpp>
 #include "Task.hpp"
-#include <atomic>
-
+#include "CameraManager.hpp"
 
 /** Wrapper to simplify reading grayscale images from a libcamera::Camera.
  * 
@@ -32,37 +31,12 @@ class CameraWrapper : public Task
     @param check Function to check the string id of a detected camera    
     @param color Use RGB color format instead of grayscale.
     */
-    CameraWrapper(const char* name, const std::unique_ptr<libcamera::CameraManager>& cm, bool(*check)(const std::string&), bool color = false) :
+    CameraWrapper(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool(*check)(const std::string&), bool color = false) :
         Task(name),
+        cm(cm),
+        check(check),
         color(color)
-    {
-        // Check all cameras
-        for (auto const &camera : cm->cameras())
-        {
-            if(check(camera->id()))
-            {
-                // This cameras id matches what this wrapper should attach to
-                Logger::instance() << name << ": Attaching to detected camera " << camera->id() << std::endl;
-                this->camera = cm->get(camera->id());
-                return;
-            }
-        }
-        std::cerr << name << ": No camera matching the given criteria was detected." << std::endl;
-    }
-
-    CameraWrapper(CameraWrapper& other) :
-        Task(other.name),
-        camera(other.camera),
-        color(other.color)    
     {}
-
-
-    /** Sets the camera configuration
-    
-    Configures the camera to to aqcuire the desired image format,
-    and allocates frame buffers.
-    */
-    void configure();
 
     /** Starts the camera 
     */
@@ -154,7 +128,25 @@ class CameraWrapper : public Task
 
 
     protected:
+
+    /** Identifies the correct camera to read from.
+    
+    @return true if a camera was found and connected to.
+    */
+    bool connect();
+    
+    /** Sets the camera configuration
+    
+    Configures the camera to to aqcuire the desired image format,
+    and allocates frame buffers.
+    */
+    void configure();
+
+
+
     uint64_t cookie;
+    const std::shared_ptr<CameraManagerTask> cm;
+    bool(*check)(const std::string&);
     std::shared_ptr<libcamera::Camera> camera;
     std::unique_ptr<libcamera::CameraConfiguration> config;
     libcamera::FrameBufferAllocator *allocator;

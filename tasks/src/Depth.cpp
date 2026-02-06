@@ -8,8 +8,14 @@
 using namespace std::chrono_literals;
 
 
-void DepthCamera::initialize()
+bool DepthCamera::start_impl()
 {
+    if(!left->is_alive() || !right->is_alive())
+    {
+        warning("Input cameras are not started, cannot start depth computation");
+        return false;
+    }
+
     for(int i = 0; i < N; ++i)
     {
         _disparity[i] = cv::Mat(left->get_height(), left->get_width(), CV_16S);
@@ -17,7 +23,7 @@ void DepthCamera::initialize()
 
     // Initialize stereo calibration data
     cv::Mat _Rl, _Rr, _Pl, _Pr;
-    Logger::instance() << "Computing stereo rectification" << std::endl;
+    info("Computing stereo rectification");
     cv::stereoRectify(
         left_intr, left_dist,
         right_intr, right_dist,
@@ -26,13 +32,13 @@ void DepthCamera::initialize()
         _Rl, _Rr, _Pl, _Pr,
         Q
     );
-    Logger::instance() << "Computing left remap" << std::endl;
+    info("Computing left remap");
     cv::initUndistortRectifyMap(
         left_intr, left_dist, _Rl, _Pl,
         cv::Size(left->get_width(), left->get_height()),
         CV_16SC2, mapl1, mapl2
     );    
-    Logger::instance() << "Computing right remap" << std::endl;
+    info("Computing right remap");
     cv::initUndistortRectifyMap(
         right_intr, right_dist, _Rr, _Pr,
         cv::Size(left->get_width(), left->get_height()),
@@ -46,15 +52,18 @@ void DepthCamera::initialize()
         (3,2)
     */
     converter.M =  static_cast<float>(Q.at<double>(2,3) / (16.0 * std::abs(Q.at<double>(3,2))));
-    Logger::instance() << "Q: " << Q << std::endl;
-    Logger::instance() << "Set disparity to depth conversion to " << converter.M << std::endl;
+    info("Q: ", Q);
+    info("Set disparity to depth conversion to ", converter.M);
+
+    return true;
 }
 
 
-void DepthCamera::update()
+void DepthCamera::step()
 {
+    if(!is_alive()) return;
+    
     // Determine the next buffer to update
-    Logger::instance() << "Depth index updating" << std::endl;
     size_t target_idx = latest_idx + 1;
     if(target_idx == locked_idx)
     {
@@ -75,7 +84,7 @@ void DepthCamera::update()
     _stereo_locked = true;
     stereo->compute(left_rect, right_rect, _disparity[target_idx]);
     if(_disparity[target_idx].empty())
-        Logger::instance() << "Empty disparity map produced" << std::endl;
+        warning("Empty disparity map produced");
     _stereo_locked = false;
 
     // Update indices

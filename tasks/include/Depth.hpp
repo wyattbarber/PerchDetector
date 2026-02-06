@@ -3,11 +3,12 @@
 #include <CameraWrapper.hpp>
 #include <opencv2/calib3d.hpp>
 #include <memory>
+#include "Task.hpp"
 
 
 /** Manages getting grayscale frames from two cameras and maintaining a buffer of depth maps.
 */
-class DepthCamera
+class DepthCamera : public Task
 {
 public:
     typedef float dtype; /// Datatype used for depth of each pixel
@@ -15,10 +16,12 @@ public:
 
     /** Construct a new depth camera
     
-    @param left Left camera wrapper
-    @param right Right camera wrapper
+    @param name Task name
+    @param left Left camera task
+    @param right Right camera task
     */  
-    DepthCamera(std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
+    DepthCamera(const char* name, std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
+        Task(name),
         left(left),
         right(right),
         left_intr(3,3,CV_64F,(void*)_left_intrinsic), 
@@ -62,7 +65,7 @@ public:
 
     /** Collects one new disparity map.
     */
-    void update();
+    void step();
 
     /** Gets a pointer to the most recently 
     accuired and locked disparity map. 
@@ -82,7 +85,9 @@ public:
     Should be called after cameras are initialized and their shape data
     is available.
     */
-    void initialize();
+    bool start_impl();
+
+    void stop_impl(){}
 
     /** Changes the parameters for StereoSGBM.
      
