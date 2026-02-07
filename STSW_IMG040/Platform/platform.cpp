@@ -21,33 +21,35 @@
 #include <cstdio>
 #include <chrono>
 #include <thread>
+#include <cerrno>
 
 #include "Logging.hpp"
+
 
 void open_VL53L8CX(const char* fname, VL53L8CX_Platform* dev)
 {
 	dev->wordsize = 8;
-	dev->freq = 100000;
+	dev->freq = 3e6;
 	dev->spimode = 0;
 	dev->delay = 0;
 
 	dev->fd = open(fname, O_RDWR);
 	if(dev->fd < 0)
 	{
-		Logger::instance() << "[ERROR][VL53L8CX] Failed to open SPI device " << fname << std::endl;
+		Logger::instance() << "[ERROR][VL53L8CX] Failed to open SPI device " << fname << ", error " << std::strerror(errno) << std::endl;
 		return;
 	}
 
 	if(ioctl(dev->fd, SPI_IOC_WR_BITS_PER_WORD, &dev->spimode) < 0)
 	{
-		Logger::instance() << "[ERROR][VL53L8CX] Failed to set SPI mode to " << dev->spimode << std::endl;
+		Logger::instance() << "[ERROR][VL53L8CX] Failed to set SPI mode to " << dev->spimode << ", error " << std::strerror(errno) << std::endl;
 		close(dev->fd);
 		return;
 	}
 
 	if(ioctl(dev->fd, SPI_IOC_WR_MAX_SPEED_HZ, &dev->freq) < 0)
 	{
-		Logger::instance() << "[ERROR][VL53L8CX] Failed to set SPI frequency to " << dev->freq << std::endl;
+		Logger::instance() << "[ERROR][VL53L8CX] Failed to set SPI frequency to " << dev->freq << ", error " << std::strerror(errno) << std::endl;
 		close(dev->fd);
 		return;
 	}
@@ -86,7 +88,7 @@ uint8_t VL53L8CX_RdByte(
 
 	if(ioctl(p_platform->fd, SPI_IOC_MESSAGE(2), &xfer) < 0)
 	{
-		Logger::instance() << "[ERROR][VL53L8CX] Failed to read from register " << RegisterAdress << std::endl;
+		Logger::instance() << "[ERROR][VL53L8CX] Failed to read a single byte from register " << RegisterAdress << ", error " << std::strerror(errno) << std::endl;
 	}
 	else
 	{
@@ -106,17 +108,18 @@ uint8_t VL53L8CX_WrByte(
 	struct spi_ioc_transfer xfer[1] = {0};
 
 	const char buffer[] = {
-		static_cast<uint8_t>((RegisterAdress & 0xFF00) >> 8), 
+		static_cast<uint8_t>(((RegisterAdress & 0xFF00) >> 8) | 0x80), // Set write bit at start of address
 		static_cast<uint8_t>(RegisterAdress & 0x00FF), 
 		value
 	};
+
 	xfer[0].tx_buf = (uint64_t)buffer;
 	xfer[0].rx_buf = 0;
 	xfer[0].len = (uint32_t)3;
 
 	if(ioctl(p_platform->fd, SPI_IOC_MESSAGE(1), &xfer) < 0)
 	{
-		Logger::instance() << "[ERROR][VL53L8CX] Failed to write to register " << RegisterAdress << std::endl;
+		Logger::instance() << "[ERROR][VL53L8CX] Failed to write a single byte to register " << RegisterAdress << ", error " << std::strerror(errno) << std::endl;
 	}
 	else
 	{
@@ -126,28 +129,32 @@ uint8_t VL53L8CX_WrByte(
 	return status;
 }
 
+
 uint8_t VL53L8CX_WrMulti(
 		VL53L8CX_Platform *p_platform,
 		uint16_t RegisterAdress,
 		uint8_t *p_values,
 		uint32_t size)
 {
-	uint8_t status = 255;
+		uint8_t status = 255;
 
-	struct spi_ioc_transfer xfer[1] = {0};
+	struct spi_ioc_transfer xfer[2] = {0, 0};
 
-	char* buffer = (char*)malloc(size+2);
-	buffer[0] = static_cast<uint8_t>((RegisterAdress & 0xFF00) >> 8);
-	buffer[1] = static_cast<uint8_t>(RegisterAdress & 0x00FF);
-	memcpy(buffer+2, (void*)p_values, size);
+	const char buffer[2] = {
+		static_cast<uint8_t>(((RegisterAdress & 0xFF00) >> 8) | 0x80), // Set write bit at start of address
+		static_cast<uint8_t>(RegisterAdress & 0x00FF)
+	};
 
 	xfer[0].tx_buf = (uint64_t)buffer;
 	xfer[0].rx_buf = 0;
-	xfer[0].len = size+2;
+	xfer[0].len = 2;
+	xfer[1].tx_buf = (uint64_t)p_values;
+	xfer[1].rx_buf = 0;
+	xfer[1].len = size;
 
-	if(ioctl(p_platform->fd, SPI_IOC_MESSAGE(1), &xfer) < 0)
+	if(ioctl(p_platform->fd, SPI_IOC_MESSAGE(2), &xfer) < 0)
 	{
-		Logger::instance() << "[ERROR][VL53L8CX] Failed to write to register " << RegisterAdress << std::endl;
+		Logger::instance() << "[ERROR][VL53L8CX] Failed to write " << size << " bytes to register " << RegisterAdress << ", error " << std::strerror(errno) << std::endl;
 	}	
 	else
 	{
@@ -156,6 +163,7 @@ uint8_t VL53L8CX_WrMulti(
 
 	return status;
 }
+
 
 uint8_t VL53L8CX_RdMulti(
 		VL53L8CX_Platform *p_platform,
@@ -167,10 +175,10 @@ uint8_t VL53L8CX_RdMulti(
 	
 	struct spi_ioc_transfer xfer[2] = {0, 0};
 
-	char* buffer = (char*)malloc(size+2);
-	buffer[0] = static_cast<uint8_t>((RegisterAdress & 0xFF00) >> 8);
-	buffer[1] = static_cast<uint8_t>(RegisterAdress & 0x00FF);
-	memcpy(buffer+2, (void*)p_values, size);
+	const char buffer[]= {
+		static_cast<uint8_t>((RegisterAdress & 0xFF00) >> 8),
+		static_cast<uint8_t>(RegisterAdress & 0x00FF)
+	};
 
 	xfer[0].tx_buf = (uint64_t)buffer;
 	xfer[0].rx_buf = 0;
@@ -179,9 +187,9 @@ uint8_t VL53L8CX_RdMulti(
 	xfer[1].rx_buf = (uint64_t)p_values;
 	xfer[1].len = size;
 
-	if(ioctl(p_platform->fd, SPI_IOC_MESSAGE(1), &xfer) < 0)
+	if(ioctl(p_platform->fd, SPI_IOC_MESSAGE(2), &xfer) < 0)
 	{
-		Logger::instance() << "[ERROR][VL53L8CX] Failed to read from register " << RegisterAdress << std::endl;
+		Logger::instance() << "[ERROR][VL53L8CX] Failed to read " << size << " bytes from register " << RegisterAdress << ", error " << std::strerror(errno) << std::endl;
 	}	
 	else
 	{

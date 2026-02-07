@@ -4,12 +4,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(OpenCV REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
-find_package(Gstreamer REQUIRED HINTS cmake)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
 
-# Generic logging task interface library
+# Generic logging and task interface library
 add_library(util STATIC
     util/src/Task.cpp
 )

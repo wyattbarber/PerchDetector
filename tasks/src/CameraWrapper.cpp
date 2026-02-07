@@ -82,7 +82,7 @@ static void requestComplete(Request *request)
 {
     if (request->status() == Request::RequestCancelled)
     {
-        Logger::instance() << "Request cancelled" << std::endl;
+        Logger::instance() << "[WARNING][camera-requestComplete] Request cancelled" << std::endl;
         return;
     }    
     // Get the associated CameraWrapper and the index of this request in its request vector
@@ -102,12 +102,12 @@ bool CameraWrapper::connect()
         if(check(camera->id()))
         {
             // This cameras id matches what this wrapper should attach to
-            info(name, ": Attaching to detected camera ", camera->id() );
+            info("Attaching to detected camera ", camera->id() );
             this->camera = cm->manager()->get(camera->id());
             return true;
         }
     }
-    error(name, ": No camera matching the given criteria was detected.");
+    error("No camera matching the given criteria was detected.");
     return false;
 }
 

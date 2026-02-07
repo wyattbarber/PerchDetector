@@ -55,9 +55,21 @@ void make_tasks()
 
 void list_tasks(const char* line_start, task_executor& tasks)
 {
+    // Compute padding to make list into even columns
+    auto max_len = tasks.begin()->first.size();
     for(const auto& pair : tasks)
     {
-        std::cout << line_start << pair.first << ": " << (std::get<0>(pair.second)->is_alive() ? "started" : "stopped") << std::endl;
+        auto len = pair.first.size();
+        max_len = (len > max_len) ? len : max_len;
+    }
+
+    // Print two columns of task names and states
+    for(const auto& pair : tasks)
+    {
+        std::cout << line_start << pair.first;
+        for(auto i = pair.first.size(); i < max_len; ++i){ std::cout << ' '; } // Space pad the name to make columns even
+        std::cout << "\t\t";
+        std::cout << (std::get<0>(pair.second)->is_alive() ? "running" : "stopped") << std::endl;
     }
 }
 
