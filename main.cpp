@@ -1,6 +1,7 @@
 #include <CameraManager.hpp>
 #include <CameraWrapper.hpp>
 #include <Depth.hpp>
+#include <VL53L8CX.hpp>
 #include <chrono>
 #include <functional>
 #include <cstring>
@@ -29,6 +30,7 @@ static bool id_cam_left(const std::string& id){return id.find("i2c@0/imx219@10")
 static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10") != std::string::npos;}
 std::shared_ptr<CameraWrapper> cam_left, cam_right;
 std::shared_ptr<DepthCamera> depth;
+std::shared_ptr<VL53L8CX> lidar;
 
 
 // Helper Functions //
@@ -47,6 +49,8 @@ void make_tasks()
     cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, false);
     
     depth = std::make_shared<DepthCamera>("stereo", cam_left, cam_right);
+
+    lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
 }
 
 void list_tasks(const char* line_start, task_executor& tasks)
@@ -93,7 +97,8 @@ int main(int argc, char** argv)
         cam_manager,
         cam_left,
         cam_right,
-        depth
+        depth,
+        lidar
     });
     
     // Start base tasks that should be run without user input

@@ -31,15 +31,16 @@ set_source_files_properties(
 
     PROPERTIES LANGUAGE CXX
 )
-target_link_libraries(stsw_img040 PRIVATE util)
+target_link_libraries(stsw_img040 PUBLIC util)
 target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/VL53L8CX_ULD_API/inc)
 
 # Library of specific task types
 add_library(tasks STATIC 
     tasks/src/CameraWrapper.cpp
     tasks/src/Depth.cpp
+    tasks/src/VL53L8CX.cpp
 )
-target_link_libraries(tasks PRIVATE util LibCamera ${OpenCV_LIBS})
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS})
 target_include_directories(tasks PUBLIC tasks/include)
 
 # Main executable
