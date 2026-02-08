@@ -20,6 +20,7 @@ bool DepthCamera::start_impl()
     {
         _disparity[i] = cv::Mat(left->get_height(), left->get_width(), CV_16S);
     }
+    depth = cv::Mat(_disparity[0].rows, _disparity[0].cols, CV_32F);
 
     // Initialize stereo calibration data
     cv::Mat _Rl, _Rr, _Pl, _Pr;
@@ -74,12 +75,12 @@ void DepthCamera::step()
         target_idx = (locked_idx == 0) ? 1 : 0;
     }
 
-    cv::Mat right_im, left_im, left_rect, right_rect;
-    left->lock(); 
-    right->lock();
-    rectify(*left->image(), *right->image(), left_rect, right_rect);
-    left->unlock();
-    right->unlock();
+    cv::Mat left_rect, right_rect;
+    cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, left->acquire(), left->get_stride());
+    cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, right->acquire(), right->get_stride());
+    rectify(left_im, right_im, left_rect, right_rect);
+    left->release();
+    right->release();
 
     _stereo_locked = true;
     stereo->compute(left_rect, right_rect, _disparity[target_idx]);
@@ -92,19 +93,16 @@ void DepthCamera::step()
 }
 
 
-cv::Mat DepthCamera::depth()
-{
-    cv::Mat out(disparity()->rows, disparity()->cols, CV_32F);
-    disparity()->convertTo(out, CV_32F);
-    out.forEach<float>(converter);
-    return out;
-}
-
-
 void DepthCamera::rectify(cv::Mat& left_in, cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out)
 {
     cv::remap(left_in, left_out, mapl1, mapl2, cv::INTER_LINEAR);
     cv::remap(right_in, right_out, mapr1, mapr2, cv::INTER_LINEAR);
+}
+
+
+size_t DepthCamera::size()
+{
+    return _disparity[0].total();
 }
 
 

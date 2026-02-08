@@ -8,6 +8,10 @@ using namespace std::chrono_literals;
 
 bool VL53L8CX::start_impl()
 {
+    // Open the SPI interface
+    open_VL53L8CX(path, &device.platform);
+
+    // Test and configure the sensor
     uint8_t status, alive;
 
     status = vl53l8cx_is_alive(&device, &alive);
@@ -39,6 +43,7 @@ bool VL53L8CX::start_impl()
 
 void VL53L8CX::stop_impl()
 {
+    // Shutdown measurements
     int status;
 
     status = vl53l8cx_stop_ranging(&device);
@@ -52,6 +57,9 @@ void VL53L8CX::stop_impl()
             error("Failed to stop ranging, result ", (int)status, ". Not retrying.");
         }
     }
+    
+    // Close the SPI interface
+    close_VL53L8CX(&device.platform);
 }
 
 

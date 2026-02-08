@@ -2,6 +2,7 @@
 #include <CameraWrapper.hpp>
 #include <Depth.hpp>
 #include <VL53L8CX.hpp>
+#include <DataEncoder.hpp>
 #include <chrono>
 #include <functional>
 #include <cstring>
@@ -31,6 +32,7 @@ static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10"
 std::shared_ptr<CameraWrapper> cam_left, cam_right;
 std::shared_ptr<DepthCamera> depth;
 std::shared_ptr<VL53L8CX> lidar;
+std::shared_ptr<DataEncoder<DepthCamera, float>> depth_stream;
 
 
 // Helper Functions //
@@ -44,13 +46,20 @@ void sig_handle(int signum)
 void make_tasks()
 {
     cam_manager = std::make_shared<CameraManagerTask>();
+    cam_manager->init();
     
     cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, false);
+    cam_left->init();
     cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, false);
+    cam_right->init();
     
     depth = std::make_shared<DepthCamera>("stereo", cam_left, cam_right);
+    depth->init();
+    depth_stream = std::make_shared<DataEncoder<DepthCamera, float>>("depth_streamer", depth);
+    depth_stream->init();
 
     lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
+    lidar->init();
 }
 
 void list_tasks(const char* line_start, task_executor& tasks)
@@ -110,7 +119,8 @@ int main(int argc, char** argv)
         cam_left,
         cam_right,
         depth,
-        lidar
+        lidar,
+        depth_stream
     });
     
     // Start base tasks that should be run without user input
@@ -145,9 +155,14 @@ int main(int argc, char** argv)
             // List all tasks and status
             list_tasks("\t", tasks);
         }
-        else if(cmd[0] == "start")
+        else if((cmd[0] == "start") || (cmd[0] == "autostart"))
         {
             // Start a task
+            if(cmd.size() < 2)
+            {
+                std::cout << "Need a task name to start." << std::endl;
+                continue;
+            }
             if(tasks.find(cmd[1]) == tasks.end())
             {
                 std::cout << "Task " << cmd[1] << " is not defined." << std::endl;
@@ -159,7 +174,7 @@ int main(int argc, char** argv)
                 continue;
             }
 
-            if(std::get<0>(tasks[cmd[1]])->start())
+            if((cmd[0] == "start") ? std::get<0>(tasks[cmd[1]])->start() : std::get<0>(tasks[cmd[1]])->autostart())
             {
                 std::cout << "Task " << cmd[1] << " has been started." << std::endl;
             }
@@ -168,9 +183,14 @@ int main(int argc, char** argv)
                 std::cout << "Task " << cmd[1] << " failed to start." << std::endl;
             }
         }
-        else if(cmd[0] == "stop")
+        else if((cmd[0] == "stop") || (cmd[0] == "autostop"))
         {
             // Stop a task
+            if(cmd.size() < 2)
+            {
+                std::cout << "Need a task name to stop." << std::endl;
+                continue;
+            }
             if(tasks.find(cmd[1]) == tasks.end())
             {
                 std::cout << "Task " << cmd[1] << " is not defined." << std::endl;
@@ -182,7 +202,7 @@ int main(int argc, char** argv)
                 continue;
             }
 
-            std::get<0>(tasks[cmd[1]])->stop();
+            (cmd[0] == "stop") ? std::get<0>(tasks[cmd[1]])->stop() : std::get<0>(tasks[cmd[1]])->autostop();
             std::cout << "Stopped task " << cmd[1] << std::endl;
         }
         else if(cmd[0] == "exit")
@@ -211,15 +231,40 @@ int main(int argc, char** argv)
             {
                 left_file = path + "left-" + std::to_string(i) + ".png";
                 right_file = path + "right-" + std::to_string(i) + ".png";
-                cam_left->lock();
-                cam_right->lock();
-                imwrite(left_file.c_str(), *cam_left->image());
-                imwrite(right_file.c_str(), *cam_right->image());
-                cam_left->unlock();
-                cam_right->unlock();
+                cv::Mat left_im(cam_left->get_height(), cam_left->get_width(), CV_8UC1, cam_left->acquire(), cam_left->get_stride());
+                cv::Mat right_im(cam_right->get_height(), cam_right->get_width(), CV_8UC1, cam_right->acquire(), cam_right->get_stride());
+                imwrite(left_file.c_str(), left_im);
+                imwrite(right_file.c_str(), right_im);
+                cam_left->release();
+                cam_right->release();
                 std::this_thread::sleep_for(1s); 
             }
             std::cout << "Captures completed." << std::endl;
+        }
+        else if(tasks.find(cmd[0]) != tasks.end())
+        {
+            if(cmd.size() < 2)
+            {
+                std::cout << "Need a command name to run a task specific action." << std::endl;
+                continue;
+            }
+
+            auto task = std::get<0>(tasks[cmd[0]]);
+            if(!task->is_alive())
+            {
+                std::cout << "Cannot call commands of a task that is not running." << std::endl;
+                continue;
+            }
+            
+            if(!task->implements(cmd[1]))
+            {
+                std::cout << "Task " << cmd[0] << " has no command named " << cmd[1] << std::endl;
+                continue; 
+            }
+
+            std::vector<std::string> args;
+            if(cmd.size() > 2) args = std::vector<std::string>(cmd.begin()+2, cmd.end());
+            task->call(cmd[1], std::cin, std::cout, args);
         }
         else
         {

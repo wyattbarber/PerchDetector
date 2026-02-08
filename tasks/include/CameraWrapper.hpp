@@ -5,6 +5,7 @@
 #include <memory>
 #include <opencv2/core/mat.hpp>
 #include "Task.hpp"
+#include "DataSource.hpp"
 #include "CameraManager.hpp"
 
 /** Wrapper to simplify reading grayscale images from a libcamera::Camera.
@@ -13,7 +14,7 @@
  * format, mapping DMA buffers to memory, and keeping data in scope as the application needs.
  * 
  */
-class CameraWrapper : public Task
+class CameraWrapper : public Task, public DataSource<uint8_t>
 {
     public:
 
@@ -32,7 +33,8 @@ class CameraWrapper : public Task
     @param color Use RGB color format instead of grayscale.
     */
     CameraWrapper(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool(*check)(const std::string&), bool color = false) :
-        Task(name),
+        Task(name, {cm}),
+        DataSource<uint8_t>(),
         cm(cm),
         check(check),
         color(color)
@@ -66,34 +68,12 @@ class CameraWrapper : public Task
     */
     size_t get_stride(){ return stride; }
 
-    /** Latest image buffer.
-     * 
-     * Gets a pointer to the image buffer most recenltly updated and locked.
-     * 
-     * The image provides is a single channel grayscale image.
-     * 
-     * @return start of image data.
-    */
-    void* data(){ return map[locked_idx]; }
-
-    /** Latest image matrix.
-     * 
-     * Provides the same data as data(), however it returns
-     * a pointer to a cv::Mat that is mapped to the same buffer,
-     * for easier copying to other matrices or passing to OpenCV 
-     * functions.
-     * 
-     * The image provides is a single channel grayscale image.
-     * 
-     * @return image
-    */
-    cv::Mat* image(){ return &matrices[locked_idx]; }
-
+   
     /** Get the size of the image data in bytes.
     
     @return data size.
     */
-    size_t size(){ return bytes; }
+    size_t size() override { return bytes; }
 
 
     /** Gets a pointer to the camera instance.
@@ -106,28 +86,26 @@ class CameraWrapper : public Task
     Should be used only by the capture callback, not by application code.*/
     void set_freshest(uint8_t);
 
-    /** Locks the most recently updated buffer.
-     * 
-     * Allows the application to acquire the most recently updated buffer
-     * and ensure that the data remains valid while it is used. Calling this
-     * method will cause the value pointed to by data() or image() to remain 
-     * unchanged until unlock() is called. For that duration, if the associated
-     * buffer and request is reached in the frame reading cycle, the locked buffer 
-     * will be skipped and the next request queued instead.
+
+protected:
+
+    /** Get and lock the latest image.
+
+    @return Pointer to image data
+    */
+    uint8_t* lock() override
+    {
+        locked_idx = freshest_buffer;
+        return (uint8_t*)map[locked_idx];
+    }
+
+
+    /** Unlock latest image.
      */
-    void lock();
-
-    /** Unlock the currently in scope buffer.
-     * 
-     * Should be called after lock() once all processing of the 
-     * latest frame has completed. Calling this releases the currently
-     * locked buffer to again be queued once it is due in the update loop, 
-     * and the data pointed to by data() or image() may be overwritten.
-     */
-    void unlock();
-
-
-    protected:
+    void unlock() override
+    {
+        locked_idx = -1;
+    }
 
     /** Identifies the correct camera to read from.
     

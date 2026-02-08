@@ -14,11 +14,11 @@ class CameraManagerTask : public Task
 {
 public:
     CameraManagerTask() : 
-        Task("_camera_manager")
+        Task("_camera_manager", {})
     {        
         cm = std::make_unique<libcamera::CameraManager>();
-        cm->cameraAdded.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ Logger::instance() << "[INFO][_camera_manager]" << cam->id(), " connected"; });
-        cm->cameraRemoved.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ Logger::instance() << "[WARNING][_camera_manager]" << cam->id(), " removed."; });
+        cm->cameraAdded.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ Logger::instance() << "[INFO][_camera_manager]" << cam->id() << " connected." << std::endl; });
+        cm->cameraRemoved.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ Logger::instance() << "[WARNING][_camera_manager]" << cam->id() << " removed." << std::endl; });
     }
 
     bool start_impl(){ cm->start(); return true; }

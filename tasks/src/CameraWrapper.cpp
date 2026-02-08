@@ -232,15 +232,3 @@ void CameraWrapper::set_freshest(uint8_t idx)
         camera->queueRequest(requests[next].get());
     }
 }
-
-
-void CameraWrapper::lock()
-{
-    locked_idx = freshest_buffer;
-}
-
-
-void CameraWrapper::unlock()
-{
-    locked_idx = -1;
-}

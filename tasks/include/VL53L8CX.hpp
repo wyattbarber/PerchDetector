@@ -13,20 +13,13 @@ class VL53L8CX : public Task
 public:
     /** Create a new sensor manager task 
     
-    Opens the file for the device, but does not begin SPI communication.
-    The file will be closed when this object is deleted.
-
     @param name Task name
-    @param dev Path to the SPI device for the sensor
+    @param path Path to the SPI device for the sensor
     */
-    VL53L8CX(const char* name, const char* dev) : 
-        Task(name)
+    VL53L8CX(const char* name, const char* path) : 
+        Task(name, {}),
+        path(path)
     {
-        open_VL53L8CX(dev, &device.platform);
-    }
-    ~VL53L8CX()
-    {
-        close_VL53L8CX(&device.platform);
     }
 
     /** Checks communication and configures the sensor to start measurements.
@@ -48,6 +41,7 @@ public:
     void step();
 
 protected:
+    const char* path;
     VL53L8CX_Configuration device;
     VL53L8CX_ResultsData data;
 };

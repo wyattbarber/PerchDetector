@@ -4,11 +4,12 @@
 #include <opencv2/calib3d.hpp>
 #include <memory>
 #include "Task.hpp"
+#include "DataSource.hpp"
 
 
 /** Manages getting grayscale frames from two cameras and maintaining a buffer of depth maps.
 */
-class DepthCamera : public Task
+class DepthCamera : public Task, public DataSource<float>
 {
 public:
     typedef float dtype; /// Datatype used for depth of each pixel
@@ -21,7 +22,8 @@ public:
     @param right Right camera task
     */  
     DepthCamera(const char* name, std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
-        Task(name),
+        Task(name, {left, right}),
+        DataSource<float>(),
         left(left),
         right(right),
         left_intr(3,3,CV_64F,(void*)_left_intrinsic), 
@@ -54,31 +56,10 @@ public:
         locked_idx = 0;
     }
 
-    /** Locks the most recent depth map,
-    preventing it from being overwritten,
-    */
-    void lock(){ locked_idx = latest_idx; }
-
-    /** Release the previously locked depth map to be overwritten.
-    */
-    void unlock(){ locked_idx = -1; }
 
     /** Collects one new disparity map.
     */
     void step();
-
-    /** Gets a pointer to the most recently 
-    accuired and locked disparity map. 
-    
-    @return Pointer to disparity data.
-    */
-    const cv::Mat* disparity(){ return &_disparity[locked_idx]; }
-
-    /** Computes depth for the latest data.
-    
-    @return Depth image
-    */
-    cv::Mat depth();
 
     /** Initalizes data arrays.
     
@@ -102,13 +83,38 @@ public:
                     int	uniquenessRatio,
                     int	speckleWindowSize,
                     int	speckleRange);
+
+    /** Get depth image size.
+    
+    @return number of pixels in the image.
+    */
+    size_t size() override;
+    
+protected:
+    /** Locks the most recent depth map,
+    preventing it from being overwritten,
+    */
+    float* lock() override 
+    { 
+        locked_idx = latest_idx; 
+        _disparity[locked_idx].convertTo(depth, CV_32F);
+        depth.forEach<float>(converter);
+        return (float*)depth.data;
+    }
+
+    /** Release the previously locked depth map to be overwritten.
+    */
+    void unlock() override 
+    { 
+        locked_idx = -1; 
+    }
+
     
     /** Applies rectification from the calibration data to a pair of images.
     
     */
     void rectify(cv::Mat& left_in, cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out);
 
-protected:
     std::shared_ptr<CameraWrapper> left, right;
     cv::Ptr<cv::StereoBM> stereo;
     bool _stereo_locked;
@@ -119,6 +125,7 @@ protected:
     size_t latest_idx;
     cv::Mat _disparity[N];
     cv::Mat rect_l, rect_r;
+    cv::Mat depth;
 
     struct disp_conv
     {

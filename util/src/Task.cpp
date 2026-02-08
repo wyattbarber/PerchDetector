@@ -1,5 +1,13 @@
 #include "Task.hpp"
 
+void Task::init()
+{    
+    for(auto task : depends_on)
+    {
+        task->declare_dependency_of(shared_from_this());
+    }
+}
+
 bool Task::start()
 {
     if(!alive)
@@ -19,6 +27,65 @@ void Task::stop()
 {
     alive = false;
     this->stop_impl();
+}
+
+
+void Task::declare_cli_command(const char* cmd, command_executor_t executor)
+{
+    commands[cmd] = executor;
+}
+
+
+bool Task::implements(const std::string& cmd)
+{
+    return commands.find(cmd) != commands.end();
+}
+
+
+void Task::call(const std::string& cmd, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
+{
+    auto method = commands[cmd];
+    (*method)(this, in, out, args);
+}
+
+bool Task::autostart()
+{
+    if(!is_alive())
+    {
+        for(auto task : depends_on)
+        {
+            info("Starting dependency ", task->name);
+            if(!task->autostart())
+            {
+                error("Failed to start dependency ", task->name);
+                return false;
+            }
+        }
+        info("Started dependencies.");
+        return start();
+    }
+    return true;
+}
+
+  
+void Task::autostop()
+{
+    if(is_alive())
+    {
+        for(auto task : depended_by)
+        {
+            info("Stopping dependent task ", task->name);
+            task->autostop();
+        }
+        info("Stopped dependent tasks");
+        stop();
+    }
+}
+
+
+void Task::declare_dependency_of(std::shared_ptr<Task> task)
+{
+    depended_by.push_back(task);
 }
 
 

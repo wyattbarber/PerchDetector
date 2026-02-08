@@ -5,19 +5,33 @@
 #include <map>
 #include <thread>
 #include <initializer_list>
+#include <iostream>
+#include <vector>
+#include <map>
 
 
 /** Base interface for a task
 
 */
-class Task {
+class Task : public std::enable_shared_from_this<Task>
+{
 public:
+    typedef void(*command_executor_t)(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args); /// Method type for handling task-specific CLI actions
 
-    Task(const char* name) : name(name)
+    Task(const char* name, std::initializer_list<std::shared_ptr<Task>> dependencies) : 
+        name(name),
+        depends_on{dependencies}
     {
         alive = false;
     }
 
+    /** Must be called after construction before any other methods.
+    
+    Implements functionality that cannot be done
+    in constructor.
+    */
+    void init();
+    
     /** Logs a status message.
     
     Will generate one line of formatted log output
@@ -93,10 +107,67 @@ public:
     */
     bool is_alive(){ return alive; }
 
+    /** Check if this task implements a command.
+    
+    @param cmd Name of the command to check for
+
+    @return True if the named command is implemented.
+    */
+    bool implements(const std::string& cmd);
+
+    /** Calls a command implemented by this task.
+    
+    @param cmd Name of the command to call
+    @param in Stream to provide user input
+    @param out Stream to provide output to user
+    @param args Arguments given to the command as strings
+    */
+    void call(const std::string& cmd, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
+
+    /** Start task and its dependencies. 
+
+    @return True if this task and all dependencies started without error.
+    */
+    bool autostart();
+
+    /** Stop tasks and all that depend on it. 
+    */
+    void autostop();
+
     const char* name;
 
 protected:
+    /** Adds a CLI action for this task type.
+    
+    Registers an action that the program user may call from the CLI
+    during program operation.
+
+    A method is given to execute the command, that takes 3 arguments:
+    
+    1. A pointer to the task on which the command is being executed
+    
+    2. A stream that provides input from the user
+
+    3. A stream to give output to the user
+
+    4. The arguments given by the user, as a vector of strings.
+
+    This function signature is typedef'd as Task::command_executor_t.
+
+    @param cmd Name of the command that the user will run
+    @param executor Method of the task that will run the command
+    */
+    void declare_cli_command(const char* cmd, command_executor_t executor);
+
+    /** Marks this task as a dependency of the given task.
+    
+    @param task Task that depends on this one.
+    */
+    void declare_dependency_of(std::shared_ptr<Task> task);
+
     bool alive;
+    std::map<std::string, command_executor_t> commands;
+    std::vector<std::shared_ptr<Task>> depends_on, depended_by;
 };
 
 /** Container for executing tasks.
