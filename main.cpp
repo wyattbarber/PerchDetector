@@ -3,28 +3,23 @@
 #include <Depth.hpp>
 #include <VL53L8CX.hpp>
 #include <DataEncoder.hpp>
-#include <chrono>
 #include <functional>
 #include <cstring>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/imgcodecs.hpp>
 #include <iostream>
 #include <string>
 #include <csignal>
 #include <vector>
+#include <map>
 #include <algorithm>
-#include <iomanip>
-
-
-using namespace std::chrono_literals;
+#include "main.hpp"
 
 
 // Parameters and Defaults //
 char logfile[] = "logout.txt"; // Default log file
+program_context context; // Global program state and configuration
 
 
 // Task Definitions //
-task_executor tasks;
 std::shared_ptr<CameraManagerTask> cam_manager;
 // CAM1: /base/soc/i2c0mux/i2c@1/imx219@10 
 // CAM0: /base/soc/i2c0mux/i2c@0/imx219@10
@@ -36,58 +31,54 @@ std::shared_ptr<VL53L8CX> lidar;
 std::shared_ptr<DataEncoder<DepthCamera, float>> depth_stream;
 
 
-// Helper Functions //
+// Command Line Helper Functions //
+void list_tasks(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void start(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void autostart(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void stop(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void autostop(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void exit(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void capture(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 
+void call_task_command(const std::string&, std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+
+
+// Program Setup Helper Functions //
 void sig_handle(int signum)
 {
-    kill_tasks(tasks);
+    kill_tasks(context.tasks);
     exit(signum);
 }
 
 void make_tasks()
 {
     cam_manager = std::make_shared<CameraManagerTask>();
-    cam_manager->init();
     
     cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, false);
-    cam_left->init();
     cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, false);
-    cam_right->init();
     
     depth = std::make_shared<DepthCamera>("stereo", cam_left, cam_right);
-    depth->init();
     depth_stream = std::make_shared<DataEncoder<DepthCamera, float>>("depth_streamer", depth);
-    depth_stream->init();
 
     lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
+
+    cam_manager->init();
+    cam_left->init();
+    cam_right->init();
+    depth->init();
+    depth_stream->init();
     lidar->init();
 }
 
-void list_tasks(const char* line_start, task_executor& tasks)
+void make_commands()
 {
-    // Compute padding to make list into even columns
-    auto max_len = tasks.begin()->first.size();
-    for(const auto& pair : tasks)
-    {
-        auto len = pair.first.size();
-        max_len = (len > max_len) ? len : max_len;
-    }
-
-    // Print two columns of task names and states
-    for(const auto& pair : tasks)
-    {
-        std::cout << line_start << pair.first;
-        for(auto i = pair.first.size(); i < max_len; ++i){ std::cout << ' '; } // Space pad the name to make columns even
-        std::cout << "\t\t";
-        // State
-        std::cout << (std::get<0>(pair.second)->is_alive() ? "running" : "stopped");
-        std::cout << "\t\t";
-        // Update rate
-        auto r = std::get<0>(pair.second)->rate();
-        if(r.second) std::cout << std::fixed << std::setprecision(2) << r.first << std::defaultfloat << " Hz";
-        else std::cout << "---";
-        std::cout << std::endl;
-    }
+    context.commands["status"] = &list_tasks;
+    context.commands["start"] = &start;
+    context.commands["autostart"] = &autostart;
+    context.commands["stop"] = &stop;
+    context.commands["autostop"] = &autostop;
+    context.commands["capture"] = &capture;
+    context.commands["exit"] = &exit;
 }
 
 
@@ -113,8 +104,8 @@ int main(int argc, char** argv)
         }
     }
 
-    // Configure execution based on arguments
     Logger::instance().set_file(logfile);
+    make_commands();
 
     // Construct tasts
     std::cout << "-- Constructing tasks" << std::endl;
@@ -122,7 +113,7 @@ int main(int argc, char** argv)
 
     // Launch all tasks
     std::cout << "-- Launching tasks" << std::endl;
-    tasks = launch_tasks({
+    context.tasks = launch_tasks({
         cam_manager,
         cam_left,
         cam_right,
@@ -135,13 +126,14 @@ int main(int argc, char** argv)
     std::cout << "-- Starting core tasks" << std::endl;
     cam_manager->start();
 
+    context.running = true;
     std::cout << "Perch detector CLI started" << std::endl;
+    
     // Main program started, continue on user input
-    bool running = true;
     std::string line, word;
     std::stringstream input;
     std::vector<std::string> cmd;
-    while(running)
+    while(context.running)
     {   
         // Reset inputs
         cmd.clear();
@@ -158,121 +150,15 @@ int main(int argc, char** argv)
         }
 
         // Match command to operation and execute
-        if(cmd[0] == "status")
+        if(context.commands.find(cmd[0]) != context.commands.end())
         {
-            // List all tasks and status
-            list_tasks("\t", tasks);
+            // Operation on the global program
+            context.commands[cmd[0]](std::cin, std::cout, {cmd.begin()+1, cmd.end()}, context);
         }
-        else if((cmd[0] == "start") || (cmd[0] == "autostart"))
+        else if(context.tasks.find(cmd[0]) != context.tasks.end())
         {
-            // Start a task
-            if(cmd.size() < 2)
-            {
-                std::cout << "Need a task name to start." << std::endl;
-                continue;
-            }
-            if(tasks.find(cmd[1]) == tasks.end())
-            {
-                std::cout << "Task " << cmd[1] << " is not defined." << std::endl;
-                continue;
-            }
-            if(std::get<0>(tasks[cmd[1]])->is_alive())
-            {
-                std::cout << "Task " << cmd[1] << " is already started." << std::endl;
-                continue;
-            }
-
-            if((cmd[0] == "start") ? std::get<0>(tasks[cmd[1]])->start() : std::get<0>(tasks[cmd[1]])->autostart())
-            {
-                std::cout << "Task " << cmd[1] << " has been started." << std::endl;
-            }
-            else
-            {
-                std::cout << "Task " << cmd[1] << " failed to start." << std::endl;
-            }
-        }
-        else if((cmd[0] == "stop") || (cmd[0] == "autostop"))
-        {
-            // Stop a task
-            if(cmd.size() < 2)
-            {
-                std::cout << "Need a task name to stop." << std::endl;
-                continue;
-            }
-            if(tasks.find(cmd[1]) == tasks.end())
-            {
-                std::cout << "Task " << cmd[1] << " is not defined." << std::endl;
-                continue;
-            }
-            if(!std::get<0>(tasks[cmd[1]])->is_alive())
-            {
-                std::cout << "Task " << cmd[1] << " is already stopped." << std::endl;
-                continue;
-            }
-
-            (cmd[0] == "stop") ? std::get<0>(tasks[cmd[1]])->stop() : std::get<0>(tasks[cmd[1]])->autostop();
-            std::cout << "Stopped task " << cmd[1] << std::endl;
-        }
-        else if(cmd[0] == "exit")
-        {
-            running = false;
-        }
-        else if(cmd[0] == "capture")
-        {
-            if(!cam_left->is_alive() || !cam_right->is_alive())
-            {
-                std::cout << "Cannot run capture without left and right cameras running." << std::endl;
-                continue;
-            }
-            if(cmd.size() < 2)
-            {
-                std::cout << "Capture requires at least one argument (count)." << std::endl;
-                continue;
-            }
-
-            int n = std::stoi(cmd[1]);
-            std::string path = (cmd.size() > 2) ? cmd[2] : "./";
-            std::string left_file, right_file;
-            
-            std::cout << "Saving " << n << " image pairs to " << path << ", at 1 second interval." << std::endl;
-            for(int i = 0; i < n; ++i)
-            {
-                left_file = path + "left-" + std::to_string(i) + ".png";
-                right_file = path + "right-" + std::to_string(i) + ".png";
-                cv::Mat left_im(cam_left->get_height(), cam_left->get_width(), CV_8UC1, cam_left->acquire(), cam_left->get_stride());
-                cv::Mat right_im(cam_right->get_height(), cam_right->get_width(), CV_8UC1, cam_right->acquire(), cam_right->get_stride());
-                imwrite(left_file.c_str(), left_im);
-                imwrite(right_file.c_str(), right_im);
-                cam_left->release();
-                cam_right->release();
-                std::this_thread::sleep_for(1s); 
-            }
-            std::cout << "Captures completed." << std::endl;
-        }
-        else if(tasks.find(cmd[0]) != tasks.end())
-        {
-            if(cmd.size() < 2)
-            {
-                std::cout << "Need a command name to run a task specific action." << std::endl;
-                continue;
-            }
-
-            auto task = std::get<0>(tasks[cmd[0]]);
-            if(!task->is_alive())
-            {
-                std::cout << "Cannot call commands of a task that is not running." << std::endl;
-                continue;
-            }
-            
-            if(!task->implements(cmd[1]))
-            {
-                std::cout << "Task " << cmd[0] << " has no command named " << cmd[1] << std::endl;
-                continue; 
-            }
-
-            std::vector<std::string> args;
-            if(cmd.size() > 2) args = std::vector<std::string>(cmd.begin()+2, cmd.end());
-            task->call(cmd[1], std::cin, std::cout, args);
+            // Operation on specific task
+            call_task_command(cmd[0], std::cin, std::cout, {cmd.begin()+1, cmd.end()}, context);
         }
         else
         {
@@ -284,7 +170,7 @@ int main(int argc, char** argv)
 
     // Shutdown and exit
     std::cout << "-- Killing tasks" << std::endl;    
-    kill_tasks(tasks);
+    kill_tasks(context.tasks);
 
     std::cout << "Perch detector CLI shutdown" << std::endl;
     return 0;
