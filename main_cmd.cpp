@@ -45,24 +45,30 @@ void _start(std::istream& in, std::ostream& out, const std::vector<std::string>&
         out << "Need a task name to start." << std::endl;
         return;
     }
-    if(context.tasks.find(args[0]) == context.tasks.end())
-    {
-        out << "Task " << args[0] << " is not defined." << std::endl;
-        return;
-    }
-    if(std::get<0>(context.tasks[args[0]])->is_alive())
-    {
-        out << "Task " << args[0] << " is already started." << std::endl;
-        return;
-    }
 
-    if(autostart ? std::get<0>(context.tasks[args[0]])->autostart() : std::get<0>(context.tasks[args[0]])->start())
+    for(const auto& arg : args)
     {
-        out << "Task " << args[0] << " has been started." << std::endl;
-    }
-    else
-    {
-        out << "Task " << args[0] << " failed to start." << std::endl;
+        if(context.tasks.find(arg) == context.tasks.end())
+        {
+            out << "Task " << arg << " is not defined." << std::endl;
+            continue;
+        }
+
+        auto task = std::get<0>(context.tasks[arg]);
+        if(task->is_alive())
+        {
+            out << "Task " << arg << " is already started." << std::endl;
+            continue;
+        }
+
+        if(autostart ? task->autostart() : task->start())
+        {
+            out << "Task " << arg << " has been started." << std::endl;
+        }
+        else
+        {
+            out << "Task " << arg << " failed to start." << std::endl;
+        }
     }
 }
 
@@ -87,19 +93,25 @@ void _stop(std::istream& in, std::ostream& out, const std::vector<std::string>& 
         out << "Need a task name to stop." << std::endl;
         return;
     }
-    if(context.tasks.find(args[0]) == context.tasks.end())
+    
+    for(const auto& arg : args)
     {
-        out << "Task " << args[0] << " is not defined." << std::endl;
-        return;
-    }
-    if(!std::get<0>(context.tasks[args[0]])->is_alive())
-    {
-        out << "Task " << args[0] << " is already stopped." << std::endl;
-        return;
-    }
+        if(context.tasks.find(arg) == context.tasks.end())
+        {
+            out << "Task " << arg << " is not defined." << std::endl;
+            continue;
+        }
 
-    autostop ? std::get<0>(context.tasks[args[0]])->autostop() : std::get<0>(context.tasks[args[0]])->stop();
-    out << "Stopped task " << args[0] << std::endl;
+        auto task = std::get<0>(context.tasks[arg]);
+        if(!task->is_alive())
+        {
+            out << "Task " << arg << " is already stopped." << std::endl;
+            continue;
+        }
+
+        autostop ? task->autostop() : task->stop();
+        out << "Stopped task " << arg << std::endl;
+    }
 }
 
 
