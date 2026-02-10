@@ -15,8 +15,8 @@
 
 
 // Parameters and Defaults //
-char logfile[] = "logout.txt"; // Default log file
 program_context context; // Global program state and configuration
+const char* default_log = "logout.txt";
 
 
 // Task Definitions //
@@ -39,6 +39,7 @@ void stop(std::istream&, std::ostream&, const std::vector<std::string>&, program
 void autostop(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void exit(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void capture(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void cmd_list(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 
 void call_task_command(const std::string&, std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 
@@ -73,6 +74,7 @@ void make_tasks()
 void make_commands()
 {
     context.commands["status"] = &list_tasks;
+    context.commands["commands"] = &cmd_list;
     context.commands["start"] = &start;
     context.commands["autostart"] = &autostart;
     context.commands["stop"] = &stop;
@@ -88,14 +90,16 @@ int main(int argc, char** argv)
 
     signal(SIGINT, sig_handle);
 
-    // Process arguments
+    // Set defaults and process arguments
     std::cout << "-- Configuring program" << std::endl;
+    strcpy(context.logfile, default_log);
+    
     int i = 1;
     while(i < argc)
     {
         if(strcmp(argv[i], "--logfile") == 0) // Set logfile name
         {
-            strcpy(logfile, argv[i+1]);
+            strcpy(context.logfile, argv[i+1]);
             i += 2;
         }
         else
@@ -104,7 +108,7 @@ int main(int argc, char** argv)
         }
     }
 
-    Logger::instance().set_file(logfile);
+    Logger::instance().set_file(context.logfile);
     make_commands();
 
     // Construct tasts
@@ -128,7 +132,7 @@ int main(int argc, char** argv)
 
     context.running = true;
     std::cout << "Perch detector CLI started" << std::endl;
-    
+
     // Main program started, continue on user input
     std::string line, word;
     std::stringstream input;

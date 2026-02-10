@@ -1,5 +1,6 @@
 #include "Task.hpp"
 
+
 void Task::init()
 {    
     for(auto task : depends_on)
@@ -33,6 +34,14 @@ void Task::stop()
 void Task::declare_cli_command(const char* cmd, command_executor_t executor)
 {
     commands[cmd] = executor;
+}
+
+
+std::vector<std::string> Task::list_commands()
+{
+    std::vector<std::string> out;
+    for(const auto& pair : commands){ out.push_back(pair.first); }
+    return out;
 }
 
 

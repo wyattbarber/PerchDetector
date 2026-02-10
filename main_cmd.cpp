@@ -12,18 +12,19 @@ using namespace std::chrono_literals;
 void list_tasks(std::istream& in, std::ostream& out, const std::vector<std::string>& args, program_context& context)
 {
     // Compute padding to make list into even columns
-    auto max_len = context.tasks.begin()->first.size();
+    auto max_name_len = context.tasks.begin()->first.size();
     for(const auto& pair : context.tasks)
     {
         auto len = pair.first.size();
-        max_len = (len > max_len) ? len : max_len;
+        max_name_len = (len > max_name_len) ? len : max_name_len;
     }
 
     // Print two columns of task names and states
     for(const auto& pair : context.tasks)
     {
+        // Task name
         out << "\t" << pair.first;
-        for(auto i = pair.first.size(); i < max_len; ++i){ out << ' '; } // Space pad the name to make columns even
+        for(auto i = pair.first.size(); i < max_name_len; ++i){ out << ' '; } // Space pad the name to make columns even
         out << "\t\t";
         // State
         out << (std::get<0>(pair.second)->is_alive() ? "running" : "stopped");
@@ -179,4 +180,25 @@ void call_task_command(const std::string& taskname, std::istream& in, std::ostre
     }
 
     task->call(args[0], in, out, {args.begin()+1, args.end()});
+}
+
+
+void cmd_list(std::istream& in, std::ostream& out, const std::vector<std::string>& args, program_context& context)
+{
+    if(args.size() != 1)
+    {
+        out << "Need one task name to list commands for." << std::endl;
+        return;
+    }
+    if(context.tasks.find(args[0]) == context.tasks.end())
+    {
+        out << "Task " << args[0] << " is not defined." << std::endl;
+        return;
+    }
+
+    for(const auto & cmd : std::get<0>(context.tasks[args[0]])->list_commands())
+    {
+        out << cmd << " ";
+    }
+    out << std::endl;
 }

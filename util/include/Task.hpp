@@ -111,6 +111,17 @@ public:
     */
     bool is_alive(){ return alive; }
 
+    /** Get list of commands this task implements.
+    
+    Gets a vector containing all command names supported
+    by this task. Each name is a command that can be called
+    by the call() method.
+
+    @return All command names implemented by this task.
+    */
+    std::vector<std::string> list_commands();
+    
+
     /** Check if this task implements a command.
     
     @param cmd Name of the command to check for
