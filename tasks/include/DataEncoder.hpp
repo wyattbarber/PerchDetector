@@ -38,7 +38,9 @@ public:
     */
     DataEncoder(const char* name, std::shared_ptr<T> task) : 
         Task(name, {task}),
-        task(task)
+        task(task),
+        run_stream(false),
+        streaming(false)
     {
         static_assert(std::is_base_of_v<DataSource<D>, T>, "Source must implement DataSource<D>");
         static_assert(std::is_base_of_v<Task, T>, "Source must be a Task type");

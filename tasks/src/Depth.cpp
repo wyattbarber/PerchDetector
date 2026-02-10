@@ -16,7 +16,7 @@ bool DepthCamera::start_impl()
         return false;
     }
 
-    for(int i = 0; i < N; ++i)
+    for(size_t i = 0; i < N; ++i)
     {
         _disparity[i] = cv::Mat(left->get_height(), left->get_width(), CV_16S);
     }
@@ -63,14 +63,15 @@ bool DepthCamera::start_impl()
 void DepthCamera::step()
 {
     if(!is_alive()) return;
+    tick();
     
     // Determine the next buffer to update
-    size_t target_idx = latest_idx + 1;
+    int target_idx = latest_idx + 1;
     if(target_idx == locked_idx)
     {
         target_idx += 1;
     }
-    if(target_idx >= N)
+    if((size_t)target_idx >= N)
     {
         target_idx = (locked_idx == 0) ? 1 : 0;
     }

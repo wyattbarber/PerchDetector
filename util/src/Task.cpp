@@ -89,6 +89,23 @@ void Task::declare_dependency_of(std::shared_ptr<Task> task)
 }
 
 
+void Task::tick()
+{
+    auto now = std::chrono::steady_clock::now();
+    if(tick_called_once)
+    {
+        tick_called_twice = true;
+        std::chrono::duration<float> t = last_tick_call - now;
+        rate_est = 1.0 / t.count();
+    }
+    else
+    {
+        tick_called_once = true;
+    }
+    last_tick_call = now;
+}
+
+
 void _task_runner(std::shared_ptr<Task> task, bool* alive)
 {
     while(*alive)

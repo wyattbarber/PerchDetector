@@ -13,6 +13,7 @@
 #include <csignal>
 #include <vector>
 #include <algorithm>
+#include <iomanip>
 
 
 using namespace std::chrono_literals;
@@ -78,7 +79,14 @@ void list_tasks(const char* line_start, task_executor& tasks)
         std::cout << line_start << pair.first;
         for(auto i = pair.first.size(); i < max_len; ++i){ std::cout << ' '; } // Space pad the name to make columns even
         std::cout << "\t\t";
-        std::cout << (std::get<0>(pair.second)->is_alive() ? "running" : "stopped") << std::endl;
+        // State
+        std::cout << (std::get<0>(pair.second)->is_alive() ? "running" : "stopped");
+        std::cout << "\t\t";
+        // Update rate
+        auto r = std::get<0>(pair.second)->rate();
+        if(r.second) std::cout << std::fixed << std::setprecision(2) << r.first << std::defaultfloat << " Hz";
+        else std::cout << "---";
+        std::cout << std::endl;
     }
 }
 
@@ -150,7 +158,7 @@ int main(int argc, char** argv)
         }
 
         // Match command to operation and execute
-        if(cmd[0] == "list")
+        if(cmd[0] == "status")
         {
             // List all tasks and status
             list_tasks("\t", tasks);

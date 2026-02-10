@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <chrono>
 
 
 /** Base interface for a task
@@ -23,6 +24,9 @@ public:
         depends_on{dependencies}
     {
         alive = false;
+        rate_est = 0.0;
+        tick_called_once = false;
+        tick_called_twice = false;
     }
 
     /** Must be called after construction before any other methods.
@@ -134,6 +138,20 @@ public:
     */
     void autostop();
 
+    /** Get the update rate for this task.
+    
+    If the task type is tracking the update rate
+    with tick(), then this method will return that 
+    rate in Hz (calls to tick() per second) and true
+    in the valid flag.
+
+    If the rate is not being tracked, the valid flag 
+    will be false and the rate 0;
+
+    @return rate, valid pair
+    */
+    std::pair<float, bool> rate(){ return {rate_est, tick_called_twice}; }
+
     const char* name;
 
 protected:
@@ -165,9 +183,19 @@ protected:
     */
     void declare_dependency_of(std::shared_ptr<Task> task);
 
+    /** To be used by the task implementation for rate tracking.
+    
+    A call to this method will mark a completion of one cycle
+    and an update of the rate measurement.
+    */
+    void tick();
+
     bool alive;
     std::map<std::string, command_executor_t> commands;
     std::vector<std::shared_ptr<Task>> depends_on, depended_by;
+    bool tick_called_once, tick_called_twice;
+    std::chrono::steady_clock::time_point last_tick_call;
+    float rate_est;
 };
 
 /** Container for executing tasks.

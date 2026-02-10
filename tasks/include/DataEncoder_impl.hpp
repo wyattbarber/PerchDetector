@@ -50,6 +50,7 @@ void DataEncoder<T,D>::step()
                 (*out) << data[j];
             } 
         }
+        tick();
     }
     else
     {

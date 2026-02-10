@@ -213,6 +213,8 @@ void CameraWrapper::stop_impl()
 
 void CameraWrapper::set_freshest(uint8_t idx)
 { 
+    tick();
+    
     freshest_buffer = idx; 
     uint8_t next = idx+1;
     if( next == locked_idx)

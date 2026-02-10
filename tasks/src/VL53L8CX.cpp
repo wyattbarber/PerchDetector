@@ -79,7 +79,8 @@ void VL53L8CX::step()
         if(ready)
         {
 			vl53l8cx_get_ranging_data(&device, &data);
-        }
+            tick();
+        }        
     }
 }
 
