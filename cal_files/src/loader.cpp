@@ -3,8 +3,14 @@
 #include <iostream>
 
 
-int load_camera_matrices(std::ifstream& file, cv::Mat& dist, cv::Mat& intr)
+int load_camera_matrices(const std::string& filename, cv::Mat& dist, cv::Mat& intr)
 {
+    std::ifstream file(filename);
+    if(!file)
+    {
+        return -1;
+    }
+
     Json::Value root;
     Json::CharReaderBuilder builder;
     JSONCPP_STRING errs;
@@ -48,8 +54,14 @@ int load_camera_matrices(std::ifstream& file, cv::Mat& dist, cv::Mat& intr)
 }
 
 
-int load_stereo_matrices(std::ifstream& file, cv::Mat& R, cv::Mat& T)
+int load_stereo_matrices(const std::string& filename, cv::Mat& R, cv::Mat& T)
 {
+    std::ifstream file(filename);
+    if(!file)
+    {
+        return -1;
+    }
+    
     Json::Value root;
     Json::CharReaderBuilder builder;
     JSONCPP_STRING errs;
