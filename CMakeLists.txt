@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(OpenCV REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
+find_package(jsoncpp REQUIRED)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
@@ -32,6 +33,13 @@ set_source_files_properties(
 )
 target_link_libraries(stsw_img040 PUBLIC util)
 target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/VL53L8CX_ULD_API/inc)
+
+# Hepers for loading calibration data
+add_library(cal_files STATIC
+    cal_files/src/loader.cpp
+)
+target_link_libraries(cal_files PRIVATE jsoncpp_lib ${OpenCV_LIBS})
+target_include_directories(cal_files PUBLIC cal_files/include)
 
 # Library of specific task types
 add_library(tasks STATIC 
