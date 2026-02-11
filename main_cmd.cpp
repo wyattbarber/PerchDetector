@@ -135,8 +135,8 @@ void exit(std::istream& in, std::ostream& out, const std::vector<std::string>& a
 
 void capture(std::istream& in, std::ostream& out, const std::vector<std::string>& args, program_context& context)
 {
-    auto cam_left = std::dynamic_pointer_cast<CameraWrapper>(std::get<0>(context.tasks["camera_left"]));
-    auto cam_right = std::dynamic_pointer_cast<CameraWrapper>(std::get<0>(context.tasks["camera_right"]));
+    auto cam_left = std::dynamic_pointer_cast<CameraWrapper>(std::get<0>(context.tasks["camera-left"]));
+    auto cam_right = std::dynamic_pointer_cast<CameraWrapper>(std::get<0>(context.tasks["camera-right"]));
 
     if(!cam_left->is_alive() || !cam_right->is_alive())
     {
@@ -165,6 +165,7 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
         cam_left->release();
         cam_right->release();
         std::this_thread::sleep_for(1s); 
+        out << "Complete capture " << i << " of " << n << std::endl;
     }
     out << "Captures completed." << std::endl;
 }
