@@ -166,8 +166,9 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
         cam_left->release();
         cam_right->release();
         std::this_thread::sleep_for(1s); 
-        out << "Complete capture " << i << " of " << n << std::endl;
+        out << '\r' << "Complete capture " << i << " of " << n;
     }
+    out << std::endl;
     out << "Captures completed." << std::endl;
 }
 
