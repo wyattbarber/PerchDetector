@@ -55,8 +55,8 @@ void make_tasks()
 {
     cam_manager = std::make_shared<CameraManagerTask>();
     
-    cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, false);
-    cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, false);
+    cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
+    cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
     
     depth = std::make_shared<DepthCamera>("stereo", cam_left, cam_right);
     depth_stream = std::make_shared<DataEncoder<DepthCamera, float>>("depth_streamer", depth);
@@ -93,6 +93,7 @@ int main(int argc, char** argv)
     // Set defaults and process arguments
     std::cout << "-- Configuring program" << std::endl;
     strcpy(context.logfile, default_log);
+    context.color = false;
     
     int i = 1;
     while(i < argc)
@@ -102,8 +103,14 @@ int main(int argc, char** argv)
             strcpy(context.logfile, argv[i+1]);
             i += 2;
         }
+        else if(strcmp(argv[i], "--color") == 0) // Use color images
+        {
+            context.color = true;
+            i++;
+        }
         else
         {
+            std::cout << "    Unrecognized argument " << argv[i] << std::endl;
             i++;
         }
     }
