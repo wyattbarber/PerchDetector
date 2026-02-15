@@ -3,6 +3,7 @@
 #include <opencv2/imgproc.hpp>
 #include <limits>
 #include <thread>
+#include <loader.hpp>
 
 
 using namespace std::chrono_literals;
@@ -16,11 +17,27 @@ bool DepthCamera::start_impl()
         return false;
     }
 
-    for(size_t i = 0; i < N; ++i)
+    // Load calibration data
+    std::string cal_err;
+    info("Loading left camera calibration from ", left_cal);
+    if(!load_camera_matrices(left_cal, cal_err, left_dist, left_intr))
     {
-        _disparity[i] = cv::Mat(left->get_height(), left->get_width(), CV_16S);
+        error("Failed to load calibration: ", cal_err);
+        return false;
     }
-    depth = cv::Mat(_disparity[0].rows, _disparity[0].cols, CV_32F);
+    info("Loading right camera calibration from ", right_cal);
+    if(!load_camera_matrices(right_cal, cal_err, right_dist, right_intr))
+    {
+        error("Failed to load calibration: ", cal_err);
+        return false;
+    }
+    info("Loading stereo calibration from ", stereo_cal);
+    if(!load_stereo_matrices(stereo_cal, cal_err, R, T))
+    {
+        error("Failed to load calibration: ", cal_err);
+        return false;
+    }
+
 
     // Initialize stereo calibration data
     cv::Mat _Rl, _Rr, _Pl, _Pr;
@@ -46,12 +63,17 @@ bool DepthCamera::start_impl()
         CV_16SC2, mapr1, mapr2
     );
 
-    /* Initialize disparity to depth conversion
+    /* Initialize disparity arrays and depth conversion
         Conversion factor is Z = B*f / disparity, and opencv disparity
         is scaled up by 15. The matrix Q is expected, for horizontal 
         stereo cameras, to have f at element (2,3), and -1/B at element
         (3,2)
     */
+    for(size_t i = 0; i < N; ++i)
+    {
+        _disparity[i] = cv::Mat(left->get_height(), left->get_width(), CV_16S);
+    }
+    depth = cv::Mat(_disparity[0].rows, _disparity[0].cols, CV_32F);
     converter.M =  static_cast<float>(Q.at<double>(2,3) / (16.0 * std::abs(Q.at<double>(3,2))));
     info("Q: ", Q);
     info("Set disparity to depth conversion to ", converter.M);

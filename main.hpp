@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Task.hpp>
-
+#include <string>
 
 struct program_context;
 
@@ -18,9 +18,10 @@ typedef void(*cli_cmd_executor)(std::istream&, std::ostream&, const std::vector<
 
 */
 typedef struct program_context{
-    bool running;
-    bool color;
-    char logfile[100];
-    task_executor tasks;
-    std::map<std::string, cli_cmd_executor> commands;
+    bool running; // Program is started
+    bool color; /// Use color image input instead of grayscale
+    std::string logfile; /// Path to log output
+    std::string cal_folder; /// Folder containing calibration files
+    task_executor tasks; /// Map of task names to tasks and their threads
+    std::map<std::string, cli_cmd_executor> commands; /// Map of CLI user commands and their functions
 } program_context;

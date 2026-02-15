@@ -168,7 +168,7 @@ void CameraWrapper::configure()
 
         // Create a memory mapped array from the planes file descriptor.
         // Only plane 0 is used from each buffer, since we are only using grayscale images.
-        const FrameBuffer::Plane& plane = buffer->planes().at(0);
+        const FrameBuffer::Plane& plane = buffer->planes()[0];
         info("Mapping plane of size ", plane.length, " at offset ", plane.offset);
         bytes = plane.length;
         void* plane_map = mmap(0, bytes, PROT_READ , MAP_SHARED, plane.fd.get(), plane.offset);

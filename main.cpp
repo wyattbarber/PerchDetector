@@ -58,7 +58,7 @@ void make_tasks()
     cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
     cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
     
-    depth = std::make_shared<DepthCamera>("stereo", cam_left, cam_right);
+    depth = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
     depth_stream = std::make_shared<DataEncoder<DepthCamera, float>>("depth_streamer", depth);
 
     lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
@@ -92,7 +92,8 @@ int main(int argc, char** argv)
 
     // Set defaults and process arguments
     std::cout << "-- Configuring program" << std::endl;
-    strcpy(context.logfile, default_log);
+    context.logfile = std::string(default_log);
+    context.cal_folder = std::string("~/camera_calibrations");
     context.color = false;
     
     int i = 1;
@@ -100,7 +101,7 @@ int main(int argc, char** argv)
     {
         if(strcmp(argv[i], "--logfile") == 0) // Set logfile name
         {
-            strcpy(context.logfile, argv[i+1]);
+            context.logfile = std::string(argv[i+1]);
             i += 2;
         }
         else if(strcmp(argv[i], "--color") == 0) // Use color images
@@ -115,7 +116,7 @@ int main(int argc, char** argv)
         }
     }
 
-    Logger::instance().set_file(context.logfile);
+    Logger::instance().set_file(context.logfile.c_str());
     make_commands();
 
     // Construct tasts

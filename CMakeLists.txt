@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.0)
 project(PerchDetector VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -47,7 +47,7 @@ add_library(tasks STATIC
     tasks/src/Depth.cpp
     tasks/src/VL53L8CX.cpp
 )
-target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS})
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} cal_files)
 target_include_directories(tasks PUBLIC tasks/include)
 
 # Main executable

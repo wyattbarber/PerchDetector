@@ -18,20 +18,24 @@ public:
     /** Construct a new depth camera
     
     @param name Task name
+    @param cal_path Folder containing calibration files
     @param left Left camera task
     @param right Right camera task
     */  
-    DepthCamera(const char* name, std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
+    DepthCamera(const char* name, const std::string& cal_path, std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
         Task(name, {left, right}),
         DataSource<float>(),
         left(left),
         right(right),
-        left_intr(3,3,CV_64F,(void*)_left_intrinsic), 
-        right_intr(3,3,CV_64F,(void*)_right_intrinsic), 
-        left_dist(1,5,CV_64F,(void*)_left_distortion), 
-        right_dist(1,5,CV_64F,(void*)_right_distortion), 
-        R(3,3,CV_64F,(void*)_R), 
-        T(3,1,CV_64F,(void*)_T)
+        left_cal(cal_path + "/left.json"),
+        right_cal(cal_path + "/right.json"),
+        stereo_cal(cal_path + "/stereo.json"),
+        left_intr(3,3,CV_64F), 
+        right_intr(3,3,CV_64F), 
+        left_dist(1,5,CV_64F), 
+        right_dist(1,5,CV_64F), 
+        R(3,3,CV_64F), 
+        T(3,1,CV_64F)
     {
         // stereo = cv::StereoSGBM::create(
         //     	0, // minDisparity
@@ -142,12 +146,7 @@ protected:
     struct disp_conv converter;
 
     // Camera parameters (distance units are cm)
+    const std::string left_cal, right_cal, stereo_cal;
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;
-    const cv::Mat left_intr, right_intr, left_dist, right_dist, R, T;
-    static constexpr double _left_intrinsic[] = {635.1785761582178, 0, 403.9176435893709, 0, 635.1785761582178, 315.6895331764429, 0, 0, 1};
-    static constexpr double _left_distortion[] = {0.06425766346938531, 0.2803647129199536, 0, 0, 0, 0, 0, 0.8826899528336022, 0, 0, 0, 0, 0, 0};
-    static constexpr double _right_intrinsic[] = {635.1785761582178, 0, 402.351935054699, 0, 635.1785761582178, 315.7204369891957, 0, 0, 1};
-    static constexpr double _right_distortion[] = {0.07421160862648429, 0.5709942396909135, 0, 0, 0, 0, 0, 2.225296151452876, 0, 0, 0, 0, 0, 0};
-    static constexpr double _R[] = {0.9996814737070656, -0.01851791283139589, -0.01714753717705048, 0.01817539854252873, 0.9996363685898212, -0.01991947490209907, 0.01751016889380995, 0.01960146670338558, 0.9996545285689383}; 
-    static constexpr double _T[] = {-7.302706912589366, 0.2571508864407846, -0.137874049067649}; 
+    cv::Mat left_intr, right_intr, left_dist, right_dist, R, T;
 };
