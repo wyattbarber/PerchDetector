@@ -9,9 +9,8 @@
 #include "CameraManager.hpp"
 
 
-
-const unsigned width = 600;
-const unsigned height = 800;
+const size_t _width = 600;
+const size_t _height = 800;
 
 /** Wrapper to simplify reading grayscale images from a libcamera::Camera.
  * 
@@ -19,9 +18,12 @@ const unsigned height = 800;
  * format, mapping DMA buffers to memory, and keeping data in scope as the application needs.
  * 
  */
-class CameraWrapper : public Task, public DataSource<uint8_t[width * height]>
+class CameraWrapper : public Task, public DataSource<uint8_t[_width * _height]>
 {
     public:
+    static const size_t Width = _width;
+    static const size_t Height = _height;
+
     typedef uint8_t dtype; /// Datatype of pixel intensity values
     static constexpr auto cvtype = cv::DataType<dtype>::type; // OpenCV type ID of pixel intensity values
 
@@ -38,7 +40,7 @@ class CameraWrapper : public Task, public DataSource<uint8_t[width * height]>
     */
     CameraWrapper(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool(*check)(const std::string&), bool color = false) :
         Task(name, {cm}),
-        DataSource<uint8_t[width * height]>(),
+        DataSource<uint8_t[_width * _height]>(),
         cm(cm),
         check(check),
         color(color)
@@ -58,13 +60,13 @@ class CameraWrapper : public Task, public DataSource<uint8_t[width * height]>
      * 
      * @return Width, in pixels
     */
-    size_t get_width(){ return width; }
+    size_t get_width(){ return Width; }
 
     /** Image height
      * 
      * @return Height, in pixels
     */
-    size_t get_height(){ return height; }
+    size_t get_height(){ return Height; }
     
     /** Buffer stride
      * 

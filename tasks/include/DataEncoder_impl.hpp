@@ -13,10 +13,6 @@ bool DataEncoder<T,D>::start_impl(){
         error("Cannot start streamer if producer is not running.");
         return false;
     }
-
-    size = task->size();
-    info("Allocating streaming buffer of ", size, " bytes.");
-    buffer = (D*)malloc(size*sizeof(D));
     return true;
 }
 
@@ -25,7 +21,6 @@ template<class T, typename D>
 void DataEncoder<T,D>::stop_impl()
 {
     info("Freeing streaming buffer.");
-    free(buffer);
 }
 
 
@@ -35,20 +30,14 @@ void DataEncoder<T,D>::step()
     if(run_stream)
     {
         streaming = true;
-        size_t size = task->size();
-        memcpy((void*)buffer, (void*)task->acquire(), size*sizeof(D));
-        task->release();
-        
+        auto data = task->acquire();
+        char* buffer = reinterpret_cast<char*>(&(data->data));
+
         // Dump bytes of all data to output
-        for(size_t i = 0; i < size; ++i)
+        for(size_t i = 0; i < sizeof(D); ++i)
         {
             if(!run_stream) break; // Check for exit mid frame
-            using bytearray_t = unsigned char[sizeof(D)];
-            bytearray_t* data = reinterpret_cast<bytearray_t*>(&(buffer[i]));
-            for(size_t j = 0; j < sizeof(D); ++j)
-            {
-                (*out) << data[j];
-            } 
+            (*out) << buffer[i];
         }
         tick();
     }

@@ -59,8 +59,6 @@ protected:
     std::shared_ptr<T> task;
     std::ostream* out;
     std::atomic<bool> run_stream, streaming;
-    size_t size;
-    D* buffer;
 };
 
 

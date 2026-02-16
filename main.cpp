@@ -28,7 +28,7 @@ static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10"
 std::shared_ptr<CameraWrapper> cam_left, cam_right;
 std::shared_ptr<DepthCamera> depth;
 std::shared_ptr<VL53L8CX> lidar;
-std::shared_ptr<DataEncoder<DepthCamera, float>> depth_stream;
+std::shared_ptr<DataEncoder<DepthCamera, float[CameraWrapper::Width * CameraWrapper::Height]>> depth_stream;
 
 
 // Command Line Helper Functions //
@@ -59,7 +59,7 @@ void make_tasks()
     cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
     
     depth = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
-    depth_stream = std::make_shared<DataEncoder<DepthCamera, float>>("depth_streamer", depth);
+    depth_stream = std::make_shared<DataEncoder<DepthCamera, float[CameraWrapper::Width * CameraWrapper::Height]>>("depth_streamer", depth);
 
     lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
 

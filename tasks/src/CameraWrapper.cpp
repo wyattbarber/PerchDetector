@@ -227,5 +227,5 @@ void CameraWrapper::set_freshest(uint8_t idx)
     }
 
     // Copy this reuests data to datasource interface
-    swap_data(*reinterpret_cast<uint8_t(*)[width*height]>(map[idx]));
+    swap_data(*reinterpret_cast<uint8_t(*)[Width*Height]>(map[idx]));
 }

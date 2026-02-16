@@ -9,7 +9,7 @@
 
 /** Manages getting grayscale frames from two cameras and maintaining a buffer of depth maps.
 */
-class DepthCamera : public Task, public DataSource<float>
+class DepthCamera : public Task, public DataSource<float[CameraWrapper::Width * CameraWrapper::Height]>
 {
 public:
     typedef float dtype; /// Datatype used for depth of each pixel
@@ -24,7 +24,7 @@ public:
     */  
     DepthCamera(const char* name, const std::string& cal_path, std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
         Task(name, {left, right}),
-        DataSource<float>(),
+        DataSource<float[CameraWrapper::Width * CameraWrapper::Height]>(),
         left(left),
         right(right),
         left_cal(cal_path + "/left.json"),
@@ -55,9 +55,6 @@ public:
         // stereo->setSpeckleWindowSize(50);
         // stereo->setSpeckleRange(1);
         // stereo->setTextureThreshold(0);
-
-        _stereo_locked = false;
-        locked_idx = 0;
     }
 
 
