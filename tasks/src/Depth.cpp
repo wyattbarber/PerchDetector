@@ -86,33 +86,16 @@ void DepthCamera::step()
 {
     if(!is_alive()) return;
     tick();
-    
-    // Determine the next buffer to update
-    int target_idx = latest_idx + 1;
-    if(target_idx == locked_idx)
-    {
-        target_idx += 1;
-    }
-    if((size_t)target_idx >= N)
-    {
-        target_idx = (locked_idx == 0) ? 1 : 0;
-    }
 
     cv::Mat left_rect, right_rect;
-    cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, left->acquire(), left->get_stride());
-    cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, right->acquire(), right->get_stride());
+    cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, left->acquire()->data, left->get_stride());
+    cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, right->acquire()->data, right->get_stride());
     rectify(left_im, right_im, left_rect, right_rect);
-    left->release();
-    right->release();
 
-    _stereo_locked = true;
-    stereo->compute(left_rect, right_rect, _disparity[target_idx]);
-    if(_disparity[target_idx].empty())
+    stereo->compute(left_rect, right_rect, disp);
+    if(disp.empty())
         warning("Empty disparity map produced");
-    _stereo_locked = false;
 
-    // Update indices
-    latest_idx = target_idx;
 }
 
 
@@ -140,11 +123,6 @@ void DepthCamera::set_params(int minDisparity,
                     int	speckleWindowSize,
                     int	speckleRange)
 {
-    while(_stereo_locked)
-    {
-        // Ensure any parameter changes are done, should be a very short wait
-        std::this_thread::sleep_for(100ms);
-    }
     stereo->setMinDisparity(minDisparity);
     stereo->setNumDisparities(numDisparities);
     // stereo->setP1(P1);

@@ -2,81 +2,81 @@
 
 #include <mutex>
 
+
+/** Datatype for data value updates with metadata.
+ * 
+ * Contains a datapoint from a datasource, 
+ * along with a stale flag that is set true once the 
+ * source of the data has produced a new update.
+ * 
+ * Intended to only ever be created as a shared pointer
+ * by the DataSource object that creates the data it contains.
+ * 
+ * @tparam T Type of the wrapped datapoint
+ */
+template<typename T>
+struct _datavalue_t 
+{
+    T data; /// This updates data value
+    bool stale; /// True if the data source has a newer update
+};
+template<typename T>
+using datavalue_t = _datavalue_t<T>;
+
+
 /** Interface class definition for tasks that provide thread-safe data.
 
 Assumes that all data sources only need to provide the most recent
 dataset (as opposed to maintaining a queue of all measurments).
 
-Tracks a use counter to handle multiple consumers locking the data
-simultaneously, however this relies on the consumers ensure they do
-not make repeated calls that would cause the use counter to innacurately
-reflect the number of consumers locking the data.
+Wraps updates in a struct that contains a flag for data consumers
+to check if the data they have is stale, and ensures that data updates
+are managed by smart pointers.
 
-@tparam T scalar type of the data provided.
+The datatype of the updates must be trivially default or copy constructible
+to work with this interface.
+
+@tparam T Type of the data provided.
 */
 template<typename T>
 class DataSource
 {
 public:
-    DataSource()
-    {
-        _use_counter = 0;
-    }
+    DataSource(){ static_assert(
+        std::is_trivially_copy_constructible_v<T> || std::is_trivially_default_constructible_v<T>, 
+        "Datatypes of the DataSource interface must be trivially copy or default constructible."
+    ); }
 
     /** Provides access to the latest data value.
-    
-    Returns the current data pointer and increases
-    the use counter. If the use counter is 0 when called,
-    then the latest version of the dataset is aquired and locked.
-
-    Must be paired with a call to release() once 
-    the consumer is done with this data.
-    
-    @return Pointer to dataset
+     * 
+     * Creates a shared pointer to a datavalue_t type
+     * containing the latest data value and its metadata.
+     *     
+    @return Pointer to latest data value
     */
-    T* acquire();
-
-    /** Release lock on the dataset
-    
-    Indicates that one consumer no longer needs
-    the dataset. Must be paired with exactly one previous
-    call to acquire().
-
-    Decreases the use counter, and unlocks the data
-    if this reduces it to 0;
-    */
-    void release();
-
-    /** Get the size of the dataset.
-    
-    Must be implemented to provide the number
-    of elements of type T available in the data.
-
-    @return Number of elements
-    */
-    virtual size_t size() = 0;
+    std::shared_ptr<datavalue_t<T>> acquire();
 
 protected:
-    /** Must be implemented to provide access to dataset.
     
-    Defines dataset specific locking and returns the pointer
-    to the latest valid data.
+    /** Provide a new data value.
+     * 
+     * Will creae a copy of the passed data value wrapped
+     * in a datavalue_t instance, and updates the shared_ptr
+     * that gets returned by acquire().
+     * 
+     * If the type T is copy constructible, then the copy will be
+     * performed with the copy constructor. Otherwise the copy 
+     * will be done with memcpy().
+     * 
+     * Will set the stale flag of the current data value before 
+     * swapping it, to notify consumers that new data is available.
+     * 
+     * @param value New data point to update
+     */
+    void swap_data(const T& value);
 
-    @return Pointer to data
-    */
-    virtual T* lock() = 0;
-
-    /** Must be implemented to unlock dataset.
-
-    Implements dataset specific unlocking to 
-    indicate that the pointer previously returned
-    by lock() is no longer needed and its data can 
-    be changed.
-    */
-    virtual void unlock() = 0;
-
-    unsigned _use_counter;
-    T* _latest_dataset;
+private:
+    std::shared_ptr<datavalue_t<T>> latest_data;
     std::mutex mtx;
 };
 

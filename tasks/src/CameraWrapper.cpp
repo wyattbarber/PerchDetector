@@ -123,8 +123,8 @@ void CameraWrapper::configure()
 
     config->at(0).pixelFormat = PixelFormat::fromString("YVU420"); 
     config->validate();   
-    width = config->at(0).size.width;
-    height = config->at(0).size.height;
+    // width = config->at(0).size.width;
+    // height = config->at(0).size.height;
     info("Validated viewfinder configuration is: ", config->at(0).toString());
     camera->configure(config.get());
 
@@ -178,7 +178,6 @@ void CameraWrapper::configure()
             return;
         }
         map.push_back(plane_map);
-        matrices.push_back(cv::Mat(height, width, cv::DataType<uint8_t>::type, plane_map, std::max(stride, width)));
     }
 
     camera->requestCompleted.connect(requestComplete);
@@ -215,22 +214,18 @@ void CameraWrapper::set_freshest(uint8_t idx)
 { 
     tick();
     
-    freshest_buffer = idx; 
+    // Queue next request to begin capture of next frame
     uint8_t next = idx+1;
-    if( next == locked_idx)
+    if( next >= requests.size())
     {
-        // Skip this buffer if it is locked.
-        next += 1;
-    }
-    if( next >= requests.size() )
-    {
-        // Loop around the end of the request vector, skipping index 0 if it is locked.
-        next = (locked_idx == 0) ? 1 : 0;
+        next = 0;
     }    
-
     requests[next]->reuse(Request::ReuseBuffers);
     if(is_alive())
     {
         camera->queueRequest(requests[next].get());
     }
+
+    // Copy this reuests data to datasource interface
+    swap_data(*reinterpret_cast<uint8_t(*)[width*height]>(map[idx]));
 }

@@ -8,16 +8,20 @@
 #include "DataSource.hpp"
 #include "CameraManager.hpp"
 
+
+
+const unsigned width = 600;
+const unsigned height = 800;
+
 /** Wrapper to simplify reading grayscale images from a libcamera::Camera.
  * 
  * Handles detection of a suitable camera device, configuring the desired image
  * format, mapping DMA buffers to memory, and keeping data in scope as the application needs.
  * 
  */
-class CameraWrapper : public Task, public DataSource<uint8_t>
+class CameraWrapper : public Task, public DataSource<uint8_t[width * height]>
 {
     public:
-
     typedef uint8_t dtype; /// Datatype of pixel intensity values
     static constexpr auto cvtype = cv::DataType<dtype>::type; // OpenCV type ID of pixel intensity values
 
@@ -34,7 +38,7 @@ class CameraWrapper : public Task, public DataSource<uint8_t>
     */
     CameraWrapper(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool(*check)(const std::string&), bool color = false) :
         Task(name, {cm}),
-        DataSource<uint8_t>(),
+        DataSource<uint8_t[width * height]>(),
         cm(cm),
         check(check),
         color(color)
@@ -68,13 +72,6 @@ class CameraWrapper : public Task, public DataSource<uint8_t>
     */
     size_t get_stride(){ return stride; }
 
-   
-    /** Get the size of the image data in bytes.
-    
-    @return data size.
-    */
-    size_t size() override { return bytes; }
-
 
     /** Gets a pointer to the camera instance.
      * 
@@ -88,24 +85,6 @@ class CameraWrapper : public Task, public DataSource<uint8_t>
 
 
 protected:
-
-    /** Get and lock the latest image.
-
-    @return Pointer to image data
-    */
-    uint8_t* lock() override
-    {
-        locked_idx = freshest_buffer;
-        return (uint8_t*)map[locked_idx];
-    }
-
-
-    /** Unlock latest image.
-     */
-    void unlock() override
-    {
-        locked_idx = -1;
-    }
 
     /** Identifies the correct camera to read from.
     
@@ -132,10 +111,7 @@ protected:
     const std::vector<std::unique_ptr<libcamera::FrameBuffer>>* buffers;
     std::vector<std::unique_ptr<libcamera::Request>> requests;
     std::vector<void*> map;
-    std::vector<cv::Mat> matrices;
-    size_t bytes, width, height, stride;
-    size_t freshest_buffer;
-    uint16_t locked_idx;
+    size_t bytes, stride;
     const bool color;
 };
 

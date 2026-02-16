@@ -159,12 +159,10 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
         left_file = path + "left-" + std::to_string(i) + ".png";
         right_file = path + "right-" + std::to_string(i) + ".png";
         auto cv_dtype = (context.color) ? CV_8UC3 : CV_8UC1;
-        cv::Mat left_im(cam_left->get_height(), cam_left->get_width(), cv_dtype, cam_left->acquire(), cam_left->get_stride());
-        cv::Mat right_im(cam_right->get_height(), cam_right->get_width(), cv_dtype, cam_right->acquire(), cam_right->get_stride());
+        cv::Mat left_im(cam_left->get_height(), cam_left->get_width(), cv_dtype, cam_left->acquire()->data, cam_left->get_stride());
+        cv::Mat right_im(cam_right->get_height(), cam_right->get_width(), cv_dtype, cam_right->acquire()->data, cam_right->get_stride());
         imwrite(left_file.c_str(), left_im);
         imwrite(right_file.c_str(), right_im);
-        cam_left->release();
-        cam_right->release();
         std::this_thread::sleep_for(1s); 
         out << '\r' << "Complete capture " << i << " of " << n;
     }

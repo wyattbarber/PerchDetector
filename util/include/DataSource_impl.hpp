@@ -2,19 +2,26 @@
 
 
 template<typename T>
-T* DataSource<T>::acquire()
+std::shared_ptr<datavalue_t<T>> DataSource<T>::acquire()
 {
-    std::lock_guard<std::mutex> l(mtx); // Ensure counters and locked data are updated atomically
-    if(_use_counter == 0) _latest_dataset = lock(); // No data acquired yet
-    _use_counter++;
-    return _latest_dataset;
+    std::lock_guard<std::mutex> l(mtx); 
+    return latest_data;
 }
 
 
 template<typename T>
-void DataSource<T>::release()
+void DataSource<T>::swap_data(const T& value)
 {
-    std::lock_guard<std::mutex> l(mtx); // Ensure counters and locked data are updated atomically
-    if(_use_counter>0) _use_counter--; // proctect against multiple calls
-    if(_use_counter == 0) unlock(); // Data not needed anymore
+    std::lock_guard<std::mutex> l(mtx);
+    if(latest_data) latest_data->stale = true;
+    if constexpr (std::is_trivially_copy_constructible_v<T>)
+    {
+        latest_data = std::make_shared<datavalue_t<T>>(value, false);
+    }
+    else
+    { // Must be trivially default constructible if not copy constructible
+        latest_data = std::make_shared<datavalue_t<T>>();
+        latest_data->stale = false;
+        memcpy((void*)&latest_data->data, (void*)&value, sizeof(T));
+    }
 }

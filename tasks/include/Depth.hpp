@@ -88,30 +88,8 @@ public:
                     int	speckleWindowSize,
                     int	speckleRange);
 
-    /** Get depth image size.
-    
-    @return number of pixels in the image.
-    */
-    size_t size() override;
     
 protected:
-    /** Locks the most recent depth map,
-    preventing it from being overwritten,
-    */
-    float* lock() override 
-    { 
-        locked_idx = latest_idx; 
-        _disparity[locked_idx].convertTo(depth, CV_32F);
-        depth.forEach<float>(converter);
-        return (float*)depth.data;
-    }
-
-    /** Release the previously locked depth map to be overwritten.
-    */
-    void unlock() override 
-    { 
-        locked_idx = -1; 
-    }
 
     
     /** Applies rectification from the calibration data to a pair of images.
@@ -121,15 +99,9 @@ protected:
 
     std::shared_ptr<CameraWrapper> left, right;
     cv::Ptr<cv::StereoBM> stereo;
-    bool _stereo_locked;
 
-    // Data buffer
-    static constexpr size_t N = 4;
-    int locked_idx;
-    size_t latest_idx;
-    cv::Mat _disparity[N];
-    cv::Mat rect_l, rect_r;
-    cv::Mat depth;
+    // Intermediate matrices
+    cv::Mat rect_l, rect_r, disp, depth;
 
     struct disp_conv
     {
