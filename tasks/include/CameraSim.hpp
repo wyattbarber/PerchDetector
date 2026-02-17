@@ -4,6 +4,7 @@
 #include <memory>
 #include <opencv2/core/mat.hpp>
 #include "CameraWrapper.hpp"
+#include <Eigen/Dense>
 
 
 /** Wrapper to simplify reading grayscale images from a libcamera::Camera.
@@ -28,15 +29,19 @@ class CameraSimulator : public CameraWrapper
         _block_pose_x(Width/2),
         _block_pose_y(Height/2),
         right(right)
-    {}
+    {
+        background = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>::Ones(CameraWrapper::Height, CameraWrapper::Width);
+        block = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>::Ones(block_height, block_width) * 255;
+        cv_out = cv::Mat(CameraWrapper::Height, CameraWrapper::Width, CV_8UC1);
+    }
 
     /** Starts the camera 
     */
-    bool start_impl();
+    bool start_impl(){ return true; }
 
     /** Stops the camera 
     */
-    void stop_impl();
+    void stop_impl(){}
 
     void step();
 
@@ -60,12 +65,16 @@ class CameraSimulator : public CameraWrapper
 
 
 protected:
-    std::pair<unsigned, unsigned> get_block_pose(){ return {_block_pose_y, _block_pose_x}; };
+    std::pair<unsigned, unsigned> get_block_pose(){ return {_block_pose_y, _block_pose_x}; }
 
     unsigned _block_pose_x, _block_pose_y;
     static const unsigned block_width = 100;
     static const unsigned block_height = 50;
     const bool right;
+
+    // Preallocated intermediates
+    Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic> background, block;
+    cv::Mat cv_out;
 };
 
 
