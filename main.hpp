@@ -20,6 +20,7 @@ typedef void(*cli_cmd_executor)(std::istream&, std::ostream&, const std::vector<
 typedef struct program_context{
     bool running; // Program is started
     bool color; /// Use color image input instead of grayscale
+    bool simulation; /// Program running in simulation mode
     std::string logfile; /// Path to log output
     std::string cal_folder; /// Folder containing calibration files
     task_executor tasks; /// Map of task names to tasks and their threads

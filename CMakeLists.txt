@@ -3,6 +3,7 @@ project(PerchDetector VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
 find_package(jsoncpp REQUIRED)
 
@@ -44,10 +45,11 @@ target_include_directories(cal_files PUBLIC cal_files/include)
 # Library of specific task types
 add_library(tasks STATIC 
     tasks/src/CameraWrapper.cpp
+    tasks/src/CameraSim.cpp
     tasks/src/Depth.cpp
     tasks/src/VL53L8CX.cpp
 )
-target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} cal_files)
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} cal_files Eigen3::Eigen)
 target_include_directories(tasks PUBLIC tasks/include)
 
 # Main executable

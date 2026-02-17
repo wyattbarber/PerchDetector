@@ -104,7 +104,7 @@ void Task::tick()
     if(tick_called_once)
     {
         tick_called_twice = true;
-        std::chrono::duration<float> t = last_tick_call - now;
+        std::chrono::duration<float> t = now - last_tick_call;
         rate_est = 1.0 / t.count();
     }
     else

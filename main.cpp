@@ -1,5 +1,6 @@
 #include <CameraManager.hpp>
 #include <CameraWrapper.hpp>
+#include <CameraSim.hpp>
 #include <Depth.hpp>
 #include <VL53L8CX.hpp>
 #include <DataEncoder.hpp>
@@ -55,8 +56,12 @@ void make_tasks()
 {
     cam_manager = std::make_shared<CameraManagerTask>();
     
-    cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
-    cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
+    cam_left = (context.simulation) ? 
+        std::make_shared<CameraSimulator>("camera-left", cam_manager) :
+        std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
+    cam_right = (context.simulation) ? 
+        std::make_shared<CameraSimulator>("camera-right", cam_manager) :
+        std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
     
     depth = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
     depth_stream = std::make_shared<DataEncoder<DepthCamera, float[CameraWrapper::Width * CameraWrapper::Height]>>("depth_streamer", depth);
@@ -95,6 +100,7 @@ int main(int argc, char** argv)
     context.logfile = std::string(default_log);
     context.cal_folder = std::string("~/camera_calibrations");
     context.color = false;
+    context.simulation = false;
     
     int i = 1;
     while(i < argc)
@@ -104,9 +110,19 @@ int main(int argc, char** argv)
             context.logfile = std::string(argv[i+1]);
             i += 2;
         }
+        else if(strcmp(argv[i], "--calibrations") == 0) // Set calibration folder
+        {
+            context.cal_folder = std::string(argv[i+1]);
+            i += 2;
+        }
         else if(strcmp(argv[i], "--color") == 0) // Use color images
         {
             context.color = true;
+            i++;
+        }
+        else if(strcmp(argv[i], "--simulate") == 0) // Run with simulated inputs
+        {
+            context.simulation = true;
             i++;
         }
         else

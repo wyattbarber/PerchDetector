@@ -1,6 +1,7 @@
 # Config files
 .vscode/**
 env/**
+calibrations/**
 
 # Build files
 build/**

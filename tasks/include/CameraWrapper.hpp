@@ -9,8 +9,8 @@
 #include "CameraManager.hpp"
 
 
-const size_t _width = 600;
-const size_t _height = 800;
+const size_t _width = 800;
+const size_t _height = 600;
 
 /** Wrapper to simplify reading grayscale images from a libcamera::Camera.
  * 
