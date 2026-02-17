@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Task.hpp"
 #include <mutex>
 
 
@@ -39,13 +40,18 @@ to work with this interface.
 @tparam T Type of the data provided.
 */
 template<typename T>
-class DataSource
+class DataSource : public Task
 {
 public:
-    DataSource(){ static_assert(
-        std::is_trivially_copy_constructible_v<T> || std::is_trivially_default_constructible_v<T>, 
-        "Datatypes of the DataSource interface must be trivially copy or default constructible."
-    ); }
+    DataSource(const char* name, std::initializer_list<std::shared_ptr<Task>> dependencies) : 
+        Task(name, dependencies), 
+        latest_data() 
+    { 
+        static_assert(
+            std::is_trivially_copy_constructible_v<T> || std::is_trivially_default_constructible_v<T>, 
+            "Datatypes of the DataSource interface must be trivially copy or default constructible."
+        ); 
+    }
 
     /** Provides access to the latest data value.
      * 
@@ -55,6 +61,14 @@ public:
     @return Pointer to latest data value
     */
     std::shared_ptr<datavalue_t<T>> acquire();
+
+    /** Starts the datasource.
+     * 
+     * Overrides the base Task implementation to ensure
+     * at least one datavalue is available before dependent tasks
+     * start.
+     *  */    
+    bool start() override;
 
 protected:
     

@@ -23,8 +23,11 @@ class CameraSimulator : public CameraWrapper
 
     @param name Camera name, for logging
     */
-    CameraSimulator(const char* name, const std::shared_ptr<CameraManagerTask> cm) : 
-        CameraWrapper(name, cm, [](const std::string& s){ return false; })
+    CameraSimulator(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool right = false) : 
+        CameraWrapper(name, cm, [](const std::string& s){ return false; }),
+        _block_pose_x(Width/2),
+        _block_pose_y(Height/2),
+        right(right)
     {}
 
     /** Starts the camera 
@@ -57,9 +60,12 @@ class CameraSimulator : public CameraWrapper
 
 
 protected:
+    std::pair<unsigned, unsigned> get_block_pose(){ return {_block_pose_y, _block_pose_x}; };
+
+    unsigned _block_pose_x, _block_pose_y;
     static const unsigned block_width = 100;
     static const unsigned block_height = 50;
-
+    const bool right;
 };
 
 

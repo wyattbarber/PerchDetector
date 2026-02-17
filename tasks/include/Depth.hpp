@@ -9,7 +9,7 @@
 
 /** Manages getting grayscale frames from two cameras and maintaining a buffer of depth maps.
 */
-class DepthCamera : public Task, public DataSource<float[CameraWrapper::Width * CameraWrapper::Height]>
+class DepthCamera : public DataSource<float[CameraWrapper::Width * CameraWrapper::Height]>
 {
 public:
     typedef float dtype; /// Datatype used for depth of each pixel
@@ -23,8 +23,7 @@ public:
     @param right Right camera task
     */  
     DepthCamera(const char* name, const std::string& cal_path, std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
-        Task(name, {left, right}),
-        DataSource<float[CameraWrapper::Width * CameraWrapper::Height]>(),
+        DataSource<float[CameraWrapper::Width * CameraWrapper::Height]>(name, {left, right}),
         left(left),
         right(right),
         left_cal(cal_path + "/left.json"),
@@ -95,6 +94,7 @@ protected:
     void rectify(cv::Mat& left_in, cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out);
 
     std::shared_ptr<CameraWrapper> left, right;
+    std::shared_ptr<datavalue_t<uint8_t[CameraWrapper::Width * CameraWrapper::Height]>> latest_left, latest_right;
     cv::Ptr<cv::StereoBM> stereo;
 
     // Intermediate matrices

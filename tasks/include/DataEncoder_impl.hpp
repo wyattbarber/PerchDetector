@@ -70,6 +70,7 @@ template<class T, typename D>
 void stream_data(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
 {
     // Start streaming in task thread
+    task->info("Starting data stream.");
     ((DataEncoder<T,D>*)task)->out = &out;
     ((DataEncoder<T,D>*)task)->run_stream = true;
 

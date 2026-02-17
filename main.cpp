@@ -60,7 +60,7 @@ void make_tasks()
         std::make_shared<CameraSimulator>("camera-left", cam_manager) :
         std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
     cam_right = (context.simulation) ? 
-        std::make_shared<CameraSimulator>("camera-right", cam_manager) :
+        std::make_shared<CameraSimulator>("camera-right", cam_manager, true) :
         std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
     
     depth = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);

@@ -78,7 +78,7 @@ public:
         ((Logger::instance() << "[ERROR][" << name << "] ") << ... << values) << std::endl;
     }
 
-    bool start();
+    virtual bool start();
     void stop();
     
     /** Do not call directly, use start().

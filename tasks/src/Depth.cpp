@@ -75,18 +75,27 @@ bool DepthCamera::start_impl()
     info("Q: ", Q);
     info("Set disparity to depth conversion to ", converter.M);
 
+    // Get first data so pointers are valid
+    latest_left = left->acquire();
+    latest_right = right->acquire();
+
     return true;
 }
 
 
 void DepthCamera::step()
 {
+    // Don't update if stopped or if images are not fresh
     if(!is_alive()) return;
+    if(!latest_left->stale || !latest_right->stale) return;
     tick();
+    
+    latest_left = left->acquire();
+    latest_right = right->acquire();
 
     cv::Mat left_rect, right_rect;
-    cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, left->acquire()->data, left->get_stride());
-    cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, right->acquire()->data, right->get_stride());
+    cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, latest_left->data, left->get_stride());
+    cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, latest_right->data, right->get_stride());
     rectify(left_im, right_im, left_rect, right_rect);
 
     stereo->compute(left_rect, right_rect, disp);

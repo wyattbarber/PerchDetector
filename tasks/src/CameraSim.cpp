@@ -35,7 +35,7 @@ void CameraSimulator::step()
     Matrix<uint8_t, Dynamic, Dynamic> block = Matrix<uint8_t, Dynamic, Dynamic>::Ones(block_height, block_width) * 255;
     img.block<block_height, block_width>(
         mid_y - (block_height/2),
-        mid_x - (block_width/2)
+        right ? mid_x - (block_width/2) - 50 : mid_x - (block_width/2)
     ) = block;
 
     // Update output data

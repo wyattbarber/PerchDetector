@@ -18,7 +18,7 @@ const size_t _height = 600;
  * format, mapping DMA buffers to memory, and keeping data in scope as the application needs.
  * 
  */
-class CameraWrapper : public Task, public DataSource<uint8_t[_width * _height]>
+class CameraWrapper : public DataSource<uint8_t[_width * _height]>
 {
     public:
     static const size_t Width = _width;
@@ -39,8 +39,7 @@ class CameraWrapper : public Task, public DataSource<uint8_t[_width * _height]>
     @param color Use RGB color format instead of grayscale.
     */
     CameraWrapper(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool(*check)(const std::string&), bool color = false) :
-        Task(name, {cm}),
-        DataSource<uint8_t[_width * _height]>(),
+        DataSource<uint8_t[_width * _height]>(name, {cm}),
         cm(cm),
         check(check),
         color(color)
