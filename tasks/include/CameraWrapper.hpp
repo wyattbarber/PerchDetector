@@ -12,20 +12,19 @@
 const size_t _width = 800;
 const size_t _height = 600;
 
+FWD_DECL_DATA_SOURCE(CameraWrapper, uint8_t[_width * _height])
+
 /** Wrapper to simplify reading grayscale images from a libcamera::Camera.
  * 
  * Handles detection of a suitable camera device, configuring the desired image
  * format, mapping DMA buffers to memory, and keeping data in scope as the application needs.
  * 
  */
-class CameraWrapper : public DataSource<uint8_t[_width * _height]>
+class CameraWrapper : public DataSource<CameraWrapper>
 {
     public:
     static const size_t Width = _width;
     static const size_t Height = _height;
-
-    typedef uint8_t dtype; /// Datatype of pixel intensity values
-    static constexpr auto cvtype = cv::DataType<dtype>::type; // OpenCV type ID of pixel intensity values
 
     /** Create a new wrapper for one camera on the system. 
 
@@ -39,7 +38,7 @@ class CameraWrapper : public DataSource<uint8_t[_width * _height]>
     @param color Use RGB color format instead of grayscale.
     */
     CameraWrapper(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool(*check)(const std::string&), bool color = false) :
-        DataSource<uint8_t[_width * _height]>(name, {cm}),
+        DataSource<CameraWrapper>(name, {cm}),
         cm(cm),
         check(check),
         color(color)
