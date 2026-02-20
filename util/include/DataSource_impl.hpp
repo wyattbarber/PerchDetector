@@ -30,11 +30,11 @@ void DataSource<T>::swap_data(const T& value)
     if(latest_data) latest_data->stale = true;
     if constexpr (std::is_trivially_copy_constructible_v<T>)
     {
-        latest_data = std::allocate_shared<datavalue_t<T>>(pool, value, false);
+        latest_data = std::allocate_shared<datavalue_t<T>>(pool.make_allocator<datavalue_t<T>>(), value, false);
     }
     else
     { // Must be trivially default constructible if not copy constructible
-        latest_data = std::allocate_shared<datavalue_t<T>>(pool);
+        latest_data = std::allocate_shared<datavalue_t<T>>(pool.make_allocator<datavalue_t<T>>());
         latest_data->stale = false;
         memcpy((void*)&latest_data->data, (void*)&value, sizeof(T));
     }

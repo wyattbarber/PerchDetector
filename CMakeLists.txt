@@ -1,18 +1,19 @@
 cmake_minimum_required(VERSION 3.0)
 project(PerchDetector VERSION 1.0.0)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
 find_package(jsoncpp REQUIRED)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g -fstack-protector")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
 
 # Generic logging and task interface library
 add_library(util STATIC
     util/src/Task.cpp
+    util/src/BlockAllocator.cpp
 )
 target_include_directories(util PUBLIC util/include)
 

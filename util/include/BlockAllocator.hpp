@@ -5,11 +5,17 @@
 #include "Logging.hpp"
 #include <mutex>
 
+class BlockPool;
 
-/** Block allocator class.
+/** Block allocator
  * 
- * Implements fixed-size allocations from a memory pool that
- * is allocated from the heap when the allocator is constructed.
+ * Acts as an interface between the BlockPool and standard library functions
+ * like allocate_shared.
+ * 
+ * Intended to be lighter-weight for copying. Manages a single memory
+ * block, and should be created by the BlockPool instance that is its parent.
+ * 
+ * @tparam T Datatype the block is made to store
  */
 template<typename T>
 class BlockAllocator
@@ -23,37 +29,9 @@ class BlockAllocator
 
     public:
     using value_type = T;
-    static constexpr size_t ctrl_block_size = 32+sizeof(BlockAllocator<T>); // Extra bytes allocated for smart pointer control blocks
 
-    /** Create a new allocator and pool.
-     * 
-     * Initializes a new memory pool for up to N
-     * objects of type T. The memory pool is created with malloc.
-     * 
-     * @param N Number of blocks to allocate.
-     */
-    BlockAllocator(size_t N) :
-        block_size(sizeof(T) + ctrl_block_size + sizeof(size_t)),
-        arena{(char*)malloc(N * block_size)},
-        arena_size(N * block_size),
-        next_free_block((N-1) * block_size),
-        pool_id(pool_count),
-        mtx(new std::mutex())
-    {
-        ++pool_count;
-        // Initialize the first byte of each block with the index of the next free block
-        for(size_t i = block_size; i < arena_size; i += block_size)
-        {
-            *reinterpret_cast<size_t*>(arena + i) = i - block_size;
-        }
-        // Block 0 is set to the last block, with a next block index exceeding the pool size
-        reinterpret_cast<size_t*>(arena)[0] = arena_size+1;
-    }
-    ~BlockAllocator()
-    {
-        free(arena);
-        delete mtx;
-    }
+    BlockAllocator(BlockPool* parent) : parent(parent)
+    {}
 
     /** Rebind from another allocator type.
      * 
@@ -62,23 +40,76 @@ class BlockAllocator
      * 
      * @tparam U Block type of the allocator
      * 
-     * @param alloc Allocator whos memory pool will be pointed to
+     * @param other Allocator whos memory pool will be pointed to
      */
     template<typename U>
-    BlockAllocator(const BlockAllocator<U>& other) :
-        block_size(other.block_size),
-        arena(other.arena),
-        arena_size(other.arena_size),
-        next_free_block(other.next_free_block),
-        pool_id(other.pool_id),
-        mtx(other.mtx)
-    {
-        static_assert(
-            sizeof(U)+ctrl_block_size >= sizeof(T),
-            "Cannot rebind allocator to a larger block size"
-        );
-    }
+    BlockAllocator(const BlockAllocator<U>& other);
 
+
+    T* allocate(size_t n);
+
+    /** Frees the given block.
+     * 
+     * Since only single blocks may be allocated, 
+     * n is ignored.
+     */
+    void deallocate(T* p, size_t n);
+    
+    protected:
+        BlockPool * const parent;
+};
+
+
+/** Block pool manager class.
+ * 
+ * Implements fixed-size allocations from a memory pool that
+ * is allocated from the heap when the allocator is constructed.
+ */
+class BlockPool
+{
+    template<typename T>
+    friend class BlockAllocator;
+
+    public:
+    static constexpr size_t ctrl_block_size = 32+sizeof(BlockAllocator<char>); // Extra bytes allocated for container control blocks
+
+    /** Create a new allocator and pool.
+     * 
+     * Initializes a new memory pool for up to N
+     * objects of type T. The memory pool is created with malloc.
+     * 
+     * @param N Number of blocks to allocate.
+     * @param S Size of each block
+     */
+    BlockPool(size_t N, size_t S) :
+        block_size(S + ctrl_block_size + sizeof(size_t)),
+        arena(new char[N * block_size]),
+        arena_size(N * block_size),
+        next_free_block(N-1),
+        pool_id(pool_count++)
+    {
+        // Initialize the first byte of each block with the index of the next free block
+        for(size_t i = 1; i < N; i++)
+        {
+            *next_free_from_block_id(i) = i-1;
+        }
+        // Block 0 is set to the last block, with a next block index exceeding the pool size
+        *next_free_from_block_id(0) = arena_size+1;
+
+        Logger::instance() << "[INFO][_BlockPool_" << pool_id << "] Initialized with " << N << " blocks of " << block_size << " bytes at " << (void*)arena << std::endl;
+        Logger::instance() << "[INFO][_BlockPool_" << pool_id << "] Memory span is " << (void*)arena << " to " << (void*)(arena + arena_size) << std::endl;
+    }
+    
+    ~BlockPool()
+    {
+        delete[] arena;
+        Logger::instance() << "[INFO][_BlockPool_" << pool_id << "] Deleted." << std::endl;
+    }
+    
+    template<typename T>
+    BlockAllocator<T> make_allocator(){ return BlockAllocator<T>(this); }
+
+    protected:
     /** Get a free block
      * 
      * Get the next free block in the pool.
@@ -87,54 +118,32 @@ class BlockAllocator
      * number of blocks is not 1, std::bad_alloc 
      * is thrown.
      */
-    T* allocate(size_t n)
-    {
-        std::lock_guard<std::mutex> l(*mtx);
-        if(n != 1) throw std::bad_alloc();
-        if(next_free_block > arena_size) throw std::bad_alloc();        
-        auto next = *reinterpret_cast<size_t*>(arena + next_free_block);
-        char* out = arena + next_free_block + sizeof(size_t);
-        report(next_free_block / block_size, (void*)out, true);
-        next_free_block = next;
-        return (T*)out;
-    }
+    char* allocate(size_t n);
 
     /** Frees the given block.
      * 
      * Since only single blocks may be allocated, 
      * n is ignored.
      */
-    void deallocate(T* p, size_t n)
-    {
-        std::lock_guard<std::mutex> l(*mtx);
-        if(next_free_block > arena_size)
-        {
-            // This block is now the last in the list
-            *reinterpret_cast<size_t*>(arena) = arena_size + 1;
-        }
-        else
-        {
-            *reinterpret_cast<size_t*>((char*)p - sizeof(size_t)) = next_free_block;
-        }
-        next_free_block = ((char*)p - arena) - sizeof(size_t);
-        report(next_free_block / block_size, (void*)p, false);
-    }
+    void deallocate(char* p, size_t n);
 
     protected:
     const size_t block_size; // Total block size for object, control block, and free list index 
     char * const arena; // Memory pool
     const size_t arena_size; // Total available bytes
-    size_t next_free_block; // Index of next available block
+    size_t next_free_block; // Block ID of next available block
     const unsigned pool_id;
     static unsigned pool_count;
-    std::mutex * const mtx;
+    std::mutex mtx;
 
-    void report(size_t block_id, void* addr, bool alloc)
-    {
-        if(alloc) Logger::instance() << "[INFO][_BlockAllocator] Allocated " << typeid(T).name() << " in block " << block_id << " (" << addr << ") in pool " << pool_id << std::endl;
-        else Logger::instance() << "[INFO][_BlockAllocator] Freed " << typeid(T).name() << " from block " << block_id << " (" << addr << ") in pool " << pool_id << std::endl;;
-    }
+    void report(size_t block_id, void* addr, bool alloc);
+
+    size_t block_id_from_ptr(char* ptr);
+
+    char* data_ptr_from_block_id(size_t id);
+
+    size_t* next_free_from_block_id(size_t id);
 };
 
-template<typename T>
-unsigned BlockAllocator<T>::pool_count = 0;
+
+#include "BlockAllocator_impl.hpp"
