@@ -74,7 +74,7 @@ public:
         Task(name, dependencies), 
         latest_data()
 #ifdef BLOCK_ALLOC
-        , pool(10, sizeof(datavalue_t<T>))
+        , pool(10, sizeof(update_type))
 #endif
     { 
         static_assert(

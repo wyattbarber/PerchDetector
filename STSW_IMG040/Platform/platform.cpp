@@ -74,7 +74,7 @@ uint8_t VL53L8CX_RdByte(
 	
 	struct spi_ioc_transfer xfer[2] = {0, 0};
 
-	const char buffer[] = {
+	const unsigned char buffer[] = {
 		static_cast<uint8_t>((RegisterAdress & 0xFF00) >> 8), 
 		static_cast<uint8_t>(RegisterAdress & 0x00FF)
 	};
@@ -107,7 +107,7 @@ uint8_t VL53L8CX_WrByte(
 
 	struct spi_ioc_transfer xfer[1] = {0};
 
-	const char buffer[] = {
+	const unsigned char buffer[] = {
 		static_cast<uint8_t>(((RegisterAdress & 0xFF00) >> 8) | 0x80), // Set write bit at start of address
 		static_cast<uint8_t>(RegisterAdress & 0x00FF), 
 		value
@@ -140,7 +140,7 @@ uint8_t VL53L8CX_WrMulti(
 
 	struct spi_ioc_transfer xfer[2] = {0, 0};
 
-	const char buffer[2] = {
+	const unsigned char buffer[2] = {
 		static_cast<uint8_t>(((RegisterAdress & 0xFF00) >> 8) | 0x80), // Set write bit at start of address
 		static_cast<uint8_t>(RegisterAdress & 0x00FF)
 	};
@@ -175,7 +175,7 @@ uint8_t VL53L8CX_RdMulti(
 	
 	struct spi_ioc_transfer xfer[2] = {0, 0};
 
-	const char buffer[]= {
+	const unsigned char buffer[]= {
 		static_cast<uint8_t>((RegisterAdress & 0xFF00) >> 8),
 		static_cast<uint8_t>(RegisterAdress & 0x00FF)
 	};
