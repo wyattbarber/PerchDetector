@@ -46,8 +46,10 @@ class DataSource : public Task
 public:
     DataSource(const char* name, std::initializer_list<std::shared_ptr<Task>> dependencies) : 
         Task(name, dependencies), 
-        latest_data(),
-        pool(10, sizeof(datavalue_t<T>))
+        latest_data()
+#ifdef BLOCK_ALLOC
+        , pool(10, sizeof(datavalue_t<T>))
+#endif
     { 
         static_assert(
             std::is_trivially_copy_constructible_v<T> || std::is_trivially_default_constructible_v<T>, 
@@ -94,7 +96,9 @@ protected:
 private:
     std::shared_ptr<datavalue_t<T>> latest_data;
     std::mutex mtx;
+#ifdef BLOCK_ALLOC
     BlockPool pool;
+#endif
 };
 
 

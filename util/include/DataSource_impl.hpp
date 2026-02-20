@@ -12,6 +12,9 @@ std::shared_ptr<datavalue_t<T>> DataSource<T>::acquire()
 template<typename T>
 bool DataSource<T>::start()
 {
+#ifdef BLOCK_ALLOC
+    info("Configured to allocate data values from custom block pool.");
+#endif
     auto res = Task::start();
     while(!acquire())
     { 
@@ -30,11 +33,19 @@ void DataSource<T>::swap_data(const T& value)
     if(latest_data) latest_data->stale = true;
     if constexpr (std::is_trivially_copy_constructible_v<T>)
     {
+#ifdef BLOCK_ALLOC
         latest_data = std::allocate_shared<datavalue_t<T>>(pool.make_allocator<datavalue_t<T>>(), value, false);
+#else
+        latest_data = std::make_shared<datavalue_t<T>>(value, false);
+#endif
     }
     else
     { // Must be trivially default constructible if not copy constructible
+#ifdef BLOCK_ALLOC
         latest_data = std::allocate_shared<datavalue_t<T>>(pool.make_allocator<datavalue_t<T>>());
+#else
+        latest_data = std::make_shared<datavalue_t<T>>();
+#endif
         latest_data->stale = false;
         memcpy((void*)&latest_data->data, (void*)&value, sizeof(T));
     }

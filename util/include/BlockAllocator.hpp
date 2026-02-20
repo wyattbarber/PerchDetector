@@ -85,8 +85,10 @@ class BlockPool
         block_size(S + ctrl_block_size + sizeof(size_t)),
         arena(new char[N * block_size]),
         arena_size(N * block_size),
-        next_free_block(N-1),
-        pool_id(pool_count++)
+        next_free_block(N-1)
+#ifdef LOG_ALLOC
+        , pool_id(pool_count++)
+#endif
     {
         // Initialize the first byte of each block with the index of the next free block
         for(size_t i = 1; i < N; i++)
@@ -96,14 +98,18 @@ class BlockPool
         // Block 0 is set to the last block, with a next block index exceeding the pool size
         *next_free_from_block_id(0) = arena_size+1;
 
+#ifdef LOG_ALLOC
         Logger::instance() << "[INFO][_BlockPool_" << pool_id << "] Initialized with " << N << " blocks of " << block_size << " bytes at " << (void*)arena << std::endl;
         Logger::instance() << "[INFO][_BlockPool_" << pool_id << "] Memory span is " << (void*)arena << " to " << (void*)(arena + arena_size) << std::endl;
+#endif
     }
     
     ~BlockPool()
     {
         delete[] arena;
+#ifdef LOG_ALLOC
         Logger::instance() << "[INFO][_BlockPool_" << pool_id << "] Deleted." << std::endl;
+#endif
     }
     
     template<typename T>
@@ -132,11 +138,13 @@ class BlockPool
     char * const arena; // Memory pool
     const size_t arena_size; // Total available bytes
     size_t next_free_block; // Block ID of next available block
+    std::mutex mtx;
+#ifdef LOG_ALLOC
     const unsigned pool_id;
     static unsigned pool_count;
-    std::mutex mtx;
 
     void report(size_t block_id, void* addr, bool alloc);
+#endif
 
     size_t block_id_from_ptr(char* ptr);
 
