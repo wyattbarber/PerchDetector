@@ -1,15 +1,15 @@
 #pragma once
 
-#include "Task.hpp"
+
 #include "DataSource.hpp"
 #include <type_traits>
 #include <atomic>
 
 
-template<class T, typename D>
+template<class T>
 void print_datatype(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
-template<class T, typename D>
+template<class T>
 void stream_data(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
 
@@ -20,12 +20,11 @@ data stream via a method that returns a pointer
 to the data to send.
 
 @tparam T Task type that is generating the data to send.
-@tparam D Underlying datatype of the data array
 */
-template<class T, typename D>
+template<class T>
 class DataEncoder : public Task
 {
-    friend void stream_data<T,D>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
+    friend void stream_data<T>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
 public:
     /** Create a new encoder.
@@ -36,17 +35,14 @@ public:
     @param name Name of the created task
     @param task Task that will produce the data to send
     */
-    DataEncoder(const char* name, std::shared_ptr<T> task) : 
+    DataEncoder(const char* name, std::shared_ptr<DataSource<T>> task) : 
         Task(name, {task}),
         task(task),
         run_stream(false),
         streaming(false)
     {
-        static_assert(std::is_base_of_v<DataSource<D>, T>, "Source must implement DataSource<D>");
-        static_assert(std::is_base_of_v<Task, T>, "Source must be a Task type");
-
-        declare_cli_command("datatype", &print_datatype<T,D>);
-        declare_cli_command("stream", &stream_data<T,D>);
+        declare_cli_command("datatype", &print_datatype<T>);
+        declare_cli_command("stream", &stream_data<T>);
     }
 
     bool start_impl();
@@ -56,7 +52,7 @@ public:
     void step();
 
 protected:
-    std::shared_ptr<T> task;
+    std::shared_ptr<DataSource<T>> task;
     std::ostream* out;
     std::atomic<bool> run_stream, streaming;
 };

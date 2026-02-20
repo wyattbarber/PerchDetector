@@ -1,15 +1,15 @@
 #pragma once
 
 
-template<typename T>
-std::shared_ptr<datavalue_t<T>> DataSource<T>::acquire()
+template<class T>
+std::shared_ptr<typename DataSource<T>::update_type> DataSource<T>::acquire()
 {
     std::lock_guard<std::mutex> l(mtx); 
     return latest_data;
 }
 
 
-template<typename T>
+template<class T>
 bool DataSource<T>::start()
 {
 #ifdef BLOCK_ALLOC
@@ -26,25 +26,25 @@ bool DataSource<T>::start()
 }
 
 
-template<typename T>
-void DataSource<T>::swap_data(const T& value)
+template<class T>
+void DataSource<T>::swap_data(const DataSource<T>::value_type& value)
 {
     std::lock_guard<std::mutex> l(mtx);
     if(latest_data) latest_data->stale = true;
     if constexpr (std::is_trivially_copy_constructible_v<T>)
     {
 #ifdef BLOCK_ALLOC
-        latest_data = std::allocate_shared<datavalue_t<T>>(pool.make_allocator<datavalue_t<T>>(), value, false);
+        latest_data = std::allocate_shared<update_type>(pool.make_allocator<update_type>(), value, false);
 #else
-        latest_data = std::make_shared<datavalue_t<T>>(value, false);
+        latest_data = std::make_shared<update_type>(value, false);
 #endif
     }
     else
     { // Must be trivially default constructible if not copy constructible
 #ifdef BLOCK_ALLOC
-        latest_data = std::allocate_shared<datavalue_t<T>>(pool.make_allocator<datavalue_t<T>>());
+        latest_data = std::allocate_shared<update_type>(pool.make_allocator<update_type>());
 #else
-        latest_data = std::make_shared<datavalue_t<T>>();
+        latest_data = std::make_shared<update_type>();
 #endif
         latest_data->stale = false;
         memcpy((void*)&latest_data->data, (void*)&value, sizeof(T));
