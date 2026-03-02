@@ -72,6 +72,7 @@ class BlockPool
 
     public:
     static constexpr size_t ctrl_block_size = 32+sizeof(BlockAllocator<char>); // Extra bytes allocated for container control blocks
+    const size_t block_size; // Total block size for object, control block, and free list index 
 
     /** Create a new allocator and pool.
      * 
@@ -134,7 +135,6 @@ class BlockPool
     void deallocate(char* p, size_t n);
 
     protected:
-    const size_t block_size; // Total block size for object, control block, and free list index 
     char * const arena; // Memory pool
     const size_t arena_size; // Total available bytes
     size_t next_free_block; // Block ID of next available block

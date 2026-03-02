@@ -13,7 +13,7 @@ template<class T>
 bool DataSource<T>::start()
 {
 #ifdef BLOCK_ALLOC
-    info("Configured to allocate data values from custom block pool.");
+    info("Configured to allocate data values from custom block pool. Datatype size: ", sizeof(value_type), ", block size: ", pool.block_size);
 #endif
     auto res = Task::start();
     while(!acquire())
@@ -31,6 +31,7 @@ void DataSource<T>::swap_data(const DataSource<T>::value_type& value)
 {
     std::lock_guard<std::mutex> l(mtx);
     if(latest_data) latest_data->stale = true;
+
     if constexpr (std::is_trivially_copy_constructible_v<T>)
     {
 #ifdef BLOCK_ALLOC
@@ -47,6 +48,6 @@ void DataSource<T>::swap_data(const DataSource<T>::value_type& value)
         latest_data = std::make_shared<update_type>();
 #endif
         latest_data->stale = false;
-        memcpy((void*)&latest_data->data, (void*)&value, sizeof(T));
+        memcpy((void*)&latest_data->data, (void*)&value, sizeof(value_type));
     }
 }

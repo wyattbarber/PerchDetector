@@ -148,7 +148,7 @@ void kill_tasks(task_executor& exe)
         auto task = std::get<0>(pair.second);
         if(task->is_alive())
         {
-            task->stop();
+            task->autostop();
         }
     }
 

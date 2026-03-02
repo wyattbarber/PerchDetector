@@ -2,12 +2,13 @@ cmake_minimum_required(VERSION 3.0)
 project(PerchDetector VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 
+find_package(Iconv REQUIRED) # OpenCV link dependency
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
 find_package(jsoncpp REQUIRED)
 
-set(CMAKE_CXX_FLAGS "-DBLOCK_ALLOC") # Use custom allocator in default build
+# set(CMAKE_CXX_FLAGS "-DBLOCK_ALLOC") # Use custom allocator in default build
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g -fstack-protector")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
 
