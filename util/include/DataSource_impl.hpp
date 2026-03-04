@@ -2,7 +2,7 @@
 
 
 template<class T>
-std::shared_ptr<typename DataSource<T>::update_type> DataSource<T>::acquire()
+typename DataSource<T>::update_ptr_type DataSource<T>::acquire()
 {
     std::lock_guard<std::mutex> l(mtx); 
     return latest_data;
@@ -27,12 +27,24 @@ bool DataSource<T>::start()
 
 
 template<class T>
+typename DataSource<T>::update_ptr_type DataSource<T>::allocate_next()
+{
+#ifdef BLOCK_ALLOC
+    next_data = std::allocate_shared<update_type>(pool.make_allocator<update_type>());
+#else
+    next_data = std::make_shared<update_type>();
+#endif
+    return next_data;
+}
+
+
+template<class T>
 void DataSource<T>::swap_data(const DataSource<T>::value_type& value)
 {
     std::lock_guard<std::mutex> l(mtx);
     if(latest_data) latest_data->stale = true;
 
-    if constexpr (std::is_trivially_copy_constructible_v<T>)
+    if constexpr (std::is_trivially_copy_constructible_v<value_type>)
     {
 #ifdef BLOCK_ALLOC
         latest_data = std::allocate_shared<update_type>(pool.make_allocator<update_type>(), value, false);
@@ -50,4 +62,13 @@ void DataSource<T>::swap_data(const DataSource<T>::value_type& value)
         latest_data->stale = false;
         memcpy((void*)&latest_data->data, (void*)&value, sizeof(value_type));
     }
+}
+
+
+template<class T>
+void DataSource<T>::swap_data()
+{
+    std::lock_guard<std::mutex> l(mtx);
+    latest_data = next_data;
+    next_data.reset();
 }

@@ -227,5 +227,15 @@ void CameraWrapper::set_freshest(uint8_t idx)
     }
 
     // Copy this reuests data to datasource interface
-    swap_data(*reinterpret_cast<uint8_t(*)[Width*Height]>(map[idx]));
+    auto update = allocate_next();
+    uint8_t* src = (uint8_t*)map[idx];
+    uint8_t* dst = update->data;
+    for(unsigned i = 0; i < Height; ++i)
+    {
+        // Copy individual rows to remove stride
+        memcpy((void*)dst, (void*)src, Width);
+        dst += Width;
+        src += stride;
+    }
+    swap_data();
 }

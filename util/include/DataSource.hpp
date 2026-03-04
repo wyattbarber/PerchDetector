@@ -69,9 +69,11 @@ class DataSource : public Task
 public:
     using value_type = typename DataSourceTraits<T>::value_type;
     using update_type = _datavalue_t<value_type>;
+    using update_ptr_type = std::shared_ptr<update_type>;
 
     DataSource(const char* name, std::initializer_list<std::shared_ptr<Task>> dependencies) : 
-        Task(name, dependencies), 
+        Task(name, dependencies),
+        next_data(), 
         latest_data()
 #ifdef BLOCK_ALLOC
         , pool(10, sizeof(update_type))
@@ -90,7 +92,7 @@ public:
      *     
     @return Pointer to latest data value
     */
-    std::shared_ptr<update_type> acquire();
+    update_ptr_type acquire();
 
     /** Starts the datasource.
      * 
@@ -101,6 +103,15 @@ public:
     bool start() override;
 
 protected:
+
+    /** Allocates a next value but does not swap it with the current.
+    
+    Useful if the data source needs to modify the data value in-place 
+    before it is valid.
+
+    @return New shared pointer to the next update.
+    */
+    update_ptr_type allocate_next();
     
     /** Provide a new data value.
      * 
@@ -119,8 +130,16 @@ protected:
      */
     void swap_data(const value_type& value);
 
+    /** Swaps the current data update value for the previous one allocated by allocate_next()
+
+    Is not valid if allocate_next() has not been called since the last call to
+    swap_data().
+    */
+    void swap_data();
+
 private:
-    std::shared_ptr<update_type> latest_data;
+    update_ptr_type next_data;
+    update_ptr_type latest_data;
     std::mutex mtx;
 #ifdef BLOCK_ALLOC
     BlockPool pool;
