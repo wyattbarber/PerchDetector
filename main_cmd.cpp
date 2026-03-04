@@ -149,13 +149,34 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
         return;
     }
 
-    int n = std::stoi(args[0]);
+    bool n_given = false;
+    int n;
+    if(args[0] != "inf")
+    {
+        n_given = true;
+        n = std::stoi(args[0]);
+    }
+    
     std::string path = (args.size() > 1) ? args[1] : "./";
     std::string left_file, right_file;
     
-    out << "Saving " << n << " image pairs to " << path << ", at 1 second interval." << std::endl;
-    for(int i = 0; i < n; ++i)
+    if(n_given) out << "Saving " << n << " image pairs to " << path << ", at 1 second interval." << std::endl;
+    else out << "Saving images on user trigger, enter exit to stop." << std::endl;
+    
+    bool capturing = true;
+    int i = 0;
+    while(capturing)
     {
+        if(!n_given)
+        {
+            out << "Press enter to capture an image." << std::endl;
+            std::string line;
+            std::getline(in, line);
+            if(line == "exit")
+            {
+                break;
+            }
+        }
         left_file = path + "left-" + std::to_string(i) + ".png";
         right_file = path + "right-" + std::to_string(i) + ".png";
         auto cv_dtype = (context.color) ? CV_8UC3 : CV_8UC1;
@@ -167,8 +188,18 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
             imwrite(left_file.c_str(), left_im);
             imwrite(right_file.c_str(), right_im);
         }
-        std::this_thread::sleep_for(1s); 
-        out << '\r' << "Complete capture " << i << " of " << n;
+        ++i;
+
+        if(n_given)
+        {
+            out << '\r' << "Completed capture " << i << " of " << n;
+            std::this_thread::sleep_for(1s); 
+            capturing = i < n;
+        }
+        else
+        {
+            out << "Captured image " << i << std::endl;
+        }
     }
     out << std::endl;
     out << "Captures completed." << std::endl;
