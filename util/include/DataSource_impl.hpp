@@ -15,14 +15,14 @@ bool DataSource<T>::start()
 #ifdef BLOCK_ALLOC
     info("Configured to allocate data values from custom block pool. Datatype size: ", sizeof(value_type), ", block size: ", pool.block_size);
 #endif
-    auto res = Task::start();
+    if(!Task::start()) return false;
     while(!acquire())
     { 
         info("Waiting for first data to be produced...");
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     info("Initial data pointer is valid.");
-    return res;
+    return true;
 }
 
 

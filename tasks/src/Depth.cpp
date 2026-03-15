@@ -3,7 +3,7 @@
 #include <opencv2/imgproc.hpp>
 #include <limits>
 #include <thread>
-#include <loader.hpp>
+#include <json_loader.hpp>
 
 
 using namespace std::chrono_literals;
@@ -18,23 +18,22 @@ bool DepthCamera::start_impl()
     }
 
     // Load calibration data
-    std::string cal_err;
     info("Loading left camera calibration from ", left_cal);
-    if(load_camera_matrices(left_cal, cal_err, left_dist, left_intr))
+    if(!load_camera_matrices(left_cal, left_dist, left_intr))
     {
-        error("Failed to load calibration: ", cal_err);
+        error("Failed to load left camera calibration");
         return false;
     }
     info("Loading right camera calibration from ", right_cal);
-    if(load_camera_matrices(right_cal, cal_err, right_dist, right_intr))
+    if(!load_camera_matrices(right_cal, right_dist, right_intr))
     {
-        error("Failed to load calibration: ", cal_err);
+        error("Failed to load right camera calibration");
         return false;
     }
     info("Loading stereo calibration from ", stereo_cal);
-    if(load_stereo_matrices(stereo_cal, cal_err, R, T))
+    if(!load_stereo_matrices(stereo_cal, R, T))
     {
-        error("Failed to load calibration: ", cal_err);
+        error("Failed to load stereo calibration");
         return false;
     }
 

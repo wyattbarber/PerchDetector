@@ -16,8 +16,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
 add_library(util STATIC
     util/src/Task.cpp
     util/src/BlockAllocator.cpp
+    util/src/json_loader.cpp
 )
 target_include_directories(util PUBLIC util/include)
+target_link_libraries(util PUBLIC jsoncpp_lib ${OpenCV_LIBS})
 
 # VL53L8CX API library
 add_library(stsw_img040 STATIC 
@@ -38,13 +40,6 @@ set_source_files_properties(
 target_link_libraries(stsw_img040 PUBLIC util)
 target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/VL53L8CX_ULD_API/inc)
 
-# Hepers for loading calibration data
-add_library(cal_files STATIC
-    cal_files/src/loader.cpp
-)
-target_link_libraries(cal_files PRIVATE jsoncpp_lib ${OpenCV_LIBS})
-target_include_directories(cal_files PUBLIC cal_files/include)
-
 # Library of specific task types
 add_library(tasks STATIC 
     tasks/src/CameraWrapper.cpp
@@ -52,7 +47,7 @@ add_library(tasks STATIC
     tasks/src/Depth.cpp
     tasks/src/VL53L8CX.cpp
 )
-target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} cal_files Eigen3::Eigen)
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen)
 target_include_directories(tasks PUBLIC tasks/include)
 
 # Main executable
