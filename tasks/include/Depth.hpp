@@ -70,6 +70,8 @@ public:
 
     void stop_impl(){}
 
+    std::vector<size_t> dims(){ return {CameraWrapper::Height, CameraWrapper::Width}; }
+
     /** Changes the parameters for StereoSGBM.
      
     */
@@ -86,7 +88,6 @@ public:
 
     
 protected:
-
     
     /** Applies rectification from the calibration data to a pair of images.
     

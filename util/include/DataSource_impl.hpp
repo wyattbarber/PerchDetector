@@ -34,6 +34,7 @@ typename DataSource<T>::update_ptr_type DataSource<T>::allocate_next()
 #else
     next_data = std::make_shared<update_type>();
 #endif
+    next_data->stale = false;
     return next_data;
 }
 
@@ -41,9 +42,10 @@ typename DataSource<T>::update_ptr_type DataSource<T>::allocate_next()
 template<class T>
 void DataSource<T>::swap_data(const DataSource<T>::value_type& value)
 {
-    std::lock_guard<std::mutex> l(mtx);
     if(latest_data) latest_data->stale = true;
 
+    std::lock_guard<std::mutex> l(mtx);
+    
     if constexpr (std::is_trivially_copy_constructible_v<value_type>)
     {
 #ifdef BLOCK_ALLOC
@@ -68,7 +70,10 @@ void DataSource<T>::swap_data(const DataSource<T>::value_type& value)
 template<class T>
 void DataSource<T>::swap_data()
 {
+    if(latest_data) latest_data->stale = true;
+
     std::lock_guard<std::mutex> l(mtx);
+    
     latest_data = next_data;
     next_data.reset();
 }

@@ -44,9 +44,9 @@ void DataMapper<T>::stop_impl()
 template<class T>
 void DataMapper<T>::step()
 {
-    if(is_alive())
+    if(is_alive() & running)
     {
-        if(running & latest->stale) // Memory map is opened and new data is available
+        if(latest->stale) // Memory map is opened and new data is available
         {
             mapping = true;
             latest = task->acquire();
@@ -116,4 +116,16 @@ void unmap_data(Task* task, std::istream& in, std::ostream& out, const std::vect
     }
     std::fclose(t->map_file);
     out << "Unmapping done." << std::endl;
+}
+
+
+template<class T>
+void data_dims(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
+{
+    auto t = (T*)task;    
+    for(size_t d : t->dims())
+    {
+        out << d << " ";
+    }
+    out << std::endl;
 }

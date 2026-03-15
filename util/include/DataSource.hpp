@@ -137,6 +137,12 @@ protected:
     */
     void swap_data();
 
+    /** Get dimensions of the data produced.
+    
+    @return Vector of dimension sizes.
+    */
+    std::vector<size_t> dims(){ return static_cast<T*>(this)->dims(); }
+
 private:
     update_ptr_type next_data;
     update_ptr_type latest_data;

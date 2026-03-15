@@ -72,6 +72,7 @@ class CameraWrapper : public DataSource<CameraWrapper>
     */
     size_t get_stride(){ return stride; }
 
+    std::vector<size_t> dims(){ return {Height, Width}; }
 
     /** Gets a pointer to the camera instance.
      * 

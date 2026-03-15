@@ -11,7 +11,7 @@ bool load_camera_matrices(const std::string& filename, cv::Mat& dist, cv::Mat& i
         LOG_JSON_ERR("Failed to load distortion coefficients.");
         return false;
     }
-    if(!load_json_object(root, dist_json, "intrinsic"))    
+    if(!load_json_object(root, intr_json, "intrinsic"))    
     {
         LOG_JSON_ERR("Failed to load intrinsic matrix.");
         return false;
@@ -19,7 +19,7 @@ bool load_camera_matrices(const std::string& filename, cv::Mat& dist, cv::Mat& i
 
     if(!dist_json.isArray() || !(dist_json.size() == 5))
     {
-        LOG_JSON_ERR("distortion array is not the correct format");
+        LOG_JSON_ERR("distortion array is not the correct format.");
         return false;
     }    
     for(int i = 0; i < 5; i++)

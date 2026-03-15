@@ -6,6 +6,8 @@
 #include <atomic>
 #include <unistd.h>
 
+template<class T>
+void data_dims(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
 template<class T>
 void map_data(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
@@ -49,6 +51,7 @@ public:
         mapping(false)
     {
         declare_cli_command("datatype", &print_datatype<T>);
+        declare_cli_command("dimensions", &data_dims<T>);
         declare_cli_command("map", &map_data<T>);
         declare_cli_command("unmap", &unmap_data<T>);
     }

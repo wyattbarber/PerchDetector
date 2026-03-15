@@ -2,6 +2,8 @@
 .vscode/**
 env/**
 calibrations/**
+__pycache__/**
+logout.txt
 
 # Build files
 build/**
