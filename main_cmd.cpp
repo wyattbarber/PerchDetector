@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <chrono>
 #include <string>
-#include <CameraWrapper.hpp>
 #include "main.hpp"
 
 using namespace std::chrono_literals;

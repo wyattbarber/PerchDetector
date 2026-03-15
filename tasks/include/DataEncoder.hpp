@@ -47,7 +47,7 @@ public:
 
     bool start_impl();
 
-    void stop_impl();
+    void stop_impl(){}
 
     void step();
 

@@ -18,13 +18,6 @@ bool DataEncoder<T>::start_impl(){
 
 
 template<class T>
-void DataEncoder<T>::stop_impl()
-{
-    info("Freeing streaming buffer.");
-}
-
-
-template<class T>
 void DataEncoder<T>::step()
 {
     if(run_stream)

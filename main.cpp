@@ -1,9 +1,3 @@
-#include <CameraManager.hpp>
-#include <CameraWrapper.hpp>
-#include <CameraSim.hpp>
-#include <Depth.hpp>
-#include <VL53L8CX.hpp>
-#include <DataEncoder.hpp>
 #include <functional>
 #include <cstring>
 #include <iostream>
@@ -29,7 +23,9 @@ static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10"
 std::shared_ptr<CameraWrapper> cam_left, cam_right;
 std::shared_ptr<DepthCamera> depth;
 std::shared_ptr<VL53L8CX> lidar;
-std::shared_ptr<DataEncoder<DepthCamera>> depth_stream;
+
+std::shared_ptr<DataMapper<CameraWrapper>> left_feed, right_feed;
+std::shared_ptr<DataMapper<DepthCamera>> depth_feed;
 
 
 // Command Line Helper Functions //
@@ -59,12 +55,15 @@ void make_tasks()
     cam_left = (context.simulation) ? 
         std::make_shared<CameraSimulator>("camera-left", cam_manager) :
         std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
+    left_feed = std::make_shared<DataMapper<CameraWrapper>>("left_feed", cam_left);
+
     cam_right = (context.simulation) ? 
         std::make_shared<CameraSimulator>("camera-right", cam_manager, true) :
         std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
+    right_feed = std::make_shared<DataMapper<CameraWrapper>>("right_feed", cam_right);
     
     depth = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
-    depth_stream = std::make_shared<DataEncoder<DepthCamera>>("depth_streamer", depth);
+    depth_feed = std::make_shared<DataMapper<DepthCamera>>("depth_feed", depth);
 
     lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
 
@@ -72,8 +71,10 @@ void make_tasks()
     cam_left->init();
     cam_right->init();
     depth->init();
-    depth_stream->init();
     lidar->init();
+    depth_feed->init();
+    left_feed->init();
+    right_feed->init();
 }
 
 void make_commands()
@@ -147,7 +148,9 @@ int main(int argc, char** argv)
         cam_right,
         depth,
         lidar,
-        depth_stream
+        depth_feed,
+        left_feed,
+        right_feed
     });
     
     // Start base tasks that should be run without user input
