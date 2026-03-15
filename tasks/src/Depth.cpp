@@ -93,8 +93,8 @@ void DepthCamera::step()
     latest_right = right->acquire();
 
     cv::Mat left_rect, right_rect;
-    cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, latest_left->data, left->get_stride());
-    cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, latest_right->data, right->get_stride());
+    cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, latest_left->data);
+    cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, latest_right->data);
     rectify(left_im, right_im, left_rect, right_rect);
 
     stereo->compute(left_rect, right_rect, disp);
