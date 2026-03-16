@@ -1,13 +1,14 @@
 import mmap
 import os
-import tempfile
+import traceback
 import numpy as np
 from nicegui import ui, app
 from PIL import Image
 import time
 import subprocess
-import signal
-import select
+import threading
+import asyncio
+
 
 _c_to_numpy = {
     "unsigned char": np.uint8,
@@ -29,6 +30,7 @@ class ImageReader:
         self._valid = False
 
     def configure(self, filename: str, dtype: np.dtype, shape: tuple):
+        self._valid = False
         self._file = open(filename, "rb")
         self._mm = mmap.mmap(self._file.fileno(), 0, prot=mmap.PROT_READ)
         self._shape = shape
@@ -37,7 +39,8 @@ class ImageReader:
 
     def close(self):
         self._valid = False
-        self._file.close()
+        if hasattr(self, "_file") and hasattr(self._file, "close"):
+            self._file.close()
         
     @property
     def image(self):
@@ -80,6 +83,22 @@ class ProcManager:
 
     def get_lines_out(self, cmd: str):
         out = []
+        
+        self.process.stdin.write((cmd+"\n").encode())
+        self.process.stdin.flush()
+        waiting = True
+        while waiting:
+            for line in self.process.stdout:
+                if line.strip() == b">>>":
+                    waiting = False
+                    break
+                else:
+                    out.append(line.decode())
+        return out
+
+    async def get_lines_out_async(self, cmd: str):
+        out = []
+        
         self.process.stdin.write((cmd+"\n").encode())
         self.process.stdin.flush()
         waiting = True
@@ -113,18 +132,67 @@ class ProcManager:
         self.get_lines_out(f"autostop {task}")
 
 
+class EventThread:
+    def __init__(self):
+        self._loop = asyncio.new_event_loop()
+        self._th = threading.Thread(target=self._loop.run_forever)
+        self._th.start()
+
+    def close(self):    
+        self._loop.stop()
+        self._th.join(timeout=1.0)
+
+    def submit(self, coro):
+        asyncio.run_coroutine_threadsafe(coro, self._loop)
+
+
 class UIManager:
-    def __init__(self, pm: ProcManager, memman: ImageReader):
+    def __init__(self, pm: ProcManager, memman: ImageReader, eventman: EventThread):
         self._pm = pm
         self._mem = memman
+        self._eventman = eventman
         self._image_path = "/tmp/gui_img_placeholder.png"
+        if not os.path.exists("/tmp/stereo_gui"):
+            os.makedirs("/tmp/stereo_gui")
+        self._task_prev = ""
 
     def image_window(self, container):
         self._mem.image.save(self._image_path) 
         with container:
             with ui.column():
-                self._button = ui.button(text="Refresh View", on_click=self._img_callback)
+                with ui.row():
+                    self._button = ui.button(text="Refresh View", on_click=self._img_callback)
+                    self._feed_select = ui.select(options=[""], on_change=self._feed_select_cback)
                 self._image = ui.interactive_image(source=self._image_path)
+
+    def _update_feed_options(self):
+        feed_tasks = []
+        for task in [x[0] for x in self._pm.tasks() if x[1] == "running"]:
+            cmds = self._pm.commands(task)
+            if ("map" in cmds) and ("unmap" in cmds):
+                feed_tasks.append(task)
+        self._feed_select.set_options(["", *feed_tasks])
+    
+    def _feed_select_cback(self):
+        print(self._task_prev, self._feed_select.value)
+        self._eventman.submit(self._configure_feed())
+
+    async def _configure_feed(self):
+        task = self._feed_select.value.strip()
+
+        if self._task_prev != "":
+            await self._pm.get_lines_out_async(f"{self._task_prev} unmap")
+
+        if task != "":        
+            file = f"/tmp/stereo_gui/{task}"
+            await self._pm.get_lines_out_async(f"{task} map {file}")
+            feed_type = (await self._pm.get_lines_out_async(f"{task} datatype"))[0]
+            dt, s = c_typename_to_numpy(feed_type)
+            dims = (await self._pm.get_lines_out_async(f"{task} dimensions"))[0].split()
+            shape = [int(d) for d in dims]
+            self._mem.configure(file, dt, shape)
+
+        self._task_prev = task
 
     def _img_callback(self):
         self._mem.image.save(self._image_path)
@@ -132,12 +200,12 @@ class UIManager:
 
     def task_list(self, container):
         self._task_status = {}
-        with ui.column():
-            for task, status in self._pm.tasks():
-                with ui.card() as card:
-                    card.on("click", self._make_task_toggler(task))
-                    self._task_status[task] = [ui.markdown(f"**{task}**: {status}"), status]
-
+        with container:
+            with ui.column():
+                for task, status in self._pm.tasks():
+                    with ui.card() as card:
+                        card.on("click", self._make_task_toggler(task))
+                        self._task_status[task] = [ui.markdown(f"**{task}**: {status}"), status]
 
     def _make_task_toggler(self, task):
         def _inner():
@@ -151,41 +219,44 @@ class UIManager:
             for t, status in self._pm.tasks():
                 self._task_status[t][0].set_content(f"**{t}**: {status}")
                 self._task_status[t][1] = status
+            # Update other data dependent on task info
+            self._update_feed_options()
         return _inner
 
 
 class startup():
-    def __init__(self, pm: ProcManager, im: ImageReader, um: UIManager):
+    def __init__(self, pm: ProcManager, im: ImageReader, um: UIManager, em: EventThread):
         self._pm = pm
         self._im = im
         self._um = um
+        self._em = em
 
     def __call__(self):
         self._pm.init()
-        self._pm.start_task("right_feed")
-        file = "/tmp/right-feed"
-        dt, s = c_typename_to_numpy(pm.get_lines_out(f"right_feed datatype")[0])
-        shape = [int(d) for d in pm.get_lines_out("right_feed dimensions")[0].split()]
-        self._pm.get_lines_out(f"right_feed map {file}")
-        self._im.configure(file, dt, shape)
-        print("Configured memory map")
 
 
 class shutdown():
-    def __init__(self, pm: ProcManager, im: ImageReader, um: UIManager):
+    def __init__(self, pm: ProcManager, im: ImageReader, um: UIManager, em: EventThread):
         self._pm = pm
         self._im = im
         self._um = um
+        self._em = em
 
     def __call__(self):
         self._im.close()
         self._pm.close()
+        self._em.close()
+
+
+def handle_exc(e: Exception):
+    traceback.print_exc()
 
 
 if __name__ in {"__main__", "__mp_main__"}:   
     pm = ProcManager()
     im = ImageReader()
-    um = UIManager(pm, im)
+    em = EventThread()
+    um = UIManager(pm, im, em)
 
     @ui.page('/')
     def main():
@@ -193,6 +264,7 @@ if __name__ in {"__main__", "__mp_main__"}:
             um.image_window(splitter.before)
             um.task_list(splitter.after)
 
-    app.on_startup(startup(pm, im, um))
-    app.on_shutdown(shutdown(pm, im, um))
+    app.on_startup(startup(pm, im, um, em))
+    app.on_shutdown(shutdown(pm, im, um, em))
+    app.on_exception(handle_exc)
     ui.run(reload=False)

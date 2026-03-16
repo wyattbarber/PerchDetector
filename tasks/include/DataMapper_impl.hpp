@@ -71,24 +71,23 @@ void map_data(Task* task, std::istream& in, std::ostream& out, const std::vector
         out << "File name for mapping is required." << std::endl;
         return;
     }
-    t->info("Mapped data stream to ", args[0]);
     
     t->map_file = std::fopen(args[0].c_str(), "w+");
     if(!t->map_file)
     {
-        out << "Failed to open file " << t->map_file_name << ": " << std::strerror(errno);
+        out << "Failed to open file " << args[0] << ": " << std::strerror(errno) << std::endl;
         return;
     }
     if(ftruncate(fileno(t->map_file), sizeof(typename T::value_type)+1))
     {
-        out << "Failed to set file size to " << sizeof(typename T::value_type)+1 << ": " << std::strerror(errno);
+        out << "Failed to set file size to " << sizeof(typename T::value_type)+1 << ": " << std::strerror(errno) << std::endl;
         std::fclose(t->map_file);
         return;
     }
     t->map = mmap(0, sizeof(typename T::value_type)+1, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(t->map_file), 0);
     if(t->map == MAP_FAILED)
     {
-        out << "Failed to create memory map: " << std::strerror(errno);
+        out << "Failed to create memory map: " << std::strerror(errno) << std::endl;
         std::fclose(t->map_file);
         return;
     }
@@ -97,6 +96,7 @@ void map_data(Task* task, std::istream& in, std::ostream& out, const std::vector
     char* dst = reinterpret_cast<char*>(t->map)+1;
     memcpy((void*)dst, (void*)(&t->latest->data), sizeof(typename T::value_type)); 
     t->running = true;
+    t->info("Mapped data stream to ", args[0]);
 }
 
 
