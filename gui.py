@@ -29,11 +29,12 @@ class ImageReader:
     def __init__(self):
         self._valid = False
 
-    def configure(self, filename: str, dtype: np.dtype, shape: tuple):
+    def configure(self, filename: str, dtype: np.dtype, shape: tuple, reshape: tuple):
         self._valid = False
         self._file = open(filename, "rb")
         self._mm = mmap.mmap(self._file.fileno(), 0, prot=mmap.PROT_READ)
         self._shape = shape
+        self._reshape = reshape
         self._dtype = dtype
         self._valid = True
 
@@ -53,7 +54,7 @@ class ImageReader:
                 data -= np.min(data)
                 data /= np.max(data)
                 data *= 255
-            return Image.fromarray(data.astype(np.uint8))
+            return Image.fromarray(data.astype(np.uint8)).resize((self._reshape[1], self._reshape[0]))
         else:
             return Image.fromarray(np.zeros((600, 600)).astype(np.uint8))
 
@@ -151,19 +152,18 @@ class UIManager:
         self._pm = pm
         self._mem = memman
         self._eventman = eventman
-        self._image_path = "/tmp/gui_img_placeholder.png"
         if not os.path.exists("/tmp/stereo_gui"):
             os.makedirs("/tmp/stereo_gui")
         self._task_prev = ""
 
-    def image_window(self, container):
-        self._mem.image.save(self._image_path) 
+    def image_window(self, container, size):
+        self._image_size = size
         with container:
             with ui.column():
                 with ui.row():
                     self._button = ui.button(text="Refresh View", on_click=self._img_callback)
                     self._feed_select = ui.select(options=[""], on_change=self._feed_select_cback)
-                self._image = ui.interactive_image(source=self._image_path)
+                self._image = ui.interactive_image(source=self._mem.image)
 
     def _update_feed_options(self):
         feed_tasks = []
@@ -174,7 +174,6 @@ class UIManager:
         self._feed_select.set_options(["", *feed_tasks])
     
     def _feed_select_cback(self):
-        print(self._task_prev, self._feed_select.value)
         self._eventman.submit(self._configure_feed())
 
     async def _configure_feed(self):
@@ -190,13 +189,12 @@ class UIManager:
             dt, s = c_typename_to_numpy(feed_type)
             dims = (await self._pm.get_lines_out_async(f"{task} dimensions"))[0].split()
             shape = [int(d) for d in dims]
-            self._mem.configure(file, dt, shape)
+            self._mem.configure(file, dt, shape, self._image_size)
 
         self._task_prev = task
 
     def _img_callback(self):
-        self._mem.image.save(self._image_path)
-        self._image.force_reload()
+        self._image.set_source(self._mem.image)
 
     def task_list(self, container):
         self._task_status = {}
@@ -260,9 +258,28 @@ if __name__ in {"__main__", "__mp_main__"}:
 
     @ui.page('/')
     def main():
-        with ui.splitter() as splitter:
-            um.image_window(splitter.before)
+        with ui.splitter(value=75).classes("w-full") as splitter:
             um.task_list(splitter.after)
+
+            with splitter.before:
+                with ui.tabs().classes("w-full") as tabs:
+                    feeds = ui.tab("Image Capture")
+                    log = ui.tab("Logs")
+                    cloud = ui.tab("Point Cloud")
+                    graph = ui.tab("Graph")
+
+                with ui.tab_panels(tabs, value=feeds).classes("w-full"):
+                    with ui.tab_panel(feeds) as tb:
+                            um.image_window(tb, (600, 800))
+
+                    with ui.tab_panel(log).classes("w-full"):
+                        ui.markdown("_To-Do_")
+
+                    with ui.tab_panel(cloud).classes("w-full"):
+                        ui.markdown("_To-Do_")
+
+                    with ui.tab_panel(graph).classes("w-full"):
+                        ui.markdown("_To-Do_")
 
     app.on_startup(startup(pm, im, um, em))
     app.on_shutdown(shutdown(pm, im, um, em))
