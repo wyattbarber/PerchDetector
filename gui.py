@@ -130,6 +130,29 @@ class UIManager:
         self._mem.image.save(self._image_path)
         self._image.force_reload()
 
+    def task_list(self, container):
+        self._task_status = {}
+        with ui.column():
+            for task, status in self._pm.tasks():
+                with ui.card() as card:
+                    card.on("click", self._make_task_toggler(task))
+                    self._task_status[task] = [ui.markdown(f"**{task}**: {status}"), status]
+
+
+    def _make_task_toggler(self, task):
+        def _inner():
+            # Toggle state
+            _, status = self._task_status[task]
+            if status == "stopped":
+                self._pm.start_task(task)
+            else:
+                self._pm.stop_task(task)
+            # Update all states
+            for t, status in self._pm.tasks():
+                self._task_status[t][0].set_content(f"**{t}**: {status}")
+                self._task_status[t][1] = status
+        return _inner
+
 
 class startup():
     def __init__(self, pm: ProcManager, im: ImageReader, um: UIManager):
@@ -159,7 +182,6 @@ class shutdown():
         self._pm.close()
 
 
-
 if __name__ in {"__main__", "__mp_main__"}:   
     pm = ProcManager()
     im = ImageReader()
@@ -167,7 +189,9 @@ if __name__ in {"__main__", "__mp_main__"}:
 
     @ui.page('/')
     def main():
-        um.image_window(ui.row())
+        with ui.splitter() as splitter:
+            um.image_window(splitter.before)
+            um.task_list(splitter.after)
 
     app.on_startup(startup(pm, im, um))
     app.on_shutdown(shutdown(pm, im, um))
