@@ -1,12 +1,39 @@
-#include <Depth.hpp>
+#include <Disparity.hpp>
 #include <Logging.hpp>
-#include <opencv2/imgproc.hpp>
 #include <limits>
 #include <thread>
 #include <json_loader.hpp>
+#include <opencv2/imgproc.hpp>
 
 
 using namespace std::chrono_literals;
+
+
+void set_stereo_params(cv::Ptr<StereoMatcherType> stereo,
+                int	minDisparity,
+                int	numDisparities,
+                int	blockSize,
+                int	P1,
+                int	P2,
+                int	disp12MaxDiff,
+                int	preFilterCap,
+                int	uniquenessRatio,
+                int	speckleWindowSize,
+                int	speckleRange)                
+{
+    stereo->setMinDisparity(minDisparity);
+    stereo->setNumDisparities(numDisparities);
+    stereo->setDisp12MaxDiff(disp12MaxDiff);
+    stereo->setPreFilterCap(preFilterCap);
+    stereo->setUniquenessRatio(uniquenessRatio);
+    stereo->setSpeckleWindowSize(speckleWindowSize);
+    stereo->setSpeckleRange(speckleRange);
+    if constexpr (std::is_same_v<StereoMatcherType, cv::StereoSGBM>)
+    {
+        stereo->setP1(P1);
+        stereo->setP2(P2);
+    }
+}
 
 
 bool DepthCamera::start_impl()
@@ -47,7 +74,9 @@ bool DepthCamera::start_impl()
         cv::Size(left->get_width(), left->get_height()),
         R, T, 
         _Rl, _Rr, _Pl, _Pr,
-        Q
+        Q,
+        cv::CALIB_ZERO_DISPARITY,
+        0 
     );
     info("Computing left remap");
     cv::initUndistortRectifyMap(
@@ -62,17 +91,16 @@ bool DepthCamera::start_impl()
         CV_16SC2, mapr1, mapr2
     );
 
-    /* Initialize disparity and depth intermediates and depth conversion
-        Conversion factor is Z = B*f / disparity, and opencv disparity
-        is scaled up by 15. The matrix Q is expected, for horizontal 
-        stereo cameras, to have f at element (2,3), and -1/B at element
-        (3,2)
-    */
-    disp = cv::Mat(left->get_height(), left->get_width(), CV_16S);
+    // Pre-allocate intermediates
+    rect_l = cv::Mat(left->get_height(), left->get_width(), CV_8U);
+    rect_r = cv::Mat(left->get_height(), left->get_width(), CV_8U);
+    disp_left = cv::Mat(left->get_height(), left->get_width(), CV_16S);
+    disp_right = cv::Mat(left->get_height(), left->get_width(), CV_16S);
     depth = cv::Mat(left->get_height(), left->get_width(), CV_32F);
-    converter.M =  static_cast<float>(Q.at<double>(2,3) / (16.0 * std::abs(Q.at<double>(3,2))));
-    info("Q: ", Q);
-    info("Set disparity to depth conversion to ", converter.M);
+
+    // Initialize stereo matchers and filter
+    stereo_right = std::dynamic_pointer_cast<StereoMatcherType>(cv::ximgproc::createRightMatcher(stereo_left));
+    filter = cv::ximgproc::createDisparityWLSFilter(stereo_left);
 
     // Get first data so pointers are valid
     latest_left = left->acquire();
@@ -92,18 +120,26 @@ void DepthCamera::step()
     latest_left = left->acquire();
     latest_right = right->acquire();
 
-    cv::Mat left_rect, right_rect;
     cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, latest_left->data);
     cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, latest_right->data);
-    rectify(left_im, right_im, left_rect, right_rect);
+    rectify(left_im, right_im, rect_l, rect_r);
 
-    stereo->compute(left_rect, right_rect, disp);
-    if(disp.empty())
-        warning("Empty disparity map produced");
+    stereo_left->compute(rect_l, rect_r, disp_left);
+    stereo_right->compute(rect_r, rect_l, disp_right);
+    update_ptr_type next = allocate_next();
+    filter->filter(
+        disp_left, 
+        rect_l, 
+        cv::Mat(left->get_height(), left->get_width(), CV_16S, next->data.disparity), 
+        disp_right
+    );
+    cv::Mat conf = filter->getConfidenceMap();
+    conf.convertTo(
+        cv::Mat(left->get_height(), left->get_width(), CV_8UC1, next->data.confidence),
+        CV_8U
+    );
 
-    disp.convertTo(depth, CV_32F);
-    depth.forEach<float>(converter);
-    swap_data(*reinterpret_cast<float(*)[CameraWrapper::Width * CameraWrapper::Height]>(depth.data));
+    swap_data();
 }
 
 
@@ -111,27 +147,4 @@ void DepthCamera::rectify(cv::Mat& left_in, cv::Mat& right_in, cv::Mat& left_out
 {
     cv::remap(left_in, left_out, mapl1, mapl2, cv::INTER_LINEAR);
     cv::remap(right_in, right_out, mapr1, mapr2, cv::INTER_LINEAR);
-}
-
-
-void DepthCamera::set_params(int minDisparity,
-                    int	numDisparities,
-                    int	blockSize,
-                    int	P1,
-                    int	P2,
-                    int	disp12MaxDiff,
-                    int	preFilterCap,
-                    int	uniquenessRatio,
-                    int	speckleWindowSize,
-                    int	speckleRange)
-{
-    stereo->setMinDisparity(minDisparity);
-    stereo->setNumDisparities(numDisparities);
-    // stereo->setP1(P1);
-    // stereo->setP2(P2);
-    stereo->setDisp12MaxDiff(disp12MaxDiff);
-    stereo->setPreFilterCap(preFilterCap);
-    stereo->setUniquenessRatio(uniquenessRatio);
-    stereo->setSpeckleWindowSize(speckleWindowSize);
-    stereo->setSpeckleRange(speckleRange);
 }

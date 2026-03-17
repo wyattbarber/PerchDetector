@@ -44,7 +44,7 @@ target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/V
 add_library(tasks STATIC 
     tasks/src/CameraWrapper.cpp
     tasks/src/CameraSim.cpp
-    tasks/src/Depth.cpp
+    tasks/src/Disparity.cpp
     tasks/src/VL53L8CX.cpp
 )
 target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen)
