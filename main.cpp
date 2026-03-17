@@ -23,8 +23,7 @@ static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10"
 std::shared_ptr<CameraWrapper> cam_left, cam_right;
 
 std::shared_ptr<DepthCamera> stereo;
-std::shared_ptr<DisparityFormatter> stereo_formatter;
-std::shared_ptr<DataMapper<DisparityFormatter>> stereo_feed;
+std::shared_ptr<DataMapper<DepthCamera, decltype(DepthCamera::value_type::disparity), decltype(disparity_display_conv)>> stereo_feed;
 
 std::shared_ptr<VL53L8CX> lidar;
 std::shared_ptr<VL53L8CX_Formatter> lidar_formatter;
@@ -69,8 +68,7 @@ void make_tasks()
     right_feed = std::make_shared<DataMapper<CameraWrapper>>("right_feed", cam_right);
     
     stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
-    stereo_formatter = std::make_shared<DisparityFormatter>("stereo_formatter", stereo);
-    stereo_feed = std::make_shared<DataMapper<DisparityFormatter>>("stereo_feed", stereo_formatter);
+    stereo_feed = std::make_shared<DataMapper<DepthCamera, decltype(DepthCamera::value_type::disparity), decltype(disparity_display_conv)>>("stereo_feed", stereo, disparity_display_conv);
 
     lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
     lidar_formatter= std::make_shared<VL53L8CX_Formatter>("lidar_formatter", lidar);
@@ -81,7 +79,6 @@ void make_tasks()
     cam_right->init();
     stereo->init();
     stereo_feed->init();
-    stereo_formatter->init();
     lidar->init();
     lidar_formatter->init();
     lidar_feed->init();
@@ -160,7 +157,6 @@ int main(int argc, char** argv)
         cam_left,
         cam_right,
         stereo,
-        stereo_formatter,
         stereo_feed,
         lidar,
         lidar_formatter,

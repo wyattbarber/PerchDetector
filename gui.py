@@ -257,7 +257,7 @@ class UIManager:
             self._pm.stop_task(task)
         # Update all states
         for t, status in self._pm.tasks():
-            self._task_status[t][0].set_content(f"<b>{task}</b>: {status}")
+            self._task_status[t][0].set_content(f"<b>{t}</b>: {status}")
             self._task_status[t][1] = status
         # Update other data dependent on task info
         await self._update_feed_options()
@@ -303,7 +303,9 @@ def handle_exc(e: Exception):
 
 
 if __name__ in {"__main__", "__mp_main__"}:   
-    pm = ProcManager()
+    pm = ProcManager(
+        "--calibrations", "calibrations"
+    )
     im = ImageReader((600, 800))
     em = EventThread()
     um = UIManager(pm, im, em)
@@ -320,6 +322,7 @@ if __name__ in {"__main__", "__mp_main__"}:
                     log = ui.tab("Logs")
                     cloud = ui.tab("Point Cloud")
                     graph = ui.tab("Graph")
+                    rates = ui.tab("Rates")
 
                 with ui.tab_panels(tabs, value=feeds).classes("w-full"):
                     with ui.tab_panel(feeds).classes("w-full") as tb:
@@ -335,6 +338,9 @@ if __name__ in {"__main__", "__mp_main__"}:
                         ui.markdown("_To-Do_")
 
                     with ui.tab_panel(graph).classes("w-full") as tb:
+                        ui.markdown("_To-Do_")
+                        
+                    with ui.tab_panel(rates).classes("w-full") as tb:
                         ui.markdown("_To-Do_")
 
     app.on_startup(startup(pm, im, um, em))

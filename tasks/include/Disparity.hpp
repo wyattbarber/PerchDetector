@@ -99,3 +99,9 @@ protected:
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;
     cv::Mat left_intr, right_intr, left_dist, right_dist, R, T;
 };
+
+
+/** Converts disparity updates to single channel
+    images that the gui can display.
+*/
+void disparity_display_conv(void* dst, const DepthCamera::value_type& value);

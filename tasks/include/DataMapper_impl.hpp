@@ -11,8 +11,8 @@
 #include <cerrno>
 
 
-template<class T>
-bool DataMapper<T>::start_impl(){ 
+template<class T, typename C, typename CF>
+bool DataMapper<T, C, CF>::start_impl(){ 
     if(!task->is_alive())
     {
         error("Cannot start streamer if producer is not running.");
@@ -23,15 +23,15 @@ bool DataMapper<T>::start_impl(){
 }
 
 
-template<class T>
-void DataMapper<T>::stop_impl()
+template<class T, typename C, typename CF>
+void DataMapper<T, C, CF>::stop_impl()
 {
     if(running)
     {
         info("Mapped file still open, unmapping and closing.");
         // Wait for in progress write to stop
         while(mapping){}
-        if(munmap(map, sizeof(typename T::value_type)+1))
+        if(munmap(map, sizeof(C)+1))
         {
             error("Error unmapping file: ", std::strerror(errno));
         }
@@ -41,8 +41,8 @@ void DataMapper<T>::stop_impl()
 }
 
 
-template<class T>
-void DataMapper<T>::step()
+template<class T, typename C, typename CF>
+void DataMapper<T, C, CF>::step()
 {
     if(is_alive() & running)
     {
@@ -51,9 +51,8 @@ void DataMapper<T>::step()
             mapping = true;
             latest = task->acquire();
             char* dst = reinterpret_cast<char*>(map)+1;
-            
+            converter((void*)dst, latest->data);
             reinterpret_cast<char*>(map)[0] = 0xFF;
-            memcpy((void*)dst, (void*)(&latest->data), sizeof(typename T::value_type)); 
             reinterpret_cast<char*>(map)[0] = 0x00;
             mapping = false;
         }

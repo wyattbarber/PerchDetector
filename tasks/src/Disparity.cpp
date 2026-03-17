@@ -4,6 +4,7 @@
 #include <thread>
 #include <json_loader.hpp>
 #include <opencv2/imgproc.hpp>
+#include <Eigen/Dense>
 
 
 using namespace std::chrono_literals;
@@ -147,4 +148,15 @@ void DepthCamera::rectify(const cv::Mat& left_in, const cv::Mat& right_in, cv::M
 {
     cv::remap(left_in, left_out, mapl1, mapl2, cv::INTER_LINEAR);
     cv::remap(right_in, right_out, mapr1, mapr2, cv::INTER_LINEAR);
+}
+
+
+void disparity_display_conv(void* dst, const DepthCamera::value_type& value)
+{
+    using tmp_t = Eigen::Map<Eigen::Matrix<int16_t, CameraWrapper::Height, CameraWrapper::Width>>;
+    const tmp_t tmp_src(const_cast<int16_t*>(value.disparity), CameraWrapper::Height, CameraWrapper::Width);
+    tmp_t tmp_dst((int16_t*)dst, CameraWrapper::Height, CameraWrapper::Width); 
+    tmp_dst = tmp_src.unaryExpr(
+            [](int16_t x){ return x > 0 ? x : 0; }
+        ).cast<int16_t>();
 }

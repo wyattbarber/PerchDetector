@@ -15,6 +15,15 @@ void map_data(Task* task, std::istream& in, std::ostream& out, const std::vector
 template<class T>
 void unmap_data(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
+/** Default no-op data converter.
+
+*/
+template<typename T>
+void no_op_converter(void* dst, const T& src)
+{ 
+    memcpy(dst, (const void*)&src, sizeof(T)); 
+}
+
 
 /** Shares data with other processes
 
@@ -32,7 +41,7 @@ as follows:
 
 @tparam T Task type that is generating the data to send.
 */
-template<class T>
+template<class T, typename C = typename T::value_type, typename CF = decltype(no_op_converter<typename T::value_type>)>
 class DataMapper : public Task
 {
     friend void map_data<T>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
@@ -43,10 +52,12 @@ public:
     
     @param name Name of the created task
     @param task Task that will produce the data to send
+    @param converter Optional converter function to apply to the data
     */
-    DataMapper(const char* name, std::shared_ptr<DataSource<T>> task) : 
+    DataMapper(const char* name, std::shared_ptr<DataSource<T>> task, CF& converter = no_op_converter<typename T::value_type>) : 
         Task(name, {task}),
         task(task),
+        converter(converter),
         running(false),
         mapping(false)
     {
@@ -65,6 +76,7 @@ public:
 protected:
     std::shared_ptr<DataSource<T>> task;
     typename T::update_ptr_const_type latest;
+    CF& converter;
     std::FILE* map_file;
     void* map;
     std::atomic<bool> running, mapping;
