@@ -262,6 +262,17 @@ class UIManager:
         # Update other data dependent on task info
         await self._update_feed_options()
 
+    def log_view(self, container):
+        with container:
+            self._log_refresh = ui.button(text="Refresh", on_click=lambda: self._eventman.submit(self._load_log()))
+            with ui.card():
+                self._log_view = ui.html()
+
+    async def _load_log(self):
+        log = await self._pm.get_lines_out_async("log")
+        self._log_view.set_content(
+            "</br>".join(log)
+        )
 
 class startup():
     def __init__(self, pm: ProcManager, im: ImageReader, um: UIManager, em: EventThread):
@@ -311,19 +322,19 @@ if __name__ in {"__main__", "__mp_main__"}:
                     graph = ui.tab("Graph")
 
                 with ui.tab_panels(tabs, value=feeds).classes("w-full"):
-                    with ui.tab_panel(feeds) as tb:
-                            um.image_window(tb)
+                    with ui.tab_panel(feeds).classes("w-full") as tb:
+                        um.image_window(tb)
 
-                    with ui.tab_panel(data) as tb:
-                            um.data_window(tb)
+                    with ui.tab_panel(data).classes("w-full") as tb:
+                        um.data_window(tb)
 
-                    with ui.tab_panel(log).classes("w-full"):
+                    with ui.tab_panel(log).classes("w-full") as tb:
+                        um.log_view(tb)
+
+                    with ui.tab_panel(cloud).classes("w-full") as tb:
                         ui.markdown("_To-Do_")
 
-                    with ui.tab_panel(cloud).classes("w-full"):
-                        ui.markdown("_To-Do_")
-
-                    with ui.tab_panel(graph).classes("w-full"):
+                    with ui.tab_panel(graph).classes("w-full") as tb:
                         ui.markdown("_To-Do_")
 
     app.on_startup(startup(pm, im, um, em))

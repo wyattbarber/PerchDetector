@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <chrono>
 #include <string>
+#include <fstream>
 #include "main.hpp"
 
 using namespace std::chrono_literals;
@@ -248,4 +249,19 @@ void cmd_list(std::istream& in, std::ostream& out, const std::vector<std::string
         out << cmd << " ";
     }
     out << std::endl;
+}
+
+
+void log_dump(std::istream& in, std::ostream& out, const std::vector<std::string>& args, program_context& context)
+{
+    std::ifstream log(context.logfile);
+    if(!log.is_open())
+    {
+        return;
+    }
+
+    std::stringstream content;
+    content << log.rdbuf();
+    out << content.str() << std::endl;
+    return;
 }

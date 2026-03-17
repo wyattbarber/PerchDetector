@@ -40,6 +40,7 @@ void autostop(std::istream&, std::ostream&, const std::vector<std::string>&, pro
 void exit(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void capture(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void cmd_list(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void log_dump(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 
 void call_task_command(const std::string&, std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 
@@ -94,6 +95,7 @@ void make_commands()
     context.commands["autostop"] = &autostop;
     context.commands["capture"] = &capture;
     context.commands["exit"] = &exit;
+    context.commands["log"] = &log_dump;
 }
 
 
