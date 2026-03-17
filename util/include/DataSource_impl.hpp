@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstring>
+
 
 template<class T>
 typename DataSource<T>::update_ptr_type DataSource<T>::acquire()

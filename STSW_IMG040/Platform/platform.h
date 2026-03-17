@@ -17,6 +17,17 @@
 #include <stdint.h>
 #include <string.h>
 
+// Disable unused data
+#define VL53L8CX_DISABLE_AMBIENT_PER_SPAD
+#define VL53L8CX_DISABLE_NB_SPADS_ENABLED
+// #define VL53L8CX_DISABLE_NB_TARGET_DETECTED
+#define VL53L8CX_DISABLE_SIGNAL_PER_SPAD
+// #define VL53L8CX_DISABLE_RANGE_SIGMA_MM
+// #define VL53L8CX_DISABLE_DISTANCE_MM
+// #define VL53L8CX_DISABLE_TARGET_STATUS
+#define VL53L8CX_DISABLE_REFLECTANCE_PERCENT
+#define VL53L8CX_DISABLE_MOTION_INDICATOR
+
 
 /**
  * @brief Structure VL53L8CX_Platform needs to be filled by the customer,

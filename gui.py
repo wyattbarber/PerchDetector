@@ -8,6 +8,7 @@ import time
 import subprocess
 import threading
 import asyncio
+from pprint import pformat
 
 
 _c_to_numpy = {
@@ -15,6 +16,8 @@ _c_to_numpy = {
     "char": np.int8,
     "float": np.float32,
     "double": np.float64,
+    "short": np.int16,
+    "unsigned short": np.uint16
 }
 
 def c_typename_to_numpy(typename: str):
@@ -26,15 +29,15 @@ def c_typename_to_numpy(typename: str):
 
 
 class ImageReader:
-    def __init__(self):
+    def __init__(self, displaysize):
         self._valid = False
+        self._reshape = displaysize
 
-    def configure(self, filename: str, dtype: np.dtype, shape: tuple, reshape: tuple):
+    def configure(self, filename: str, dtype: np.dtype, shape: tuple):
         self._valid = False
         self._file = open(filename, "rb")
         self._mm = mmap.mmap(self._file.fileno(), 0, prot=mmap.PROT_READ)
         self._shape = shape
-        self._reshape = reshape
         self._dtype = dtype
         self._valid = True
 
@@ -51,6 +54,7 @@ class ImageReader:
             data = np.ndarray(self._shape, buffer=self._mm[1:], dtype=self._dtype).copy()
             if self._dtype != np.uint8:
                 # Scale data
+                data = data.astype(np.float64)
                 data -= np.min(data)
                 data /= np.max(data)
                 data *= 255
@@ -58,6 +62,15 @@ class ImageReader:
         else:
             return Image.fromarray(np.zeros((600, 600)).astype(np.uint8))
 
+    @property
+    def data_string(self):
+        if self._valid:
+            while self._mm[0] != 0:
+                pass
+            return pformat(np.ndarray(self._shape, buffer=self._mm[1:], dtype=self._dtype))
+        else:
+            return "[]"
+        
 
 class ProcManager:
     def __init__(self, *args: str):
@@ -147,34 +160,18 @@ class EventThread:
         asyncio.run_coroutine_threadsafe(coro, self._loop)
 
 
-class UIManager:
-    def __init__(self, pm: ProcManager, memman: ImageReader, eventman: EventThread):
-        self._pm = pm
-        self._mem = memman
-        self._eventman = eventman
-        if not os.path.exists("/tmp/stereo_gui"):
-            os.makedirs("/tmp/stereo_gui")
-        self._task_prev = ""
-
-    def image_window(self, container, size):
-        self._image_size = size
+class FeedSelection:
+    def __init__(self, container, refresher, pm: ProcManager, em: EventThread, mem: ImageReader):
         with container:
-            with ui.column():
-                with ui.row():
-                    self._button = ui.button(text="Refresh View", on_click=self._img_callback)
-                    self._feed_select = ui.select(options=[""], on_change=self._feed_select_cback)
-                self._image = ui.interactive_image(source=self._mem.image)
-
-    def _update_feed_options(self):
-        feed_tasks = []
-        for task in [x[0] for x in self._pm.tasks() if x[1] == "running"]:
-            cmds = self._pm.commands(task)
-            if ("map" in cmds) and ("unmap" in cmds):
-                feed_tasks.append(task)
-        self._feed_select.set_options(["", *feed_tasks])
+            self._button = ui.button(text="Refresh", on_click=refresher)
+            self._feed_select = ui.select(options=[""], on_change=self._feed_select_cback)
+        self._pm = pm
+        self._em = em
+        self._mem = mem
+        self._task_prev = ""
     
     def _feed_select_cback(self):
-        self._eventman.submit(self._configure_feed())
+        self._em.submit(self._configure_feed())
 
     async def _configure_feed(self):
         task = self._feed_select.value.strip()
@@ -189,12 +186,53 @@ class UIManager:
             dt, s = c_typename_to_numpy(feed_type)
             dims = (await self._pm.get_lines_out_async(f"{task} dimensions"))[0].split()
             shape = [int(d) for d in dims]
-            self._mem.configure(file, dt, shape, self._image_size)
+            self._mem.configure(file, dt, shape)
 
         self._task_prev = task
+    
+    def update_feed_options(self, options):
+        self._feed_select.set_options(["", *options])
 
+    @property
+    def feed(self):
+        return self._feed_select.value
+
+
+class UIManager:
+    def __init__(self, pm: ProcManager, memman: ImageReader, eventman: EventThread):
+        self._pm = pm
+        self._mem = memman
+        self._eventman = eventman
+        if not os.path.exists("/tmp/stereo_gui"):
+            os.makedirs("/tmp/stereo_gui")
+        self._task_prev = ""
+
+    def image_window(self, container):
+        with container:
+            self._image_select = FeedSelection(ui.row(), lambda: self._image.set_source(self._mem.image), self._pm, self._eventman, self._mem)
+            self._image = ui.interactive_image(source=self._mem.image)
+
+    def data_window(self, container):
+        with container:
+            self._data_select = FeedSelection(ui.row(), self._data_callback, self._pm, self._eventman, self._mem)
+            with ui.card():
+                self._data_view = ui.label()
+
+    async def _update_feed_options(self):
+        feed_tasks = []
+        for task in [x[0] for x in self._pm.tasks() if x[1] == "running"]:
+            cmds = self._pm.commands(task)
+            if ("map" in cmds) and ("unmap" in cmds):
+                feed_tasks.append(task)
+        self._image_select.update_feed_options(feed_tasks)
+        self._data_select.update_feed_options(feed_tasks)
+   
     def _img_callback(self):
         self._image.set_source(self._mem.image)
+
+    def _data_callback(self):
+        self._data_view.text = self._mem.data_string
+        self._data_view.update()
 
     def task_list(self, container):
         self._task_status = {}
@@ -207,19 +245,22 @@ class UIManager:
 
     def _make_task_toggler(self, task):
         def _inner():
-            # Toggle state
-            _, status = self._task_status[task]
-            if status == "stopped":
-                self._pm.start_task(task)
-            else:
-                self._pm.stop_task(task)
-            # Update all states
-            for t, status in self._pm.tasks():
-                self._task_status[t][0].set_content(f"**{t}**: {status}")
-                self._task_status[t][1] = status
-            # Update other data dependent on task info
-            self._update_feed_options()
+            self._eventman.submit(self._toggle_task(task))
         return _inner
+
+    async def _toggle_task(self, task):
+        # Toggle state
+        _, status = self._task_status[task]
+        if status == "stopped":
+            self._pm.start_task(task)
+        else:
+            self._pm.stop_task(task)
+        # Update all states
+        for t, status in self._pm.tasks():
+            self._task_status[t][0].set_content(f"**{t}**: {status}")
+            self._task_status[t][1] = status
+        # Update other data dependent on task info
+        await self._update_feed_options()
 
 
 class startup():
@@ -252,7 +293,7 @@ def handle_exc(e: Exception):
 
 if __name__ in {"__main__", "__mp_main__"}:   
     pm = ProcManager()
-    im = ImageReader()
+    im = ImageReader((600, 800))
     em = EventThread()
     um = UIManager(pm, im, em)
 
@@ -264,13 +305,17 @@ if __name__ in {"__main__", "__mp_main__"}:
             with splitter.before:
                 with ui.tabs().classes("w-full") as tabs:
                     feeds = ui.tab("Image Capture")
+                    data = ui.tab("Raw Data")
                     log = ui.tab("Logs")
                     cloud = ui.tab("Point Cloud")
                     graph = ui.tab("Graph")
 
                 with ui.tab_panels(tabs, value=feeds).classes("w-full"):
                     with ui.tab_panel(feeds) as tb:
-                            um.image_window(tb, (600, 800))
+                            um.image_window(tb)
+
+                    with ui.tab_panel(data) as tb:
+                            um.data_window(tb)
 
                     with ui.tab_panel(log).classes("w-full"):
                         ui.markdown("_To-Do_")

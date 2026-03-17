@@ -22,7 +22,10 @@ static bool id_cam_left(const std::string& id){return id.find("i2c@0/imx219@10")
 static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10") != std::string::npos;}
 std::shared_ptr<CameraWrapper> cam_left, cam_right;
 std::shared_ptr<DepthCamera> depth;
+
 std::shared_ptr<VL53L8CX> lidar;
+std::shared_ptr<VL53L8CX_Formatter> lidar_formatter;
+std::shared_ptr<DataMapper<VL53L8CX_Formatter>> lidar_feed;
 
 std::shared_ptr<DataMapper<CameraWrapper>> left_feed, right_feed;
 std::shared_ptr<DataMapper<DepthCamera>> depth_feed;
@@ -66,12 +69,16 @@ void make_tasks()
     depth_feed = std::make_shared<DataMapper<DepthCamera>>("depth_feed", depth);
 
     lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
+    lidar_formatter= std::make_shared<VL53L8CX_Formatter>("lidar_formatter", lidar);
+    lidar_feed = std::make_shared<DataMapper<VL53L8CX_Formatter>>("lidar_feed", lidar_formatter);
 
     cam_manager->init();
     cam_left->init();
     cam_right->init();
     depth->init();
     lidar->init();
+    lidar_formatter->init();
+    lidar_feed->init();
     depth_feed->init();
     left_feed->init();
     right_feed->init();
@@ -148,6 +155,8 @@ int main(int argc, char** argv)
         cam_right,
         depth,
         lidar,
+        lidar_formatter,
+        lidar_feed,
         depth_feed,
         left_feed,
         right_feed

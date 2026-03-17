@@ -1,14 +1,16 @@
 #pragma once
 
-#include "Task.hpp"
+#include "DataSource.hpp"
 #include "vl53l8cx_api.h"
 
+
+FWD_DECL_DATA_SOURCE(VL53L8CX, VL53L8CX_ResultsData)
 
 /** Manage communication with a VL53L8CX lidar sensor.
 
 
 */
-class VL53L8CX : public Task
+class VL53L8CX : public DataSource<VL53L8CX>
 {
 public:
     /** Create a new sensor manager task 
@@ -17,7 +19,7 @@ public:
     @param path Path to the SPI device for the sensor
     */
     VL53L8CX(const char* name, const char* path) : 
-        Task(name, {}),
+        DataSource<VL53L8CX>(name, {}),
         path(path)
     {
     }
@@ -39,6 +41,8 @@ public:
     
     */
     void step();
+
+    std::vector<size_t> dims(){ return {1}; }
 
 protected:
     const char* path;
