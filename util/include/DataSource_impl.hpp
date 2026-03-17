@@ -4,7 +4,7 @@
 
 
 template<class T>
-typename DataSource<T>::update_ptr_type DataSource<T>::acquire()
+typename DataSource<T>::update_ptr_const_type DataSource<T>::acquire()
 {
     std::lock_guard<std::mutex> l(mtx); 
     return latest_data;

@@ -39,7 +39,7 @@ public:
         {
             if(!latest->stale) return;
             latest = task->acquire();
-            swap_data(*reinterpret_cast<value_type*>(latest->data.distance_mm)); // Take only the first plane of closest detections as output
+            swap_data(*reinterpret_cast<const value_type*>(latest->data.distance_mm)); // Take only the first plane of closest detections as output
             tick();
         }
     }
@@ -48,5 +48,5 @@ public:
 
 protected:
     std::shared_ptr<VL53L8CX> task;
-    typename VL53L8CX::update_ptr_type latest;
+    typename VL53L8CX::update_ptr_const_type latest;
 };

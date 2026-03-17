@@ -183,8 +183,8 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
         {
             auto im_left = cam_left->acquire();
             auto im_right = cam_right->acquire();
-            cv::Mat left_im(cam_left->get_height(), cam_left->get_width(), cv_dtype, im_left->data);
-            cv::Mat right_im(cam_right->get_height(), cam_right->get_width(), cv_dtype, im_right->data);
+            const cv::Mat left_im(cam_left->get_height(), cam_left->get_width(), cv_dtype, const_cast<uint8_t*>(im_left->data));
+            const cv::Mat right_im(cam_right->get_height(), cam_right->get_width(), cv_dtype, const_cast<uint8_t*>(im_right->data));
             imwrite(left_file.c_str(), left_im);
             imwrite(right_file.c_str(), right_im);
         }

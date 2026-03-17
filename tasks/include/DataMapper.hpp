@@ -64,7 +64,7 @@ public:
 
 protected:
     std::shared_ptr<DataSource<T>> task;
-    typename T::update_ptr_type latest;
+    typename T::update_ptr_const_type latest;
     std::FILE* map_file;
     void* map;
     std::atomic<bool> running, mapping;

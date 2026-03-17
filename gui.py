@@ -241,7 +241,7 @@ class UIManager:
                 for task, status in self._pm.tasks():
                     with ui.card() as card:
                         card.on("click", self._make_task_toggler(task))
-                        self._task_status[task] = [ui.markdown(f"**{task}**: {status}"), status]
+                        self._task_status[task] = [ui.html(f"<b>{task}</b>: {status}"), status]
 
     def _make_task_toggler(self, task):
         def _inner():
@@ -257,7 +257,7 @@ class UIManager:
             self._pm.stop_task(task)
         # Update all states
         for t, status in self._pm.tasks():
-            self._task_status[t][0].set_content(f"**{t}**: {status}")
+            self._task_status[t][0].set_content(f"<b>{task}</b>: {status}")
             self._task_status[t][1] = status
         # Update other data dependent on task info
         await self._update_feed_options()

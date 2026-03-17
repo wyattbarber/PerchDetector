@@ -9,8 +9,8 @@ find_package(LibCamera REQUIRED HINTS cmake)
 find_package(jsoncpp REQUIRED)
 
 # set(CMAKE_CXX_FLAGS "-DBLOCK_ALLOC") # Use custom allocator in default build
-set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g -fstack-protector")
-set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-fopenmp -Wall -g")
+set(CMAKE_CXX_FLAGS_RELEASE "-fopenmp -Wall -O3")
 
 # Generic logging and task interface library
 add_library(util STATIC

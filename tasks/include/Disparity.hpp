@@ -83,10 +83,10 @@ protected:
     /** Applies rectification from the calibration data to a pair of images.
     
     */
-    void rectify(cv::Mat& left_in, cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out);
+    void rectify(const cv::Mat& left_in, const cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out);
 
     std::shared_ptr<CameraWrapper> left, right;
-    std::shared_ptr<CameraWrapper::update_type> latest_left, latest_right;
+    typename CameraWrapper::update_ptr_const_type latest_left, latest_right;
 
     cv::Ptr<StereoMatcherType> stereo_left, stereo_right;
     cv::Ptr<cv::ximgproc::DisparityWLSFilter> filter;    

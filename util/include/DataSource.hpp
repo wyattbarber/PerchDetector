@@ -70,6 +70,7 @@ public:
     using value_type = typename DataSourceTraits<T>::value_type;
     using update_type = _datavalue_t<value_type>;
     using update_ptr_type = std::shared_ptr<update_type>;
+    using update_ptr_const_type = std::shared_ptr<const update_type>;
 
     DataSource(const char* name, std::initializer_list<std::shared_ptr<Task>> dependencies) : 
         Task(name, dependencies),
@@ -92,7 +93,7 @@ public:
      *     
     @return Pointer to latest data value
     */
-    update_ptr_type acquire();
+    update_ptr_const_type acquire();
 
     /** Starts the datasource.
      * 

@@ -120,8 +120,8 @@ void DepthCamera::step()
     latest_left = left->acquire();
     latest_right = right->acquire();
 
-    cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, latest_left->data);
-    cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, latest_right->data);
+    const cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, const_cast<uint8_t*>(latest_left->data));
+    const cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, const_cast<uint8_t*>(latest_right->data));
     rectify(left_im, right_im, rect_l, rect_r);
 
     stereo_left->compute(rect_l, rect_r, disp_left);
@@ -143,7 +143,7 @@ void DepthCamera::step()
 }
 
 
-void DepthCamera::rectify(cv::Mat& left_in, cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out)
+void DepthCamera::rectify(const cv::Mat& left_in, const cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out)
 {
     cv::remap(left_in, left_out, mapl1, mapl2, cv::INTER_LINEAR);
     cv::remap(right_in, right_out, mapr1, mapr2, cv::INTER_LINEAR);

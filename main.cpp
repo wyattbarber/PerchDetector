@@ -21,14 +21,16 @@ std::shared_ptr<CameraManagerTask> cam_manager;
 static bool id_cam_left(const std::string& id){return id.find("i2c@0/imx219@10") != std::string::npos;}
 static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10") != std::string::npos;}
 std::shared_ptr<CameraWrapper> cam_left, cam_right;
-std::shared_ptr<DepthCamera> depth;
+
+std::shared_ptr<DepthCamera> stereo;
+std::shared_ptr<DisparityFormatter> stereo_formatter;
+std::shared_ptr<DataMapper<DisparityFormatter>> stereo_feed;
 
 std::shared_ptr<VL53L8CX> lidar;
 std::shared_ptr<VL53L8CX_Formatter> lidar_formatter;
 std::shared_ptr<DataMapper<VL53L8CX_Formatter>> lidar_feed;
 
 std::shared_ptr<DataMapper<CameraWrapper>> left_feed, right_feed;
-std::shared_ptr<DataMapper<DepthCamera>> depth_feed;
 
 
 // Command Line Helper Functions //
@@ -66,8 +68,9 @@ void make_tasks()
         std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
     right_feed = std::make_shared<DataMapper<CameraWrapper>>("right_feed", cam_right);
     
-    depth = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
-    depth_feed = std::make_shared<DataMapper<DepthCamera>>("depth_feed", depth);
+    stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
+    stereo_formatter = std::make_shared<DisparityFormatter>("stereo_formatter", stereo);
+    stereo_feed = std::make_shared<DataMapper<DisparityFormatter>>("stereo_feed", stereo_formatter);
 
     lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
     lidar_formatter= std::make_shared<VL53L8CX_Formatter>("lidar_formatter", lidar);
@@ -76,11 +79,12 @@ void make_tasks()
     cam_manager->init();
     cam_left->init();
     cam_right->init();
-    depth->init();
+    stereo->init();
+    stereo_feed->init();
+    stereo_formatter->init();
     lidar->init();
     lidar_formatter->init();
     lidar_feed->init();
-    depth_feed->init();
     left_feed->init();
     right_feed->init();
 }
@@ -155,11 +159,12 @@ int main(int argc, char** argv)
         cam_manager,
         cam_left,
         cam_right,
-        depth,
+        stereo,
+        stereo_formatter,
+        stereo_feed,
         lidar,
         lidar_formatter,
         lidar_feed,
-        depth_feed,
         left_feed,
         right_feed
     });
