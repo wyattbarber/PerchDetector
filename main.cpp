@@ -63,10 +63,8 @@ void make_tasks(task_executor& tasks)
     tasks.add(stereo);
 
     auto lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
-    auto lidar_formatter= std::make_shared<VL53L8CX_Formatter>("lidar_formatter", lidar);
-    tasks.create<DataMapper<VL53L8CX_Formatter>>("lidar_feed", lidar_formatter);
+    tasks.add(make_data_mapper<uint16_t[64]>("lidar_feed", lidar, lidar_display_conv));
     tasks.add(lidar);
-    tasks.add(lidar_formatter);
 }
 
 

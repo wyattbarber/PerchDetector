@@ -49,3 +49,9 @@ protected:
     VL53L8CX_Configuration device;
     VL53L8CX_ResultsData data;
 };
+
+
+/** Helper to format lidar data as single plane image display.
+
+*/
+void lidar_display_conv(void* dst, const VL53L8CX::value_type& value);
