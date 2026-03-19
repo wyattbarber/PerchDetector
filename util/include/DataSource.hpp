@@ -49,6 +49,7 @@ struct DataSourceTraits<C> \
     using value_type = T; \
 }; 
 
+
 /** Interface class definition for tasks that provide thread-safe data.
 
 Assumes that all data sources only need to provide the most recent

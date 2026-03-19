@@ -65,6 +65,9 @@ void make_tasks(task_executor& tasks)
     auto lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
     tasks.add(make_data_mapper<uint16_t[64]>("lidar_feed", lidar, lidar_display_conv));
     tasks.add(lidar);
+
+    auto pointcloud = std::make_shared<PointCloud<50>>("point_cloud", stereo, context.cal_folder);
+    tasks.add(pointcloud);
 }
 
 

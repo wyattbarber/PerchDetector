@@ -30,6 +30,9 @@ as output
 class DepthCamera : public DataSource<DepthCamera>
 {
 public:
+    static constexpr auto Height = CameraWrapper::Height;
+    static constexpr auto Width = CameraWrapper::Width;
+
     /** Construct a new disparity generator.
 
     The given calibration data path must be a folder containing the following files:

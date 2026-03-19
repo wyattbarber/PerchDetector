@@ -4,6 +4,7 @@
 #include <CameraWrapper.hpp>
 #include <CameraSim.hpp>
 #include <Disparity.hpp>
+#include <PointCloud.hpp>
 #include <VL53L8CX.hpp>
 #include <DataEncoder.hpp>
 #include <DataMapper.hpp>
