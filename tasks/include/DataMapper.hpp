@@ -82,5 +82,30 @@ protected:
     std::atomic<bool> running, mapping;
 };
 
+/** Helper to create a new data mapper.
+
+Constructs a new shared pointer to a data mapper instance
+with the given conversion functor.
+
+One template parameter, C, cannot be deduced and must 
+be specified. This is the datatype of the updates
+produced by this DataMapper after the conversion 
+has been applied.
+
+@tparam C Datatype produced by the conversion functor.
+@tparam T Type of the task producing data.
+@tparam CF Type of the conversion functor to apply.
+
+@param name Name of the DataMapper task to create.
+@param task Task producing the data to map.
+@param converter Converter functor to apply to data updates.
+
+@return new task type.
+*/
+template<typename C, class T, typename CF>
+auto make_data_mapper(const char* name, std::shared_ptr<T> task, CF& converter)
+{
+    return std::make_shared<DataMapper<T, C, CF>>(name, task, converter);
+}
 
 #include "DataMapper_impl.hpp"

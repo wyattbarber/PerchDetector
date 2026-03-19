@@ -27,10 +27,10 @@ void list_tasks(std::istream& in, std::ostream& out, const std::vector<std::stri
         for(auto i = pair.first.size(); i < max_name_len; ++i){ out << ' '; } // Space pad the name to make columns even
         out << "\t\t";
         // State
-        out << (std::get<0>(pair.second)->is_alive() ? "running" : "stopped");
+        out << (pair.second->is_alive() ? "running" : "stopped");
         out << "\t\t";
         // Update rate
-        auto r = std::get<0>(pair.second)->rate();
+        auto r = pair.second->rate();
         if(r.second) out << std::fixed << std::setprecision(2) << r.first << std::defaultfloat << " Hz";
         else out << "---";
         out << std::endl;
@@ -54,7 +54,7 @@ void _start(std::istream& in, std::ostream& out, const std::vector<std::string>&
             continue;
         }
 
-        auto task = std::get<0>(context.tasks[arg]);
+        auto task = context.tasks[arg];
         if(task->is_alive())
         {
             out << "Task " << arg << " is already started." << std::endl;
@@ -102,7 +102,7 @@ void _stop(std::istream& in, std::ostream& out, const std::vector<std::string>& 
             continue;
         }
 
-        auto task = std::get<0>(context.tasks[arg]);
+        auto task = context.tasks[arg];
         if(!task->is_alive())
         {
             out << "Task " << arg << " is already stopped." << std::endl;
@@ -135,8 +135,8 @@ void exit(std::istream& in, std::ostream& out, const std::vector<std::string>& a
 
 void capture(std::istream& in, std::ostream& out, const std::vector<std::string>& args, program_context& context)
 {
-    auto cam_left = std::dynamic_pointer_cast<CameraWrapper>(std::get<0>(context.tasks["camera-left"]));
-    auto cam_right = std::dynamic_pointer_cast<CameraWrapper>(std::get<0>(context.tasks["camera-right"]));
+    auto cam_left = context.tasks.get<CameraWrapper>("camera-left");
+    auto cam_right = context.tasks.get<CameraWrapper>("camera-right");
 
     if(!cam_left->is_alive() || !cam_right->is_alive())
     {
@@ -214,7 +214,7 @@ void call_task_command(const std::string& taskname, std::istream& in, std::ostre
         return;
     }
 
-    auto task = std::get<0>(context.tasks[taskname]);
+    auto task = context.tasks[taskname];
     if(!task->is_alive())
     {
         out << "Cannot call commands of a task that is not running." << std::endl;
@@ -244,7 +244,7 @@ void cmd_list(std::istream& in, std::ostream& out, const std::vector<std::string
         return;
     }
 
-    for(const auto & cmd : std::get<0>(context.tasks[args[0]])->list_commands())
+    for(const auto & cmd : context.tasks[args[0]]->list_commands())
     {
         out << cmd << " ";
     }

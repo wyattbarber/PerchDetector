@@ -1,0 +1,78 @@
+#pragma once
+
+#include "Task.hpp"
+#include <map>
+#include <thread>
+#include <utility>
+
+
+/** Container for tasks executed in a program. 
+
+*/
+class TaskManager
+{
+public: 
+    /** Get a pointer to a task by name.
+    
+    @param name Name of task to get.
+
+    @return Pointer to task of given name.
+    */
+    std::shared_ptr<Task>& operator[](const std::string& name);
+
+    /** Get a pointer of specific type by name.
+    
+    @tparam Task type to cast the given task to.
+
+    @param name Name of the task to get.
+
+    @return Pointer to the named task.
+    */
+    template<typename T>
+    std::shared_ptr<T> get(const std::string& name){ return std::dynamic_pointer_cast<T>((*this)[name]); }
+
+    
+    /** Add a task, autofilling its name.
+    
+    @tparam Type of the task to add.
+
+    @param task Task to add
+    */
+    template<typename T>
+    void add(std::shared_ptr<T> task){ (*this)[task->name] = task; }
+
+    /** Create a new task to add.
+    
+    @tparam Type of the task to add.
+
+    @param Args Constructor arguments for the task to add.
+    */
+    template<typename T, typename... Ts>
+    void create(Ts&&... Args){ add(std::make_shared<T>(Args...)); }
+
+    /** Starts all tasks.
+    
+    Should be called once all tasks are created and added.
+    */
+    void launch();
+
+    /** Stops all tasks.
+    
+    Should be on program termination for a clean shutdown.
+    */
+    void kill();
+
+    /** Helpers for compatibility with existing map iteration code in main.
+    */
+    const auto begin(){ return tasks.begin(); }
+    const auto end(){ return tasks.end(); }
+    const auto find(const std::string& name){ return tasks.find(name); }
+
+protected:
+    std::map<std::string, std::shared_ptr<Task>> tasks;
+    std::map<std::string, std::unique_ptr<std::thread>> threads;
+    bool running;
+};
+
+
+typedef TaskManager task_executor; // Typedef for compatibility with old stuff I wrote

@@ -2,8 +2,6 @@
 
 #include <iostream>
 #include "Logging.hpp"
-#include <map>
-#include <thread>
 #include <initializer_list>
 #include <iostream>
 #include <vector>
@@ -209,28 +207,5 @@ protected:
     float rate_est;
 };
 
-/** Container for executing tasks.
-
-Maps task names to sets of task, thread, kill flag
-where the thread is the thread in which the task is executing.
-*/
-typedef std::map<std::string, std::tuple<std::shared_ptr<Task>, std::unique_ptr<std::thread>, bool*>> task_executor;
 
 
-/** Starts tasks in new threads.
-
-Creates a new thread to execute each task, and assembles 
-a map of task names to tasks and threads.
-
-@param tasks Pointers to tasks to execute.
-*/
-task_executor launch_tasks(std::initializer_list<std::shared_ptr<Task>> tasks);
-
-
-/** Kills all tasks.
-
-Ends all tasks and destroys their threads.
-
-@param exe map of tasks and threads
-*/
-void kill_tasks(task_executor& exe);

@@ -13,24 +13,11 @@
 program_context context; // Global program state and configuration
 const char* default_log = "logout.txt";
 
-
-// Task Definitions //
-std::shared_ptr<CameraManagerTask> cam_manager;
+// Functions for identifying left and right cameras.
 // CAM1: /base/soc/i2c0mux/i2c@1/imx219@10 
 // CAM0: /base/soc/i2c0mux/i2c@0/imx219@10
 static bool id_cam_left(const std::string& id){return id.find("i2c@0/imx219@10") != std::string::npos;}
 static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10") != std::string::npos;}
-std::shared_ptr<CameraWrapper> cam_left, cam_right;
-
-std::shared_ptr<DepthCamera> stereo;
-std::shared_ptr<DataMapper<DepthCamera, decltype(DepthCamera::value_type::disparity), decltype(disparity_display_conv)>> stereo_feed;
-
-std::shared_ptr<VL53L8CX> lidar;
-std::shared_ptr<VL53L8CX_Formatter> lidar_formatter;
-std::shared_ptr<DataMapper<VL53L8CX_Formatter>> lidar_feed;
-
-std::shared_ptr<DataMapper<CameraWrapper>> left_feed, right_feed;
-
 
 // Command Line Helper Functions //
 void list_tasks(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
@@ -49,54 +36,51 @@ void call_task_command(const std::string&, std::istream&, std::ostream&, const s
 // Program Setup Helper Functions //
 void sig_handle(int signum)
 {
-    kill_tasks(context.tasks);
+    context.tasks.kill();
     exit(signum);
 }
 
-void make_tasks()
+
+void make_tasks(task_executor& tasks)
 {
-    cam_manager = std::make_shared<CameraManagerTask>();
+    auto cam_manager = std::make_shared<CameraManagerTask>();
+    tasks.add(cam_manager);
     
-    cam_left = (context.simulation) ? 
+    auto cam_left = (context.simulation) ? 
         std::make_shared<CameraSimulator>("camera-left", cam_manager) :
         std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
-    left_feed = std::make_shared<DataMapper<CameraWrapper>>("left_feed", cam_left);
+    tasks.create<DataMapper<CameraWrapper>>("left_feed", cam_left);
+    tasks.add(cam_left);
 
-    cam_right = (context.simulation) ? 
+    auto cam_right = (context.simulation) ? 
         std::make_shared<CameraSimulator>("camera-right", cam_manager, true) :
         std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
-    right_feed = std::make_shared<DataMapper<CameraWrapper>>("right_feed", cam_right);
-    
-    stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
-    stereo_feed = std::make_shared<DataMapper<DepthCamera, decltype(DepthCamera::value_type::disparity), decltype(disparity_display_conv)>>("stereo_feed", stereo, disparity_display_conv);
+    tasks.create<DataMapper<CameraWrapper>>("right_feed", cam_right);
+    tasks.add(cam_right);
 
-    lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
-    lidar_formatter= std::make_shared<VL53L8CX_Formatter>("lidar_formatter", lidar);
-    lidar_feed = std::make_shared<DataMapper<VL53L8CX_Formatter>>("lidar_feed", lidar_formatter);
+    auto stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
+    tasks.add(make_data_mapper<decltype(DepthCamera::value_type::disparity)>("stereo_feed", stereo, disparity_display_conv));
+    tasks.add(stereo);
 
-    cam_manager->init();
-    cam_left->init();
-    cam_right->init();
-    stereo->init();
-    stereo_feed->init();
-    lidar->init();
-    lidar_formatter->init();
-    lidar_feed->init();
-    left_feed->init();
-    right_feed->init();
+    auto lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
+    auto lidar_formatter= std::make_shared<VL53L8CX_Formatter>("lidar_formatter", lidar);
+    tasks.create<DataMapper<VL53L8CX_Formatter>>("lidar_feed", lidar_formatter);
+    tasks.add(lidar);
+    tasks.add(lidar_formatter);
 }
 
-void make_commands()
+
+void make_commands(std::map<std::string, cli_cmd_executor>& commands)
 {
-    context.commands["status"] = &list_tasks;
-    context.commands["commands"] = &cmd_list;
-    context.commands["start"] = &start;
-    context.commands["autostart"] = &autostart;
-    context.commands["stop"] = &stop;
-    context.commands["autostop"] = &autostop;
-    context.commands["capture"] = &capture;
-    context.commands["exit"] = &exit;
-    context.commands["log"] = &log_dump;
+    commands["status"] = &list_tasks;
+    commands["commands"] = &cmd_list;
+    commands["start"] = &start;
+    commands["autostart"] = &autostart;
+    commands["stop"] = &stop;
+    commands["autostop"] = &autostop;
+    commands["capture"] = &capture;
+    commands["exit"] = &exit;
+    commands["log"] = &log_dump;
 }
 
 
@@ -144,30 +128,19 @@ int main(int argc, char** argv)
     }
 
     Logger::instance().set_file(context.logfile.c_str());
-    make_commands();
+    make_commands(context.commands);
 
     // Construct tasts
     std::cout << "-- Constructing tasks" << std::endl;
-    make_tasks();    
+    make_tasks(context.tasks);    
 
     // Launch all tasks
     std::cout << "-- Launching tasks" << std::endl;
-    context.tasks = launch_tasks({
-        cam_manager,
-        cam_left,
-        cam_right,
-        stereo,
-        stereo_feed,
-        lidar,
-        lidar_formatter,
-        lidar_feed,
-        left_feed,
-        right_feed
-    });
+    context.tasks.launch();
     
     // Start base tasks that should be run without user input
     std::cout << "-- Starting core tasks" << std::endl;
-    cam_manager->start();
+    context.tasks["_camera_manager"]->start();
 
     context.running = true;
     std::cout << "Perch detector CLI started" << std::endl;
@@ -213,7 +186,7 @@ int main(int argc, char** argv)
 
     // Shutdown and exit
     std::cout << "-- Killing tasks" << std::endl;    
-    kill_tasks(context.tasks);
+    context.tasks.kill();
 
     std::cout << "Perch detector CLI shutdown" << std::endl;
     return 0;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <thread>
 
 
 template<class T>
@@ -21,7 +22,7 @@ bool DataSource<T>::start()
     while(!acquire())
     { 
         info("Waiting for first data to be produced...");
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
     info("Initial data pointer is valid.");
     return true;

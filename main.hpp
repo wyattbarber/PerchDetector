@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Task.hpp>
+#include <TaskManager.hpp>
 #include <TaskTypes.hpp>
 #include <string>
 

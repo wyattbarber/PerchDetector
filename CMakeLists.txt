@@ -15,6 +15,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-fopenmp -Wall -O3")
 # Generic logging and task interface library
 add_library(util STATIC
     util/src/Task.cpp
+    util/src/TaskManager.cpp
     util/src/BlockAllocator.cpp
     util/src/json_loader.cpp
 )
