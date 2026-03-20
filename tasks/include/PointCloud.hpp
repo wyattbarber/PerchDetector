@@ -1,7 +1,8 @@
 #pragma once
 
-#include <opencv2/calib3d.hpp>
+#include "DataSource.hpp"
 #include "Disparity.hpp"
+#include <opencv2/calib3d.hpp>
 
 /// Point cloud size
 template<uint8_t X> 
@@ -38,7 +39,7 @@ public:
     @param stereo Disparity task to get data from.
     @param cal_path Path to folder containing stereo calibration and settings.
     */
-    PointCloud(const char* name, std::shared_ptr<DepthCamera> stereo, const std::string& cal_path) :
+    PointCloud(const char* name, std::shared_ptr<DepthCamera> stereo, const std::string& cal_path):
         DataSource<PointCloud<X>>(name, {stereo}),
         stereo(stereo),        
         left_cal(cal_path + "/left.json"),

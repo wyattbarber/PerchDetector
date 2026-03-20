@@ -68,6 +68,7 @@ void make_tasks(task_executor& tasks)
 
     auto pointcloud = std::make_shared<PointCloud<50>>("point_cloud", stereo, context.cal_folder);
     tasks.add(pointcloud);
+    tasks.create<DataMapper<PointCloud<50>>>("point_cloud_feed", pointcloud);
 }
 
 
