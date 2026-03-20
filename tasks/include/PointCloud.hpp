@@ -64,6 +64,9 @@ protected:
     const std::string left_cal, right_cal, stereo_cal, stereo_param;
     cv::Mat Q, point_cloud;
     std::pair<uint8_t, size_t> confidence_w_indices[DepthCamera::Height*DepthCamera::Width];
+
+    unsigned filter_n;
+    double filter_r;
 };
 
 

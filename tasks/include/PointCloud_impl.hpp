@@ -49,6 +49,18 @@ bool PointCloud<X>::start_impl()
         0 
     );
 
+    // Load filtering settings
+    if(!load_json_value_pairs(
+        stereo_param,
+        std::make_tuple("filter"),
+        "outlier_n", filter_n,
+        "outlier_r", filter_r
+    ))
+    {
+        this->error("Failed to load point cloud filter settings.");
+        return false;
+    }
+    
     latest_disparity = stereo->acquire();
     return true;
 }
