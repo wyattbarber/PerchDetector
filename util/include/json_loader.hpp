@@ -98,8 +98,20 @@ For example `bool ok = load_json_value_pairs(root, "float_val", float_var_ref, "
 
 @return true if all values were loaded successfully.
 */
-template<typename... Ts>
-bool load_json_value_pairs(const Json::Value& root, Ts... Pairs);
+template<typename T, typename... Ts>
+bool load_json_value_pairs(const Json::Value& root, const std::string& key, T& value, Ts&&... Pairs);
+template<typename T, typename... Ts>
+bool load_json_value_pairs(const Json::Value& root, int key, T& value, Ts&&... Pairs);
 
+/** Overloaded helper to load items from an unopened file and a path to the root of the items.
+
+@param file Name of the file to open
+@param root Path (as tuple of keys) to the root of the parameters to load.
+@param Pairs Sequence of key-reference pairs to read and map data.
+
+@return true if all values were loaded successfully.
+*/
+template<typename... Ks, typename... Ts>
+bool load_json_value_pairs(const std::string& file, const std::tuple<Ks...>& root, Ts&&... Pairs);
 
 #include "json_loader_impl.hpp"

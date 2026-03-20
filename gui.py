@@ -70,7 +70,16 @@ class ImageReader:
             return pformat(np.ndarray(self._shape, buffer=self._mm[1:], dtype=self._dtype))
         else:
             return "[]"
-        
+
+    @property
+    def raw_data(self):
+        if self._valid:
+            while self._mm[0] != 0:
+                pass
+            return np.ndarray(self._shape, buffer=self._mm[1:], dtype=self._dtype).copy()
+        else:
+            return np.ones((3, 3)).astype(np.uint8)
+
 
 class ProcManager:
     def __init__(self, *args: str):
@@ -215,7 +224,7 @@ class UIManager:
     def data_window(self, container):
         with container:
             self._data_select = FeedSelection(ui.row(), self._data_callback, self._pm, self._eventman, self._mem)
-            with ui.card():
+            with ui.card().classes("w-full"):
                 self._data_view = ui.label()
 
     async def _update_feed_options(self):
@@ -226,6 +235,7 @@ class UIManager:
                 feed_tasks.append(task)
         self._image_select.update_feed_options(feed_tasks)
         self._data_select.update_feed_options(feed_tasks)
+        self._pt_cloud_select.update_feed_options(feed_tasks)
    
     def _img_callback(self):
         self._image.set_source(self._mem.image)
@@ -265,7 +275,7 @@ class UIManager:
     def log_view(self, container):
         with container:
             self._log_refresh = ui.button(text="Refresh", on_click=lambda: self._eventman.submit(self._load_log()))
-            with ui.card():
+            with ui.card().classes("w-full"):
                 self._log_view = ui.html()
 
     async def _load_log(self):
@@ -273,6 +283,18 @@ class UIManager:
         self._log_view.set_content(
             "</br>".join(log)
         )
+
+    def point_cloud_scene(self, container):
+        with container:
+            self._pt_cloud_select = FeedSelection(ui.row(), self._pt_cloud_callback, self._pm, self._eventman, self._mem)
+            self._3d_scene = ui.scene(background_color='#222').classes("w-full")
+
+    def _pt_cloud_callback(self):
+        ptc = self._mem.raw_data
+        if ptc.shape[1] == 3:
+            self._3d_scene.point_cloud(ptc, np.ones(ptc.shape), point_size=0.1)
+        else:
+            ui.notify(f"Cannot render data of shape {ptc.shape} as point cloud")
 
 class startup():
     def __init__(self, pm: ProcManager, im: ImageReader, um: UIManager, em: EventThread):
@@ -299,6 +321,7 @@ class shutdown():
 
 
 def handle_exc(e: Exception):
+    ui.notify(str(e))
     traceback.print_exc()
 
 
@@ -335,7 +358,7 @@ if __name__ in {"__main__", "__mp_main__"}:
                         um.log_view(tb)
 
                     with ui.tab_panel(cloud).classes("w-full") as tb:
-                        ui.markdown("_To-Do_")
+                        um.point_cloud_scene(tb)
 
                     with ui.tab_panel(graph).classes("w-full") as tb:
                         ui.markdown("_To-Do_")

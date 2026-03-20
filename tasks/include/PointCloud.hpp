@@ -55,7 +55,7 @@ public:
 
     void stop_impl(){}
 
-    std::vector<size_t> dims(){ return {3, num_points<X>()}; }
+    std::vector<size_t> dims(){ return {num_points<X>(), 3}; }
   
 protected:
     std::shared_ptr<DepthCamera> stereo;

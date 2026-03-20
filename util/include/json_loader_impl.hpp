@@ -1,4 +1,5 @@
 #include <type_traits>
+#include <utility>
 
 
 inline bool _check_key(const Json::Value& root, const std::string& key)
@@ -41,6 +42,7 @@ inline bool load_json_value(const Json::Value& root, T& value, const K& key)
 {
     if(!_check_key(root, key)) return false;
         
+
     const Json::Value v = root[key];
     
     if constexpr (std::is_floating_point_v<T>) // Read float type
@@ -163,18 +165,37 @@ inline bool load_json_object(const std::string& filename, Json::Value& obj, Ts..
 }
 
 
-template<typename K, typename T, typename... Ts>
-inline bool load_json_value_pairs(const Json::Value& root, const K& key, T& value, Ts... Pairs)
+inline bool load_json_value_pairs(const Json::Value& root)
 {
-    if(!_check_key(root, key)) return false;
-    if(!load_json_value(root, value, key)) return false;
-    return load_json_value_pairs(root, Pairs...);
+    return true;
 }
 
 
-template<typename K, typename T>
-inline bool load_json_value_pairs(const Json::Value& root, const K& key, T& value)
+template<typename T, typename... Ts>
+inline bool load_json_value_pairs(const Json::Value& root, const std::string& key, T& value, Ts&&... Pairs)
 {
     if(!_check_key(root, key)) return false;
-    return load_json_value(root, value, key);
+    if(!load_json_value(root, value, key)) return false;
+    return load_json_value_pairs(root, std::forward<Ts>(Pairs)...);
+}
+
+
+template<typename T, typename... Ts>
+inline bool load_json_value_pairs(const Json::Value& root, int key, T& value, Ts&&... Pairs)
+{
+    if(!_check_key(root, key)) return false;
+    if(!load_json_value(root, value, key)) return false;
+    return load_json_value_pairs(root, std::forward<Ts>(Pairs)...);
+}
+
+
+template<typename... Ks, typename... Ts>
+inline bool load_json_value_pairs(const std::string& file, const std::tuple<Ks...>& root, Ts&&... Pairs)
+{
+    Json::Value obj;
+    auto get_root = [&file, &obj](auto&&... Keys){ return load_json_object(file, obj, Keys...); };
+    
+    if(!std::apply(get_root, root)) return false;
+
+    return load_json_value_pairs(obj, std::forward<Ts>(Pairs)...);
 }

@@ -61,8 +61,6 @@ public:
         R(3,3,CV_64F), 
         T(3,1,CV_64F)
     {
-        stereo_left = StereoMatcherType::create(0, 16*6);
-        stereo_left->setBlockSize(15);
     }
 
 
@@ -101,6 +99,10 @@ protected:
     const std::string left_cal, right_cal, stereo_cal, stereo_param;
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;
     cv::Mat left_intr, right_intr, left_dist, right_dist, R, T;
+
+    bool configure_matchers();
+    bool load_calibration();
+    void dist_to_disp(double min_dist, double max_dist, int& min_disp, int& max_disp);
 };
 
 

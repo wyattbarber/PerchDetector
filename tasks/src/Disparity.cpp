@@ -45,6 +45,139 @@ bool DepthCamera::start_impl()
         return false;
     }
 
+    if(!load_calibration()) return false;
+
+    // Pre-allocate intermediates
+    rect_l = cv::Mat(Height, Width, CV_8U);
+    rect_r = cv::Mat(Height, Width, CV_8U);
+    disp_left = cv::Mat(Height, Width, CV_16S);
+    disp_right = cv::Mat(Height, Width, CV_16S);
+    depth = cv::Mat(Height, Width, CV_32F);
+
+    if(!configure_matchers()) return false;
+
+    // Get first data so pointers are valid
+    latest_left = left->acquire();
+    latest_right = right->acquire();
+
+    return true;
+}
+
+
+void DepthCamera::step()
+{
+    // Don't update if stopped or if images are not fresh
+    if(!is_alive()) return;
+    if(!latest_left->stale || !latest_right->stale) return;
+    tick();
+    
+    latest_left = left->acquire();
+    latest_right = right->acquire();
+
+    const cv::Mat left_im(Height, Width, CV_8UC1, const_cast<uint8_t*>(latest_left->data));
+    const cv::Mat right_im(Height, Width, CV_8UC1, const_cast<uint8_t*>(latest_right->data));
+    rectify(left_im, right_im, rect_l, rect_r);
+
+    stereo_left->compute(rect_l, rect_r, disp_left);
+    stereo_right->compute(rect_r, rect_l, disp_right);
+    update_ptr_type next = allocate_next();
+    filter->filter(
+        disp_left, 
+        rect_l, 
+        cv::Mat(Height, Width, CV_16S, next->data.disparity), 
+        disp_right
+    );
+    cv::Mat conf = filter->getConfidenceMap();
+    conf.convertTo(
+        cv::Mat(Height, Width, CV_8UC1, next->data.confidence),
+        CV_8U
+    );
+
+    swap_data();
+}
+
+
+void DepthCamera::rectify(const cv::Mat& left_in, const cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out)
+{
+    cv::remap(left_in, left_out, mapl1, mapl2, cv::INTER_LINEAR);
+    cv::remap(right_in, right_out, mapr1, mapr2, cv::INTER_LINEAR);
+}
+
+
+bool DepthCamera::configure_matchers()
+{
+    // Load settings
+    double min_dist=0.0, max_dist=0.0;
+    int minDisparity=0, maxDisparity=0, blockSize=0, P1=0, P2=0, disp12MaxDiff=0, preFilterCap=0, uniquenessRatio=0, speckleWindowSize=0, speckleRange=0;
+    if(!load_json_value_pairs(
+        stereo_param,
+        std::make_tuple("stereo"),        
+        "minDistance", min_dist,
+        "maxDistance", max_dist,
+        "blockSize", blockSize,
+        "P1", P1,
+        "P2", P2,
+        "disp12MaxDiff", disp12MaxDiff,
+        "preFilterCap", preFilterCap,
+        "uniquenessRatio", uniquenessRatio,
+        "speckleWindowSize", speckleWindowSize,
+        "speckleRange", speckleRange
+    ))
+    {
+        error("Failed to load block matcher settings.");
+        return false;
+    }
+    dist_to_disp(min_dist, max_dist, minDisparity, maxDisparity);
+    if((minDisparity < 1) || (maxDisparity < minDisparity) || (maxDisparity > static_cast<int>(Width/2)))
+    {
+        error("Computed disparity range ", minDisparity, ":", maxDisparity, " is invalid.");
+        return false;
+    }
+    auto numDisparities = ((maxDisparity-minDisparity)/16)*16; // Num disparities should be a multiple of 16
+    info("Configured stereo matching for distance range ", min_dist, ":", max_dist, ", disparity range ", minDisparity, ":", minDisparity+numDisparities);
+
+    int lambda=0, dr=0, lrc=0;
+    float sigma=0.0;
+    if(!load_json_value_pairs(
+        stereo_param,
+        std::make_tuple("filter"),   
+        "lambda", lambda,
+        "sigma", sigma,
+        "DR", dr,
+        "LRC", lrc
+    ))
+    {
+        error("Failed to load WLS filter settings.");
+        return false;
+    }
+
+    // Initialize stereo matchers and filter
+    stereo_left = StereoMatcherType::create();
+    set_stereo_params(stereo_left, 
+        minDisparity,
+        numDisparities,
+        blockSize,
+        P1,
+        P2,
+        disp12MaxDiff,
+        preFilterCap,
+        uniquenessRatio,
+        speckleWindowSize,
+        speckleRange
+    );
+    stereo_right = std::dynamic_pointer_cast<StereoMatcherType>(cv::ximgproc::createRightMatcher(stereo_left));
+    filter = cv::ximgproc::createDisparityWLSFilter(stereo_left);
+    filter->setLambda(lambda);
+    filter->setSigmaColor(sigma);
+    filter->setDepthDiscontinuityRadius(dr);
+    filter->setLRCthresh(lrc);
+
+    return true;
+}
+
+
+bool DepthCamera::load_calibration()
+{
     // Load calibration data
     info("Loading left camera calibration from ", left_cal);
     if(!load_camera_matrices(left_cal, left_dist, left_intr))
@@ -72,7 +205,7 @@ bool DepthCamera::start_impl()
     cv::stereoRectify(
         left_intr, left_dist,
         right_intr, right_dist,
-        cv::Size(left->get_width(), left->get_height()),
+        cv::Size(Width, Height),
         R, T, 
         _Rl, _Rr, _Pl, _Pr,
         Q,
@@ -82,72 +215,27 @@ bool DepthCamera::start_impl()
     info("Computing left remap");
     cv::initUndistortRectifyMap(
         left_intr, left_dist, _Rl, _Pl,
-        cv::Size(left->get_width(), left->get_height()),
+        cv::Size(Width, Height),
         CV_16SC2, mapl1, mapl2
     );    
     info("Computing right remap");
     cv::initUndistortRectifyMap(
         right_intr, right_dist, _Rr, _Pr,
-        cv::Size(left->get_width(), left->get_height()),
+        cv::Size(Width, Height),
         CV_16SC2, mapr1, mapr2
     );
-
-    // Pre-allocate intermediates
-    rect_l = cv::Mat(left->get_height(), left->get_width(), CV_8U);
-    rect_r = cv::Mat(left->get_height(), left->get_width(), CV_8U);
-    disp_left = cv::Mat(left->get_height(), left->get_width(), CV_16S);
-    disp_right = cv::Mat(left->get_height(), left->get_width(), CV_16S);
-    depth = cv::Mat(left->get_height(), left->get_width(), CV_32F);
-
-    // Initialize stereo matchers and filter
-    stereo_right = std::dynamic_pointer_cast<StereoMatcherType>(cv::ximgproc::createRightMatcher(stereo_left));
-    filter = cv::ximgproc::createDisparityWLSFilter(stereo_left);
-
-    // Get first data so pointers are valid
-    latest_left = left->acquire();
-    latest_right = right->acquire();
 
     return true;
 }
 
 
-void DepthCamera::step()
+void DepthCamera::dist_to_disp(double min_dist, double max_dist, int& min_disp, int& max_disp)
 {
-    // Don't update if stopped or if images are not fresh
-    if(!is_alive()) return;
-    if(!latest_left->stale || !latest_right->stale) return;
-    tick();
-    
-    latest_left = left->acquire();
-    latest_right = right->acquire();
-
-    const cv::Mat left_im(left->get_height(), left->get_width(), CV_8UC1, const_cast<uint8_t*>(latest_left->data));
-    const cv::Mat right_im(right->get_height(), right->get_width(), CV_8UC1, const_cast<uint8_t*>(latest_right->data));
-    rectify(left_im, right_im, rect_l, rect_r);
-
-    stereo_left->compute(rect_l, rect_r, disp_left);
-    stereo_right->compute(rect_r, rect_l, disp_right);
-    update_ptr_type next = allocate_next();
-    filter->filter(
-        disp_left, 
-        rect_l, 
-        cv::Mat(left->get_height(), left->get_width(), CV_16S, next->data.disparity), 
-        disp_right
-    );
-    cv::Mat conf = filter->getConfidenceMap();
-    conf.convertTo(
-        cv::Mat(left->get_height(), left->get_width(), CV_8UC1, next->data.confidence),
-        CV_8U
-    );
-
-    swap_data();
-}
-
-
-void DepthCamera::rectify(const cv::Mat& left_in, const cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out)
-{
-    cv::remap(left_in, left_out, mapl1, mapl2, cv::INTER_LINEAR);
-    cv::remap(right_in, right_out, mapr1, mapr2, cv::INTER_LINEAR);
+    auto b = 1.0 / Q.at<double>(3,2);
+    auto f = Q.at<double>(2,3);
+    info("Computing disparity range with baseline ", b, "m and focal length ", f, "px.");
+    min_disp = static_cast<int>((f*b) / max_dist);
+    max_disp = static_cast<int>((f*b) / min_dist);
 }
 
 
