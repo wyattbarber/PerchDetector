@@ -130,7 +130,3 @@ void VL53L8CX::step()
 }
 
 
-void lidar_display_conv(void* dst, const VL53L8CX::value_type& value)
-{
-    memcpy(dst, &value.distance_mm, 64*sizeof(uint16_t));
-}

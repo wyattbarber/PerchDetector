@@ -49,26 +49,26 @@ void make_tasks(task_executor& tasks)
     auto cam_left = (context.simulation) ? 
         std::make_shared<CameraSimulator>("camera-left", cam_manager) :
         std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
-    tasks.create<DataMapper<CameraWrapper>>("left_feed", cam_left);
+    tasks.add(make_data_mapper("left_feed", cam_left));
     tasks.add(cam_left);
 
     auto cam_right = (context.simulation) ? 
         std::make_shared<CameraSimulator>("camera-right", cam_manager, true) :
         std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
-    tasks.create<DataMapper<CameraWrapper>>("right_feed", cam_right);
+    tasks.add(make_data_mapper("right_feed", cam_right));
     tasks.add(cam_right);
 
     auto stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
-    tasks.add(make_data_mapper<decltype(DepthCamera::value_type::disparity)>("stereo_feed", stereo, disparity_display_conv));
+    tasks.add(make_data_mapper("stereo_feed", stereo, stereo_display_conv()));
     tasks.add(stereo);
 
     auto lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
-    tasks.add(make_data_mapper<uint16_t[64]>("lidar_feed", lidar, lidar_display_conv));
+    tasks.add(make_data_mapper("lidar_feed", lidar, lidar_display_conv()));
     tasks.add(lidar);
 
     auto pointcloud = std::make_shared<PointCloud<50>>("point_cloud", stereo, context.cal_folder);
     tasks.add(pointcloud);
-    tasks.create<DataMapper<PointCloud<50>>>("point_cloud_feed", pointcloud);
+    tasks.add(make_data_mapper("point_cloud_feed", pointcloud));
 }
 
 

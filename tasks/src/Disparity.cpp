@@ -239,11 +239,12 @@ void DepthCamera::dist_to_disp(double min_dist, double max_dist, int& min_disp, 
 }
 
 
-void disparity_display_conv(void* dst, const DepthCamera::value_type& value)
+
+void stereo_display_conv::eval(void* dst, const DepthCamera::value_type& src)
 {
-    using tmp_t = Eigen::Map<Eigen::Matrix<int16_t, CameraWrapper::Height, CameraWrapper::Width>>;
-    const tmp_t tmp_src(const_cast<int16_t*>(value.disparity), CameraWrapper::Height, CameraWrapper::Width);
-    tmp_t tmp_dst((int16_t*)dst, CameraWrapper::Height, CameraWrapper::Width); 
+    using tmp_t = Eigen::Map<Eigen::Matrix<int16_t, DepthCamera::Height, DepthCamera::Width>>;
+    const tmp_t tmp_src(const_cast<int16_t*>(src.disparity), DepthCamera::Height, DepthCamera::Width);
+    tmp_t tmp_dst((int16_t*)dst, DepthCamera::Height, DepthCamera::Width); 
     tmp_dst = tmp_src.unaryExpr(
             [](int16_t x){ return x > 0 ? x : 0; }
         ).cast<int16_t>();

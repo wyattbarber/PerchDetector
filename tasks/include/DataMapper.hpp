@@ -1,28 +1,21 @@
 #pragma once
 
 #include "DataSource.hpp"
-#include "DataEncoder.hpp"
 #include <type_traits>
 #include <atomic>
 #include <unistd.h>
 
-template<class T>
+template<class T, class C>
 void data_dims(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
-template<class T>
+template<class T, class C>
 void map_data(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
-template<class T>
+template<class T, class C>
 void unmap_data(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
-/** Default no-op data converter.
-
-*/
-template<typename T>
-void no_op_converter(void* dst, const T& src)
-{ 
-    memcpy(dst, (const void*)&src, sizeof(T)); 
-}
+template<typename C>
+void print_mapper_datatype(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
 
 /** Shares data with other processes
@@ -41,11 +34,11 @@ as follows:
 
 @tparam T Task type that is generating the data to send.
 */
-template<class T, typename C = typename T::value_type, typename CF = decltype(no_op_converter<typename T::value_type>)>
+template<class T, typename C>
 class DataMapper : public Task
 {
-    friend void map_data<T>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
-    friend void unmap_data<T>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
+    friend void map_data<T,C>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
+    friend void unmap_data<T,C>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
 public:
     /** Create a new data mapper.
@@ -54,17 +47,17 @@ public:
     @param task Task that will produce the data to send
     @param converter Optional converter function to apply to the data
     */
-    DataMapper(const char* name, std::shared_ptr<DataSource<T>> task, CF& converter = no_op_converter<typename T::value_type>) : 
+    DataMapper(const char* name, std::shared_ptr<DataSource<T>> task, C converter) : 
         Task(name, {task}),
         task(task),
         converter(converter),
         running(false),
         mapping(false)
     {
-        declare_cli_command("datatype", &print_datatype<T>);
-        declare_cli_command("dimensions", &data_dims<T>);
-        declare_cli_command("map", &map_data<T>);
-        declare_cli_command("unmap", &unmap_data<T>);
+        declare_cli_command("datatype", &print_mapper_datatype<typename C::conversion_type>);
+        declare_cli_command("dimensions", &data_dims<T,C>);
+        declare_cli_command("map", &map_data<T,C>);
+        declare_cli_command("unmap", &unmap_data<T,C>);
     }
 
     bool start_impl();
@@ -73,28 +66,44 @@ public:
 
     void step();
 
+    std::vector<size_t> dims(){ return converter.dims(); }
+
 protected:
     std::shared_ptr<DataSource<T>> task;
     typename T::update_ptr_const_type latest;
-    CF& converter;
+    const C converter;
     std::FILE* map_file;
     void* map;
     std::atomic<bool> running, mapping;
 };
+
+
+/** Default no-op data converter.
+
+*/
+template<typename T>
+struct no_op_converter
+{ 
+    no_op_converter(std::shared_ptr<T> task) : task(task) {}
+    std::shared_ptr<T> task;
+
+    using conversion_type = typename T::value_type;
+    std::vector<size_t> dims() const { return task->dims(); }
+    static void eval(void* dst, const conversion_type& src) { memcpy(dst, (const void*)&src, sizeof(conversion_type)); } 
+};
+
 
 /** Helper to create a new data mapper.
 
 Constructs a new shared pointer to a data mapper instance
 with the given conversion functor.
 
-One template parameter, C, cannot be deduced and must 
-be specified. This is the datatype of the updates
-produced by this DataMapper after the conversion 
-has been applied.
+The converter argument is optional, it can be used to reformat data or isolate 
+specific components before sharing it to other processes. If omitted, then data will be 
+copied to the memory map region as-is.
 
-@tparam C Datatype produced by the conversion functor.
 @tparam T Type of the task producing data.
-@tparam CF Type of the conversion functor to apply.
+@tparam C Type of the conversion functor to apply.
 
 @param name Name of the DataMapper task to create.
 @param task Task producing the data to map.
@@ -102,10 +111,15 @@ has been applied.
 
 @return new task type.
 */
-template<typename C, class T, typename CF>
-auto make_data_mapper(const char* name, std::shared_ptr<T> task, CF& converter)
+template<class T, typename C>
+auto make_data_mapper(const char* name, std::shared_ptr<T> task, C converter)
 {
-    return std::make_shared<DataMapper<T, C, CF>>(name, task, converter);
+    return std::make_shared<DataMapper<T,C>>(name, task, converter);
+}
+template<class T>
+auto make_data_mapper(const char* name, std::shared_ptr<T> task)
+{
+    return std::make_shared<DataMapper<T,no_op_converter<T>>>(name, task, no_op_converter<T>(task));
 }
 
 #include "DataMapper_impl.hpp"

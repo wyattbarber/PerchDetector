@@ -11,8 +11,8 @@
 #include <cerrno>
 
 
-template<class T, typename C, typename CF>
-bool DataMapper<T, C, CF>::start_impl(){ 
+template<class T, typename C>
+bool DataMapper<T, C>::start_impl(){ 
     if(!task->is_alive())
     {
         error("Cannot start streamer if producer is not running.");
@@ -23,8 +23,8 @@ bool DataMapper<T, C, CF>::start_impl(){
 }
 
 
-template<class T, typename C, typename CF>
-void DataMapper<T, C, CF>::stop_impl()
+template<class T, typename C>
+void DataMapper<T, C>::stop_impl()
 {
     if(running)
     {
@@ -41,8 +41,8 @@ void DataMapper<T, C, CF>::stop_impl()
 }
 
 
-template<class T, typename C, typename CF>
-void DataMapper<T, C, CF>::step()
+template<class T, typename C>
+void DataMapper<T, C>::step()
 {
     if(is_alive() & running)
     {
@@ -51,7 +51,7 @@ void DataMapper<T, C, CF>::step()
             mapping = true;
             latest = task->acquire();
             char* dst = reinterpret_cast<char*>(map)+1;
-            converter((void*)dst, latest->data);
+            converter.eval((void*)dst, latest->data);
             reinterpret_cast<char*>(map)[0] = 0xFF;
             reinterpret_cast<char*>(map)[0] = 0x00;
             mapping = false;
@@ -60,10 +60,10 @@ void DataMapper<T, C, CF>::step()
 }
 
 
-template<class T>
+template<class T, class C>
 void map_data(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
 {
-    auto t = (DataMapper<T>*)task;
+    auto t = (DataMapper<T,C>*)task;
 
     if(args.size() < 1)
     {
@@ -99,10 +99,10 @@ void map_data(Task* task, std::istream& in, std::ostream& out, const std::vector
 }
 
 
-template<class T>
+template<class T, class C>
 void unmap_data(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
 {
-    auto t = (DataMapper<T>*)task;
+    auto t = (DataMapper<T,C>*)task;
     t->info("Unmapping data stream");
 
     t->running = false;
@@ -118,13 +118,31 @@ void unmap_data(Task* task, std::istream& in, std::ostream& out, const std::vect
 }
 
 
-template<class T>
+template<class T, class C>
 void data_dims(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
 {
-    auto t = (T*)task;    
+    auto t = (DataMapper<T,C>*)task;
     for(size_t d : t->dims())
     {
         out << d << " ";
     }
     out << std::endl;
+}
+
+
+template<typename C>
+void print_mapper_datatype(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
+{
+    int status;
+    std::string name = typeid(C).name();
+    char* demangled = abi::__cxa_demangle(name.c_str(), NULL, NULL, &status);
+    if(!status)
+    {
+        out << demangled << std::endl;
+        free(demangled);
+    }
+    else
+    {
+        out << name << std::endl;
+    }
 }

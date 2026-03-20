@@ -109,4 +109,9 @@ protected:
 /** Converts disparity updates to single channel
     images that the gui can display.
 */
-void disparity_display_conv(void* dst, const DepthCamera::value_type& value);
+typedef struct stereo_display_conv
+{ 
+    using conversion_type = int16_t[DepthCamera::Height * DepthCamera::Width];
+    static std::vector<size_t> dims() { return {DepthCamera::Height, DepthCamera::Width}; }
+    static void eval(void* dst, const DepthCamera::value_type& src);
+} stereo_display_conv;
