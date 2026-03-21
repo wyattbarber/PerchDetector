@@ -88,9 +88,10 @@ void PointCloud<X>::step()
         for(size_t i = 0; i < num_points<X>(); ++i)
         {
             auto idx_orig = confidence_w_indices[i].second;
-            next->data[3*i] = point_clout_ptr[3*idx_orig]; // x
-            next->data[3*i + 1] = point_clout_ptr[3*idx_orig + 1]; // y
-            next->data[3*i + 2] = point_clout_ptr[3*idx_orig + 2]; // z
+            // Copy best points and convert to mm
+            next->data[3*i] = point_clout_ptr[3*idx_orig] * 1000.0; // x
+            next->data[3*i + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
+            next->data[3*i + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
         }
         this->swap_data();
 
