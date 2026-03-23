@@ -137,6 +137,8 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
 {
     auto cam_left = context.tasks.get<CameraWrapper>("camera-left");
     auto cam_right = context.tasks.get<CameraWrapper>("camera-right");
+    auto lidar = context.tasks.get<VL53L8CX>("lidar");
+
 
     if(!cam_left->is_alive() || !cam_right->is_alive())
     {
@@ -149,6 +151,7 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
         return;
     }
 
+    bool with_lidar = false;
     bool n_given = false;
     int n;
     if(args[0] != "inf")
@@ -156,9 +159,21 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
         n_given = true;
         n = std::stoi(args[0]);
     }
+    if(args.size()>2)
+    {
+        if(args[2] == "--lidar")
+        {
+            with_lidar = true;
+            if(!lidar->is_alive())
+            {
+                out << "Option to save lidar data given but lidar task is not started." << std::endl;
+                return;
+            }
+        }
+    }
     
     std::string path = (args.size() > 1) ? args[1] : "./";
-    std::string left_file, right_file;
+    std::string left_file, right_file, lidar_file;
     
     if(n_given) out << "Saving " << n << " image pairs to " << path << ", at 1 second interval." << std::endl;
     else out << "Saving images on user trigger, enter exit to stop." << std::endl;
@@ -167,7 +182,7 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
     int i = 0;
     while(capturing)
     {
-        if(!n_given)
+        if(!n_given) // Wait for user trigger
         {
             out << "Press enter to capture an image." << std::endl;
             std::string line;
@@ -179,18 +194,29 @@ void capture(std::istream& in, std::ostream& out, const std::vector<std::string>
         }
         left_file = path + "left-" + std::to_string(i) + ".png";
         right_file = path + "right-" + std::to_string(i) + ".png";
-        auto cv_dtype = (context.color) ? CV_8UC3 : CV_8UC1;
-        {
-            auto im_left = cam_left->acquire();
-            auto im_right = cam_right->acquire();
-            const cv::Mat left_im(cam_left->get_height(), cam_left->get_width(), cv_dtype, const_cast<uint8_t*>(im_left->data));
-            const cv::Mat right_im(cam_right->get_height(), cam_right->get_width(), cv_dtype, const_cast<uint8_t*>(im_right->data));
-            imwrite(left_file.c_str(), left_im);
-            imwrite(right_file.c_str(), right_im);
-        }
-        ++i;
+        lidar_file = path + "lidar-" + std::to_string(i) + ".json";
 
-        if(n_given)
+        // Get data
+        auto im_left = cam_left->acquire();
+        auto im_right = cam_right->acquire();        
+        VL53L8CX::update_ptr_const_type lidar_data;
+        if(with_lidar)
+        {   
+            lidar_data = lidar->acquire();
+        }
+        const cv::Mat left_im(cam_left->get_height(), cam_left->get_width(), CV_8UC1, const_cast<uint8_t*>(im_left->data));
+        const cv::Mat right_im(cam_right->get_height(), cam_right->get_width(), CV_8UC1, const_cast<uint8_t*>(im_right->data));
+        // Save data
+        imwrite(left_file.c_str(), left_im);
+        imwrite(right_file.c_str(), right_im);
+        if(with_lidar)
+        {
+            std::ofstream lidar_out(lidar_file);
+            VL53L8CX::data_to_json(lidar_data, lidar_out);
+        }
+
+        ++i;
+        if(n_given) // Await next capture period
         {
             out << '\r' << "Completed capture " << i << " of " << n;
             std::this_thread::sleep_for(1s); 

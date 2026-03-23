@@ -70,7 +70,7 @@ void close_VL53L8CX(VL53L8CX_Platform* dev);
  * zone means a lower RAM). The value must be between 1 and 4.
  */
 
-#define 	VL53L8CX_NB_TARGET_PER_ZONE		1U
+#define 	VL53L8CX_NB_TARGET_PER_ZONE		4U
 
 /*
  * @brief The macro below can be used to avoid data conversion into the driver.

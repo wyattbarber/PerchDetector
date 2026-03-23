@@ -2,6 +2,8 @@
 #include <chrono>
 #include <thread>
 #include <opencv2/core.hpp>
+#include "json/json.h"
+#include <string>
 
 using namespace std::chrono_literals;
 
@@ -130,3 +132,40 @@ void VL53L8CX::step()
 }
 
 
+
+void VL53L8CX::data_to_json(update_ptr_const_type data, std::ofstream& file)
+{
+    Json::Value root;
+    root["distance"] = Json::Value(Json::arrayValue);
+    root["sigma"] = Json::Value(Json::arrayValue);
+    root["status"] = Json::Value(Json::arrayValue);
+    root["num_detections"] = Json::Value(Json::arrayValue);
+    // root["distance"].resize(VL53L8CX_NB_TARGET_PER_ZONE);
+    // root["sigma"].resize(VL53L8CX_NB_TARGET_PER_ZONE);
+    // root["status"].resize(VL53L8CX_NB_TARGET_PER_ZONE);
+
+    for(size_t i = 0; i < VL53L8CX_NB_TARGET_PER_ZONE; ++i)
+    {
+        root["distance"][(int)i] = Json::Value(Json::arrayValue);
+        root["sigma"][(int)i] = Json::Value(Json::arrayValue);
+        root["status"][(int)i] = Json::Value(Json::arrayValue);
+        // root["distance"][(int)i].resize(64);
+        // root["sigma"][(int)i].resize(64);
+        // root["status"][(int)i].resize(64);
+        for(size_t j = 0; j < 64; ++j)
+        {   
+            root["distance"][(int)i][(int)j] = Json::Value(data->data.distance_mm[(i*64)+j]);
+            root["sigma"][(int)i][(int)j] = Json::Value(data->data.range_sigma_mm[(i*64)+j]);
+            root["status"][(int)i][(int)j] = Json::Value(data->data.target_status[(i*64)+j]);
+        }
+    }    
+    
+    // root["num_detections"].resize(64);
+    for(size_t i = 0; i < 64; ++i)
+    {   
+        root["num_detections"][(int)i] = Json::Value(data->data.nb_target_detected[i]);
+    }
+
+    Json::StreamWriterBuilder wbuilder;
+    file << Json::writeString(wbuilder, root).c_str();
+}

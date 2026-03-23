@@ -42,6 +42,25 @@ public:
     */
     void step();
 
+    /** Helper to save data to a file.
+
+    Saves the data in json format with the following fields:
+    
+    distance: 
+        List of 4 lists of 64 values in mm.
+
+    sigma:
+        List of 4 lists of 64 values in mm.
+            
+    status:
+        List of 4 lists of 64 status codes.
+
+    num_detections:
+        List of 64 object counts, up to 4.
+
+     */
+    static void data_to_json(update_ptr_const_type data, std::ofstream& file);
+
     std::vector<size_t> dims(){ return {1}; }
 
 protected:
