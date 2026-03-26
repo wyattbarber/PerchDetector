@@ -41,34 +41,34 @@ void sig_handle(int signum)
 }
 
 
-void make_tasks(task_executor& tasks)
+void make_tasks(program_context& context)
 {
     auto cam_manager = std::make_shared<CameraManagerTask>();
-    tasks.add(cam_manager);
+    context.tasks.add(cam_manager);
     
     auto cam_left = (context.simulation) ? 
         std::make_shared<CameraSimulator>("camera-left", cam_manager) :
         std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left, context.color);
-    tasks.add(make_data_mapper("left_feed", cam_left));
-    tasks.add(cam_left);
+    context.tasks.add(make_data_mapper("left_feed", cam_left));
+    context.tasks.add(cam_left);
 
     auto cam_right = (context.simulation) ? 
         std::make_shared<CameraSimulator>("camera-right", cam_manager, true) :
         std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right, context.color);
-    tasks.add(make_data_mapper("right_feed", cam_right));
-    tasks.add(cam_right);
+    context.tasks.add(make_data_mapper("right_feed", cam_right));
+    context.tasks.add(cam_right);
 
     auto stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
-    tasks.add(make_data_mapper("stereo_feed", stereo, stereo_display_conv()));
-    tasks.add(stereo);
+    context.tasks.add(make_data_mapper("stereo_feed", stereo, stereo_display_conv()));
+    context.tasks.add(stereo);
 
-    auto lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0");
-    tasks.add(make_data_mapper("lidar_feed", lidar, lidar_display_conv()));
-    tasks.add(lidar);
+    auto lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0", context.cal_folder);
+    context.tasks.add(make_data_mapper("lidar_feed", lidar, lidar_display_conv()));
+    context.tasks.add(lidar);
 
     auto pointcloud = std::make_shared<PointCloud<50>>("point_cloud", stereo, context.cal_folder);
-    tasks.add(pointcloud);
-    tasks.add(make_data_mapper("point_cloud_feed", pointcloud));
+    context.tasks.add(pointcloud);
+    context.tasks.add(make_data_mapper("point_cloud_feed", pointcloud));
 }
 
 
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
 
     // Construct tasts
     std::cout << "-- Constructing tasks" << std::endl;
-    make_tasks(context.tasks);    
+    make_tasks(context);    
 
     // Launch all tasks
     std::cout << "-- Launching tasks" << std::endl;

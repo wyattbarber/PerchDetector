@@ -2,6 +2,7 @@
 .vscode/**
 env/**
 calibrations/**
+!calibrations/*.json
 __pycache__/**
 logout.txt
 

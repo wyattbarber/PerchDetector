@@ -3,6 +3,7 @@
 #include <thread>
 #include <opencv2/core.hpp>
 #include "json/json.h"
+#include <json_loader.hpp>
 #include <string>
 
 using namespace std::chrono_literals;
@@ -10,6 +11,17 @@ using namespace std::chrono_literals;
 
 bool VL53L8CX::start_impl()
 {
+    uint8_t sharpener;
+    if(!load_json_value_pairs(
+        settings,
+        std::make_tuple(),
+        "sharpener", sharpener
+    ))
+    {
+        error("Failed to load lidar settings.");
+        return false;
+    }
+    
     // Open the SPI interface
     open_VL53L8CX(path, &device.platform);
 
@@ -43,6 +55,13 @@ bool VL53L8CX::start_impl()
     if(status)
     {
         error("Failed to set target order, result ", (int)status);
+        return false;
+    }
+
+    status = vl53l8cx_set_sharpener_percent(&device, sharpener);
+    if(status)
+    {
+        error("Failed to set sharpener percent, result ", (int)status);
         return false;
     }
 

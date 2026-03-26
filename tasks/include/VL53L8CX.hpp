@@ -2,6 +2,7 @@
 
 #include "DataSource.hpp"
 #include "vl53l8cx_api.h"
+#include <string>
 
 
 FWD_DECL_DATA_SOURCE(VL53L8CX, VL53L8CX_ResultsData)
@@ -17,10 +18,12 @@ public:
     
     @param name Task name
     @param path Path to the SPI device for the sensor
+    @param settings Path to json settings file
     */
-    VL53L8CX(const char* name, const char* path) : 
+    VL53L8CX(const char* name, const char* path, const std::string& settings) : 
         DataSource<VL53L8CX>(name, {}),
-        path(path)
+        path(path),
+        settings(settings+"/lidar_settings.json")
     {
     }
 
@@ -65,6 +68,7 @@ public:
 
 protected:
     const char* path;
+    const std::string settings;
     VL53L8CX_Configuration device;
     VL53L8CX_ResultsData data;
 };
