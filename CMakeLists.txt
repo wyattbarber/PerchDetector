@@ -52,6 +52,6 @@ target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eig
 target_include_directories(tasks PUBLIC tasks/include)
 
 # Main executable
-add_executable(main main.cpp main_cmd.cpp)
+add_executable(main main.cpp main_cmd.cpp main_exe.cpp)
 target_link_libraries(main PRIVATE util tasks ${OpenCV_LIBS} LibCamera)
 target_link_options(main PRIVATE -Wl,--copy-dt-needed-entries)
