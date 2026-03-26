@@ -105,24 +105,20 @@ void VL53L8CX::step()
 
             update_ptr_type next = allocate_next();
             // Rotate data to match camera frame
-            for(size_t i = 0; i < VL53L8CX_NB_TARGET_PER_ZONE; ++i)
-            {
-                // Source matrices
-                cv::Mat src_dist(8, 8, CV_16UC1, (void*)(data.distance_mm + (64*i)));
-                cv::Mat src_sigma(8, 8, CV_16UC1, (void*)(data.range_sigma_mm + (64*i)));
-                cv::Mat src_status(8, 8, CV_8UC1, (void*)(data.target_status + (64*i)));
-                // Destination matrices
-                cv::Mat dst_dist(8, 8, CV_16UC1, (void*)(next->data.distance_mm + (64*i)));
-                cv::Mat dst_sigma(8, 8, CV_16UC1, (void*)(next->data.range_sigma_mm + (64*i)));
-                cv::Mat dst_status(8, 8, CV_8UC1, (void*)(next->data.target_status + (64*i)));
-                // Rotate
-                cv::rotate(src_dist, dst_dist, cv::ROTATE_90_CLOCKWISE);
-                cv::rotate(src_sigma, dst_sigma, cv::ROTATE_90_CLOCKWISE);
-                cv::rotate(src_status, dst_status, cv::ROTATE_90_CLOCKWISE);
-            }
-            // Number of detections is always one channel
+            // Source matrices
+            cv::Mat src_dist(8, 8, CV_16UC4, (void*)data.distance_mm);
+            cv::Mat src_sigma(8, 8, CV_16UC4, (void*)data.range_sigma_mm);
+            cv::Mat src_status(8, 8, CV_8UC4, (void*)data.target_status);
             cv::Mat src_n_detect(8, 8, CV_8UC1, (void*)data.nb_target_detected);
+            // Destination matrices
+            cv::Mat dst_dist(8, 8, CV_16UC4, (void*)next->data.distance_mm);
+            cv::Mat dst_sigma(8, 8, CV_16UC4, (void*)next->data.range_sigma_mm);
+            cv::Mat dst_status(8, 8, CV_8UC4, (void*)next->data.target_status);
             cv::Mat dst_n_detect(8, 8, CV_8UC1, (void*)next->data.nb_target_detected);
+            // Rotate
+            cv::rotate(src_dist, dst_dist, cv::ROTATE_90_CLOCKWISE);
+            cv::rotate(src_sigma, dst_sigma, cv::ROTATE_90_CLOCKWISE);
+            cv::rotate(src_status, dst_status, cv::ROTATE_90_CLOCKWISE);
             cv::rotate(src_n_detect, dst_n_detect, cv::ROTATE_90_CLOCKWISE);
 
             swap_data();
@@ -140,27 +136,20 @@ void VL53L8CX::data_to_json(update_ptr_const_type data, std::ofstream& file)
     root["sigma"] = Json::Value(Json::arrayValue);
     root["status"] = Json::Value(Json::arrayValue);
     root["num_detections"] = Json::Value(Json::arrayValue);
-    // root["distance"].resize(VL53L8CX_NB_TARGET_PER_ZONE);
-    // root["sigma"].resize(VL53L8CX_NB_TARGET_PER_ZONE);
-    // root["status"].resize(VL53L8CX_NB_TARGET_PER_ZONE);
 
     for(size_t i = 0; i < VL53L8CX_NB_TARGET_PER_ZONE; ++i)
     {
         root["distance"][(int)i] = Json::Value(Json::arrayValue);
         root["sigma"][(int)i] = Json::Value(Json::arrayValue);
         root["status"][(int)i] = Json::Value(Json::arrayValue);
-        // root["distance"][(int)i].resize(64);
-        // root["sigma"][(int)i].resize(64);
-        // root["status"][(int)i].resize(64);
         for(size_t j = 0; j < 64; ++j)
         {   
-            root["distance"][(int)i][(int)j] = Json::Value(data->data.distance_mm[(i*64)+j]);
-            root["sigma"][(int)i][(int)j] = Json::Value(data->data.range_sigma_mm[(i*64)+j]);
-            root["status"][(int)i][(int)j] = Json::Value(data->data.target_status[(i*64)+j]);
+            root["distance"][(int)i][(int)j] = Json::Value(data->data.distance_mm[(j*4)+i]);
+            root["sigma"][(int)i][(int)j] = Json::Value(data->data.range_sigma_mm[(j*4)+i]);
+            root["status"][(int)i][(int)j] = Json::Value(data->data.target_status[(j*4)+i]);
         }
     }    
     
-    // root["num_detections"].resize(64);
     for(size_t i = 0; i < 64; ++i)
     {   
         root["num_detections"][(int)i] = Json::Value(data->data.nb_target_detected[i]);
@@ -169,3 +158,12 @@ void VL53L8CX::data_to_json(update_ptr_const_type data, std::ofstream& file)
     Json::StreamWriterBuilder wbuilder;
     file << Json::writeString(wbuilder, root).c_str();
 }
+
+
+void lidar_display_conv::eval(void* dst, const VL53L8CX::value_type& src) 
+{ 
+    for(size_t i = 0; i < 64; ++i)
+    {
+        reinterpret_cast<uint16_t*>(dst)[i] = src.distance_mm[i*4];
+    }
+} 

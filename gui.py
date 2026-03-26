@@ -191,7 +191,7 @@ async def _img_callback():
             if m > 0:
                 img /= m
             img *= 255
-        elements["image"].set_source(Image.fromarray(img.astype(np.uint8)).resize((600,800)))
+        elements["image"].set_source(Image.fromarray(img.astype(np.uint8)).resize((800,600)))
 
 def image_window(container):
     global elements, pm

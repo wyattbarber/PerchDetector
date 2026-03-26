@@ -77,5 +77,5 @@ typedef struct lidar_display_conv
 { 
     using conversion_type = uint16_t[64];
     static std::vector<size_t> dims() { return {8, 8}; }
-    static void eval(void* dst, const VL53L8CX::value_type& src) { memcpy(dst, (const void*)&src.distance_mm, sizeof(conversion_type)); } 
+    static void eval(void* dst, const VL53L8CX::value_type& src);
 } lidar_display_conv;
