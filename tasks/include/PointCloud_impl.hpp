@@ -69,34 +69,31 @@ bool PointCloud<X>::start_impl()
 template<uint8_t X> 
 void PointCloud<X>::step()
 {
-    if(this->is_alive())
+    this->tick();
+    // Compute point cloud
+    const cv::Mat disparity(DepthCamera::Height, DepthCamera::Width, CV_16S, const_cast<int16_t*>(latest_disparity->data.disparity));
+    cv::reprojectImageTo3D(disparity, point_cloud, Q, false);
+    // Partial sort confidence and indices to get low and high confidence partitions
+    for(size_t i = 0; i < DepthCamera::Height*DepthCamera::Width; ++i)
     {
-        this->tick();
-        // Compute point cloud
-        const cv::Mat disparity(DepthCamera::Height, DepthCamera::Width, CV_16S, const_cast<int16_t*>(latest_disparity->data.disparity));
-        cv::reprojectImageTo3D(disparity, point_cloud, Q, false);
-        // Partial sort confidence and indices to get low and high confidence partitions
-        for(size_t i = 0; i < DepthCamera::Height*DepthCamera::Width; ++i)
-        {
-            confidence_w_indices[i].first = latest_disparity->data.confidence[i];
-            confidence_w_indices[i].second = i;
-        }
-        std::partial_sort(confidence_w_indices, confidence_w_indices+num_points<X>(), confidence_w_indices+(DepthCamera::Height*DepthCamera::Width));
-        // Copy best points to new update
-        auto next = this->allocate_next();        
-        auto point_clout_ptr = reinterpret_cast<float*>(point_cloud.data);
-        for(size_t i = 0; i < num_points<X>(); ++i)
-        {
-            auto idx_orig = confidence_w_indices[i].second;
-            // Copy best points and convert to mm
-            next->data[3*i] = point_clout_ptr[3*idx_orig] * 1000.0; // x
-            next->data[3*i + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
-            next->data[3*i + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
-        }
-        this->swap_data();
-
-        // Wait for next update
-        while(!latest_disparity->stale){}
-        latest_disparity = stereo->acquire();
+        confidence_w_indices[i].first = latest_disparity->data.confidence[i];
+        confidence_w_indices[i].second = i;
     }
+    std::partial_sort(confidence_w_indices, confidence_w_indices+num_points<X>(), confidence_w_indices+(DepthCamera::Height*DepthCamera::Width));
+    // Copy best points to new update
+    auto next = this->allocate_next();        
+    auto point_clout_ptr = reinterpret_cast<float*>(point_cloud.data);
+    for(size_t i = 0; i < num_points<X>(); ++i)
+    {
+        auto idx_orig = confidence_w_indices[i].second;
+        // Copy best points and convert to mm
+        next->data[3*i] = point_clout_ptr[3*idx_orig] * 1000.0; // x
+        next->data[3*i + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
+        next->data[3*i + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
+    }
+    this->swap_data();
+
+    // Wait for next update
+    while(!latest_disparity->stale){}
+    latest_disparity = stereo->acquire();
 }

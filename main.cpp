@@ -43,6 +43,7 @@ int main(int argc, char** argv)
         }
         else if(strcmp(argv[i], "--simulate") == 0) // Run with simulated inputs
         {
+            std::cout << "    Warning: Simulation is not supported, ignoring." << std::endl;
             context.simulation = true;
             i++;
         }
@@ -66,7 +67,7 @@ int main(int argc, char** argv)
     
     // Start base tasks that should be run without user input
     std::cout << "-- Starting core tasks" << std::endl;
-    context.tasks["_camera_manager"]->start();
+    context.tasks.get("_camera_manager")->start();
 
     context.running = true;
     std::cout << "Perch detector CLI started" << std::endl;

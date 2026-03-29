@@ -54,7 +54,7 @@ void _start(std::istream& in, std::ostream& out, const std::vector<std::string>&
             continue;
         }
 
-        auto task = context.tasks[arg];
+        auto task = context.tasks.get(arg);
         if(task->is_alive())
         {
             out << "Task " << arg << " is already started." << std::endl;
@@ -102,7 +102,7 @@ void _stop(std::istream& in, std::ostream& out, const std::vector<std::string>& 
             continue;
         }
 
-        auto task = context.tasks[arg];
+        auto task = context.tasks.get(arg);
         if(!task->is_alive())
         {
             out << "Task " << arg << " is already stopped." << std::endl;
@@ -240,7 +240,7 @@ void call_task_command(const std::string& taskname, std::istream& in, std::ostre
         return;
     }
 
-    auto task = context.tasks[taskname];
+    auto task = context.tasks.get(taskname);
     if(!task->is_alive())
     {
         out << "Cannot call commands of a task that is not running." << std::endl;
@@ -270,7 +270,7 @@ void cmd_list(std::istream& in, std::ostream& out, const std::vector<std::string
         return;
     }
 
-    for(const auto & cmd : context.tasks[args[0]]->list_commands())
+    for(const auto & cmd : context.tasks.get(args[0])->list_commands())
     {
         out << cmd << " ";
     }

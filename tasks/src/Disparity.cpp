@@ -66,8 +66,7 @@ bool DepthCamera::start_impl()
 
 void DepthCamera::step()
 {
-    // Don't update if stopped or if images are not fresh
-    if(!is_alive()) return;
+    // Don't update if images are not fresh
     if(!latest_left->stale || !latest_right->stale) return;
     tick();
     

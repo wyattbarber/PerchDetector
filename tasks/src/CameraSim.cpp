@@ -8,7 +8,6 @@ using namespace Eigen;
 
 void CameraSimulator::step()
 {
-    if(!is_alive()) return;
     tick();
 
     // Initialize image with noise in the range 0-25

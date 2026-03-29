@@ -214,6 +214,7 @@ void CameraWrapper::step()
 {
     if(!request_busy)
     {
+        tick();
         request_busy = true;
         requests[next]->reuse(Request::ReuseBuffers);
         camera->queueRequest(requests[next].get());

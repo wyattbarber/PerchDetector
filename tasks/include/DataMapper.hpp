@@ -35,7 +35,7 @@ as follows:
 @tparam T Task type that is generating the data to send.
 */
 template<class T, typename C>
-class DataMapper : public Task
+class DataMapper : public TaskBase<DataMapper<T,C>>
 {
     friend void map_data<T,C>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
     friend void unmap_data<T,C>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
@@ -48,16 +48,16 @@ public:
     @param converter Optional converter function to apply to the data
     */
     DataMapper(const char* name, std::shared_ptr<DataSource<T>> task, C converter) : 
-        Task(name, {task}),
+        TaskBase<DataMapper>(name, {task}),
         task(task),
         converter(converter),
         running(false),
         mapping(false)
     {
-        declare_cli_command("datatype", &print_mapper_datatype<typename C::conversion_type>);
-        declare_cli_command("dimensions", &data_dims<T,C>);
-        declare_cli_command("map", &map_data<T,C>);
-        declare_cli_command("unmap", &unmap_data<T,C>);
+        this->declare_cli_command("datatype", &print_mapper_datatype<typename C::conversion_type>);
+        this->declare_cli_command("dimensions", &data_dims<T,C>);
+        this->declare_cli_command("map", &map_data<T,C>);
+        this->declare_cli_command("unmap", &unmap_data<T,C>);
     }
 
     bool start_impl();

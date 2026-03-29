@@ -14,15 +14,11 @@ void make_tasks(program_context& context)
     auto cam_manager = std::make_shared<CameraManagerTask>();
     context.tasks.add(cam_manager);
     
-    auto cam_left = (context.simulation) ? 
-        std::make_shared<CameraSimulator>("camera-left", cam_manager) :
-        std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left);
+    auto cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left);
     context.tasks.add(make_data_mapper("left_feed", cam_left));
     context.tasks.add(cam_left);
 
-    auto cam_right = (context.simulation) ? 
-        std::make_shared<CameraSimulator>("camera-right", cam_manager, true) :
-        std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right);
+    auto cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right);
     context.tasks.add(make_data_mapper("right_feed", cam_right));
     context.tasks.add(cam_right);
 

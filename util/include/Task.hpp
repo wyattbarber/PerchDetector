@@ -8,15 +8,12 @@
 #include <map>
 #include <chrono>
 
-
-/** Base interface for a task
+/** Dynamic pointer base for all tasks.
 
 */
 class Task : public std::enable_shared_from_this<Task>
 {
 public:
-    typedef void(*command_executor_t)(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args); /// Method type for handling task-specific CLI actions
-
     Task(const char* name, std::initializer_list<std::shared_ptr<Task>> dependencies) : 
         name(name),
         depends_on{dependencies}
@@ -26,14 +23,9 @@ public:
         tick_called_once = false;
         tick_called_twice = false;
     }
+    
+    typedef void(*command_executor_t)(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args); /// Method type for handling task-specific CLI actions
 
-    /** Must be called after construction before any other methods.
-    
-    Implements functionality that cannot be done
-    in constructor.
-    */
-    void init();
-    
     /** Logs a status message.
     
     Will generate one line of formatted log output
@@ -95,15 +87,13 @@ public:
     and start() may be called again after.
     */
     virtual void stop_impl() = 0;
-
-    /** Execute the task cyclic process.
     
-    Called repeatedly by task executor thread, 
-    even before start is called and after stop is called.
+    /** Must be called after construction before any other methods.
+    
+    Implements functionality that cannot be done
+    in constructor.
     */
-    virtual void step() = 0;
-
-    /** Check if task has been started.
+    void init();    /** Check if task has been started.
     
     @return true if the task was started without error.
     */
@@ -119,7 +109,6 @@ public:
     */
     std::vector<std::string> list_commands();
     
-
     /** Check if this task implements a command.
     
     @param cmd Name of the command to check for
@@ -205,6 +194,24 @@ protected:
     bool tick_called_once, tick_called_twice;
     std::chrono::steady_clock::time_point last_tick_call;
     float rate_est;
+};
+
+
+/** Template base for all task implementations.
+
+*/
+template<typename Derived>
+class TaskBase : public Task
+{
+public:    
+    using Task::Task;
+
+    /** Execute the task cyclic process.
+    
+    Called repeatedly by task executor thread, 
+    even before start is called and after stop is called.
+    */
+    void step(){ static_cast<Derived*>(this)->step(); }
 };
 
 

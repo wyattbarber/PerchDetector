@@ -10,11 +10,11 @@
 Just wraps starting the manager and logging
 libcamera events.
 */
-class CameraManagerTask : public Task
+class CameraManagerTask : public TaskBase<CameraManagerTask>
 {
 public:
     CameraManagerTask() : 
-        Task("_camera_manager", {})
+        TaskBase("_camera_manager", {})
     {        
         cm = std::make_unique<libcamera::CameraManager>();
         cm->cameraAdded.connect<void>([](std::shared_ptr<libcamera::Camera> cam){ Logger::instance() << "[INFO][_camera_manager]" << cam->id() << " connected." << std::endl; });

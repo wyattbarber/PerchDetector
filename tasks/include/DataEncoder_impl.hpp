@@ -10,7 +10,7 @@ template<class T>
 bool DataEncoder<T>::start_impl(){ 
     if(!task->is_alive())
     {
-        error("Cannot start streamer if producer is not running.");
+        this->error("Cannot start streamer if producer is not running.");
         return false;
     }
     return true;
@@ -32,7 +32,7 @@ void DataEncoder<T>::step()
             if(!run_stream) break; // Check for exit mid frame
             (*out) << buffer[i];
         }
-        tick();
+        this->tick();
     }
     else
     {

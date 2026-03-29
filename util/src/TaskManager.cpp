@@ -1,23 +1,5 @@
 #include <TaskManager.hpp>
 
-
-void _task_runner(std::shared_ptr<Task> task, bool* alive)
-{
-    while(*alive)
-    {
-        if(task->is_alive())
-        {
-            task->step();
-        }
-    }
-}
-
-
-std::shared_ptr<Task>& TaskManager::operator[](const std::string& name)
-{
-    return tasks[name];
-}
-
    
 void TaskManager::launch()
 {    
@@ -33,7 +15,7 @@ void TaskManager::launch()
         auto name = item.first;
         auto task = item.second;
 
-        threads[name] = std::make_unique<std::thread>(_task_runner, task, &running);
+        threads[name] = std::make_unique<std::thread>(executors[name], task, this);
     }
 }
 

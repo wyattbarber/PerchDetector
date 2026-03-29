@@ -65,7 +65,7 @@ to work with this interface.
 @tparam T Derived task type implementing this interface.
 */
 template<class T>
-class DataSource : public Task
+class DataSource : public TaskBase<DataSource<T>>
 {
 public:
     using value_type = typename DataSourceTraits<T>::value_type;
@@ -74,7 +74,7 @@ public:
     using update_ptr_const_type = std::shared_ptr<const update_type>;
 
     DataSource(const char* name, std::initializer_list<std::shared_ptr<Task>> dependencies) : 
-        Task(name, dependencies),
+        TaskBase<DataSource<T>>(name, dependencies),
         next_data(), 
         latest_data()
 #ifdef BLOCK_ALLOC

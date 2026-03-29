@@ -104,46 +104,43 @@ void VL53L8CX::step()
 {
     uint8_t status, ready;
 
-    if(is_alive())
+    status = vl53l8cx_check_data_ready(&device, &ready);
+    if(status)
     {
-		status = vl53l8cx_check_data_ready(&device, &ready);
+        warning("Failed to check for new data, result ", (int)status);
+        return;
+    }
+
+    if(ready)
+    {
+        status = vl53l8cx_get_ranging_data(&device, &data);
         if(status)
         {
-            warning("Failed to check for new data, result ", (int)status);
+            warning("Failed to read new data, result ", (int)status);
             return;
         }
-   
-        if(ready)
-        {
-			status = vl53l8cx_get_ranging_data(&device, &data);
-            if(status)
-            {
-                warning("Failed to read new data, result ", (int)status);
-                return;
-            }
 
-            update_ptr_type next = allocate_next();
-            // Rotate data to match camera frame
-            // Source matrices
-            cv::Mat src_dist(8, 8, CV_16UC4, (void*)data.distance_mm);
-            cv::Mat src_sigma(8, 8, CV_16UC4, (void*)data.range_sigma_mm);
-            cv::Mat src_status(8, 8, CV_8UC4, (void*)data.target_status);
-            cv::Mat src_n_detect(8, 8, CV_8UC1, (void*)data.nb_target_detected);
-            // Destination matrices
-            cv::Mat dst_dist(8, 8, CV_16UC4, (void*)next->data.distance_mm);
-            cv::Mat dst_sigma(8, 8, CV_16UC4, (void*)next->data.range_sigma_mm);
-            cv::Mat dst_status(8, 8, CV_8UC4, (void*)next->data.target_status);
-            cv::Mat dst_n_detect(8, 8, CV_8UC1, (void*)next->data.nb_target_detected);
-            // Rotate
-            cv::rotate(src_dist, dst_dist, cv::ROTATE_90_CLOCKWISE);
-            cv::rotate(src_sigma, dst_sigma, cv::ROTATE_90_CLOCKWISE);
-            cv::rotate(src_status, dst_status, cv::ROTATE_90_CLOCKWISE);
-            cv::rotate(src_n_detect, dst_n_detect, cv::ROTATE_90_CLOCKWISE);
+        update_ptr_type next = allocate_next();
+        // Rotate data to match camera frame
+        // Source matrices
+        cv::Mat src_dist(8, 8, CV_16UC4, (void*)data.distance_mm);
+        cv::Mat src_sigma(8, 8, CV_16UC4, (void*)data.range_sigma_mm);
+        cv::Mat src_status(8, 8, CV_8UC4, (void*)data.target_status);
+        cv::Mat src_n_detect(8, 8, CV_8UC1, (void*)data.nb_target_detected);
+        // Destination matrices
+        cv::Mat dst_dist(8, 8, CV_16UC4, (void*)next->data.distance_mm);
+        cv::Mat dst_sigma(8, 8, CV_16UC4, (void*)next->data.range_sigma_mm);
+        cv::Mat dst_status(8, 8, CV_8UC4, (void*)next->data.target_status);
+        cv::Mat dst_n_detect(8, 8, CV_8UC1, (void*)next->data.nb_target_detected);
+        // Rotate
+        cv::rotate(src_dist, dst_dist, cv::ROTATE_90_CLOCKWISE);
+        cv::rotate(src_sigma, dst_sigma, cv::ROTATE_90_CLOCKWISE);
+        cv::rotate(src_status, dst_status, cv::ROTATE_90_CLOCKWISE);
+        cv::rotate(src_n_detect, dst_n_detect, cv::ROTATE_90_CLOCKWISE);
 
-            swap_data();
-            tick();
-        }        
-    }
+        swap_data();
+        tick();
+    }        
 }
 
 

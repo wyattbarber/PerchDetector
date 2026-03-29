@@ -16,15 +16,15 @@ template<class T>
 bool DataSource<T>::start()
 {
 #ifdef BLOCK_ALLOC
-    info("Configured to allocate data values from custom block pool. Datatype size: ", sizeof(value_type), ", block size: ", pool.block_size);
+    this->info("Configured to allocate data values from custom block pool. Datatype size: ", sizeof(value_type), ", block size: ", pool.block_size);
 #endif
     if(!Task::start()) return false;
     while(!acquire())
     { 
-        info("Waiting for first data to be produced...");
+        this->info("Waiting for first data to be produced...");
         std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
-    info("Initial data pointer is valid.");
+    this->info("Initial data pointer is valid.");
     return true;
 }
 

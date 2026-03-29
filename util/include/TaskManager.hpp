@@ -12,14 +12,6 @@
 class TaskManager
 {
 public: 
-    /** Get a pointer to a task by name.
-    
-    @param name Name of task to get.
-
-    @return Pointer to task of given name.
-    */
-    std::shared_ptr<Task>& operator[](const std::string& name);
-
     /** Get a pointer of specific type by name.
     
     @tparam Task type to cast the given task to.
@@ -29,7 +21,9 @@ public:
     @return Pointer to the named task.
     */
     template<typename T>
-    std::shared_ptr<T> get(const std::string& name){ return std::dynamic_pointer_cast<T>((*this)[name]); }
+    std::shared_ptr<T> get(const std::string& name){ return std::dynamic_pointer_cast<T>(tasks[name]); }
+
+    std::shared_ptr<Task> get(const std::string& name){ return get<Task>(name); }
 
     
     /** Add a task, autofilling its name.
@@ -39,7 +33,11 @@ public:
     @param task Task to add
     */
     template<typename T>
-    void add(std::shared_ptr<T> task){ (*this)[task->name] = task; }
+    void add(std::shared_ptr<T> task)
+    {
+        tasks[task->name] = task; 
+        executors[task->name] = _task_runner<T>;
+    }
 
     /** Create a new task to add.
     
@@ -70,8 +68,22 @@ public:
 
 protected:
     std::map<std::string, std::shared_ptr<Task>> tasks;
+    std::map<std::string, void(*)(std::shared_ptr<Task>, TaskManager*)> executors;
     std::map<std::string, std::unique_ptr<std::thread>> threads;
     bool running;
+    
+    template<typename T>
+    static void _task_runner(std::shared_ptr<Task> task, TaskManager* manager)
+    {
+        auto t = std::static_pointer_cast<T>(task);
+        while(manager->running)
+        {
+            if(t->is_alive())
+            {
+                t->step();
+            }
+        }
+    }
 };
 
 

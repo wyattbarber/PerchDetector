@@ -22,7 +22,7 @@ to the data to send.
 @tparam T Task type that is generating the data to send.
 */
 template<class T>
-class DataEncoder : public Task
+class DataEncoder : public TaskBase<DataEncoder<T>>
 {
     friend void stream_data<T>(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
@@ -36,7 +36,7 @@ public:
     @param task Task that will produce the data to send
     */
     DataEncoder(const char* name, std::shared_ptr<DataSource<T>> task) : 
-        Task(name, {task}),
+        TaskBase<DataEncoder<T>>(name, {task}),
         task(task),
         run_stream(false),
         streaming(false)

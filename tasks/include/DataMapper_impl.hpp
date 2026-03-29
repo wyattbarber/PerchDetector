@@ -15,7 +15,7 @@ template<class T, typename C>
 bool DataMapper<T, C>::start_impl(){ 
     if(!task->is_alive())
     {
-        error("Cannot start streamer if producer is not running.");
+        this->error("Cannot start streamer if producer is not running.");
         return false;
     }
     latest = task->acquire();
@@ -28,15 +28,15 @@ void DataMapper<T, C>::stop_impl()
 {
     if(running)
     {
-        info("Mapped file still open, unmapping and closing.");
+        this->info("Mapped file still open, unmapping and closing.");
         // Wait for in progress write to stop
         while(mapping){}
         if(munmap(map, sizeof(C)+1))
         {
-            error("Error unmapping file: ", std::strerror(errno));
+            this->error("Error unmapping file: ", std::strerror(errno));
         }
         std::fclose(map_file);
-        info("Unmapped and closed file.");
+        this->info("Unmapped and closed file.");
     }
 }
 
@@ -44,7 +44,7 @@ void DataMapper<T, C>::stop_impl()
 template<class T, typename C>
 void DataMapper<T, C>::step()
 {
-    if(is_alive() & running)
+    if(running)
     {
         if(latest->stale) // Memory map is opened and new data is available
         {
