@@ -79,12 +79,12 @@ class BlockPool
      * Initializes a new memory pool for up to N
      * objects of type T. The memory pool is created with malloc.
      * 
-     * @param N Number of blocks to allocate.
+     * @param N Number of blocks to allocate
      * @param S Size of each block
      */
     BlockPool(size_t N, size_t S) :
-        block_size(S + ctrl_block_size + sizeof(size_t)),
-        arena(new char[N * block_size]),
+        block_size(S + ctrl_block_size + sizeof(size_t) + alignof(size_t)),
+        arena((char*)std::aligned_alloc(alignof(std::max_align_t), N * block_size)),
         arena_size(N * block_size),
         next_free_block(N-1)
 #ifdef LOG_ALLOC

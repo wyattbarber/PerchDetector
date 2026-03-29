@@ -289,5 +289,24 @@ void log_dump(std::istream& in, std::ostream& out, const std::vector<std::string
     std::stringstream content;
     content << log.rdbuf();
     out << content.str() << std::endl;
-    return;
+}
+
+
+void set_tick(std::istream& in, std::ostream& out, const std::vector<std::string>& args, program_context& context)
+{
+    if(args.size() < 1)
+    {
+        out << "Tick frequency is required." << std::endl;
+        return;
+    }
+
+    float f = std::stof(args[0]);
+    if(f <= 0.0)
+    {
+        out << "TIck frequency must be a positive value." << std::endl;
+        return;
+    }
+
+    context.tasks.set_tick(f);
+    out << "Program tick set to " << f << " Hz." << std::endl;
 }

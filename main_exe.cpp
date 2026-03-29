@@ -47,6 +47,7 @@ void make_commands(std::map<std::string, cli_cmd_executor>& commands)
     commands["capture"] = &capture;
     commands["exit"] = &exit;
     commands["log"] = &log_dump;
+    commands["tick"] = &set_tick;
 }
 
 

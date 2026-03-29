@@ -40,6 +40,7 @@ void exit(std::istream&, std::ostream&, const std::vector<std::string>&, program
 void capture(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void cmd_list(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void log_dump(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void set_tick(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void call_task_command(const std::string&, std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 
 

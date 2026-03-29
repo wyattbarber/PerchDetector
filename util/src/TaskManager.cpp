@@ -41,3 +41,19 @@ void TaskManager::kill()
         threads[item.first]->join();
     }
 }
+
+
+void TaskManager::set_tick(float f){ tick_period = 1.0 / f; }
+
+
+size_t TaskManager::get_ticks()
+{
+    auto t = std::chrono::steady_clock::now();
+    auto dt = t - last_tick;
+    if(std::chrono::duration<float>(dt).count() >= tick_period)
+    {
+        ++tick_counter;
+        last_tick = t;
+    }
+    return tick_counter;
+}

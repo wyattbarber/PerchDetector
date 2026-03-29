@@ -4,7 +4,7 @@
 #include <map>
 #include <thread>
 #include <utility>
-
+#include <chrono>
 
 /** Container for tasks executed in a program. 
 
@@ -12,6 +12,8 @@
 class TaskManager
 {
 public: 
+    TaskManager(): tick_period(0.1), tick_counter(0) {}
+
     /** Get a pointer of specific type by name.
     
     @tparam Task type to cast the given task to.
@@ -60,6 +62,14 @@ public:
     */
     void kill();
 
+    /** Set the tick frequency.
+    
+    Effectively sets the maximum cycle rate of all tasks.
+
+    @param f Tick frequency to set.
+    */
+    void set_tick(float f);
+
     /** Helpers for compatibility with existing map iteration code in main.
     */
     const auto begin(){ return tasks.begin(); }
@@ -71,17 +81,28 @@ protected:
     std::map<std::string, void(*)(std::shared_ptr<Task>, TaskManager*)> executors;
     std::map<std::string, std::unique_ptr<std::thread>> threads;
     bool running;
-    
+    float tick_period;
+    size_t tick_counter;
+    std::chrono::time_point<std::chrono::steady_clock> last_tick;
+
+    /** Get the number of ticks since program start. 
+    */
+    size_t get_ticks();
+
     template<typename T>
     static void _task_runner(std::shared_ptr<Task> task, TaskManager* manager)
     {
         auto t = std::static_pointer_cast<T>(task);
+        size_t last_tick_count = 0;
         while(manager->running)
         {
-            if(t->is_alive())
+            auto tick = manager->get_ticks();
+            if(t->is_alive() && (tick != last_tick_count))
             {
+                last_tick_count = tick;
                 t->step();
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 };
