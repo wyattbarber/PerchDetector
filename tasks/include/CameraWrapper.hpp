@@ -3,6 +3,7 @@
 #include <Logging.hpp>
 #include <libcamera/libcamera.h>
 #include <memory>
+#include <atomic>
 #include <opencv2/core/mat.hpp>
 #include "Task.hpp"
 #include "DataSource.hpp"
@@ -37,11 +38,11 @@ class CameraWrapper : public DataSource<CameraWrapper>
     @param check Function to check the string id of a detected camera    
     @param color Use RGB color format instead of grayscale.
     */
-    CameraWrapper(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool(*check)(const std::string&), bool color = false) :
+    CameraWrapper(const char* name, const std::shared_ptr<CameraManagerTask> cm, bool(*check)(const std::string&)) :
         DataSource<CameraWrapper>(name, {cm}),
         cm(cm),
         check(check),
-        color(color)
+        next(1)
     {}
 
     /** Starts the camera 
@@ -52,25 +53,10 @@ class CameraWrapper : public DataSource<CameraWrapper>
     */
     void stop_impl();
 
-    void step(){}
+    /** Queues new frame requests.
+    */
+    void step();
 
-    /** Image width
-     * 
-     * @return Width, in pixels
-    */
-    size_t get_width(){ return Width; }
-
-    /** Image height
-     * 
-     * @return Height, in pixels
-    */
-    size_t get_height(){ return Height; }
-    
-    /** Buffer stride
-     * 
-     * @return Bytes between the start of each row in the image, or 0 if there is no padding.
-    */
-    size_t get_stride(){ return stride; }
 
     std::vector<size_t> dims(){ return {Height, Width}; }
 
@@ -112,8 +98,9 @@ protected:
     const std::vector<std::unique_ptr<libcamera::FrameBuffer>>* buffers;
     std::vector<std::unique_ptr<libcamera::Request>> requests;
     std::vector<void*> map;
-    size_t bytes, stride;
-    const bool color;
+    size_t stride;
+    uint8_t next;
+    std::atomic<bool> request_busy;
 };
 
 

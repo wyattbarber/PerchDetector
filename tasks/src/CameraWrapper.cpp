@@ -170,8 +170,7 @@ void CameraWrapper::configure()
         // Only plane 0 is used from each buffer, since we are only using grayscale images.
         const FrameBuffer::Plane& plane = buffer->planes()[0];
         info("Mapping plane of size ", plane.length, " at offset ", plane.offset);
-        bytes = plane.length;
-        void* plane_map = mmap(0, bytes, PROT_READ , MAP_SHARED, plane.fd.get(), plane.offset);
+        void* plane_map = mmap(0, plane.length, PROT_READ , MAP_SHARED, plane.fd.get(), plane.offset);
         if(plane_map == MAP_FAILED)
         {
             error("Failed to map memory: ", strerror(errno));
@@ -192,6 +191,7 @@ bool CameraWrapper::start_impl()
     configure();
     camera->start();
     camera->queueRequest(requests[0].get());
+    request_busy = true;
     return true;
 }
 
@@ -210,23 +210,26 @@ void CameraWrapper::stop_impl()
 }
 
 
-void CameraWrapper::set_freshest(uint8_t idx)
-{ 
-    tick();
-    
-    // Queue next request to begin capture of next frame
-    uint8_t next = idx+1;
-    if( next >= requests.size())
+void CameraWrapper::step()
+{
+    if(!request_busy)
     {
-        next = 0;
-    }    
-    requests[next]->reuse(Request::ReuseBuffers);
-    if(is_alive())
-    {
+        request_busy = true;
+        requests[next]->reuse(Request::ReuseBuffers);
         camera->queueRequest(requests[next].get());
     }
+    ++next;
+    if(next >= requests.size())
+    {
+        next = 0;
+    } 
+}
 
-    // Copy this reuests data to datasource interface
+
+void CameraWrapper::set_freshest(uint8_t idx)
+{    
+    // Copy this requests data to datasource interface
+    request_busy = false;
     auto update = allocate_next();
     uint8_t* src = (uint8_t*)map[idx];
     uint8_t* dst = update->data;

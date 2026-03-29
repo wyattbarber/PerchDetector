@@ -5,7 +5,10 @@ void _task_runner(std::shared_ptr<Task> task, bool* alive)
 {
     while(*alive)
     {
-        task->step();
+        if(task->is_alive())
+        {
+            task->step();
+        }
     }
 }
 

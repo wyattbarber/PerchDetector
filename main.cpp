@@ -26,7 +26,6 @@ int main(int argc, char** argv)
     std::cout << "-- Configuring program" << std::endl;
     context.logfile = std::string("logout.txt");
     context.cal_folder = std::string("~/camera_calibrations");
-    context.color = false;
     context.simulation = false;
     
     int i = 1;
@@ -41,11 +40,6 @@ int main(int argc, char** argv)
         {
             context.cal_folder = std::string(argv[i+1]);
             i += 2;
-        }
-        else if(strcmp(argv[i], "--color") == 0) // Use color images
-        {
-            context.color = true;
-            i++;
         }
         else if(strcmp(argv[i], "--simulate") == 0) // Run with simulated inputs
         {
