@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 
 template<typename T>
 template<typename U>
@@ -15,8 +17,18 @@ BlockAllocator<T>::BlockAllocator(const BlockAllocator<U>& other) : parent(other
 template<typename T>
 T* BlockAllocator<T>::allocate(size_t n)
 {
-    return (T*)parent->allocate(n);        
+    void* block = parent->allocate(n);        
+    size_t space = parent->block_size;
+    void* loc = std::align(
+        alignof(T),
+        sizeof(T),
+        block,
+        space
+    );
+    if(loc == nullptr) throw std::bad_alloc(); // Alignment failed
+    return (T*)loc;
 }
+
 
 template<typename T>
 void BlockAllocator<T>::deallocate(T* p, size_t n)
