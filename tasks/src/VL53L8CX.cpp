@@ -11,11 +11,12 @@ using namespace std::chrono_literals;
 
 bool VL53L8CX::start_impl()
 {
-    uint8_t sharpener;
+    uint8_t sharpener, rate;
     if(!load_json_value_pairs(
         settings,
         std::make_tuple(),
-        "sharpener", sharpener
+        "sharpener", sharpener,
+        "max_rate_hz", rate
     ))
     {
         error("Failed to load lidar settings.");
@@ -61,7 +62,14 @@ bool VL53L8CX::start_impl()
     status = vl53l8cx_set_sharpener_percent(&device, sharpener);
     if(status)
     {
-        error("Failed to set sharpener percent, result ", (int)status);
+        error("Failed to set sharpener to ", sharpener, " percent, result ", (int)status);
+        return false;
+    }
+
+    status = vl53l8cx_set_ranging_frequency_hz(&device, rate);
+    if(status)
+    {
+        error("Failed to set maximum update rate to ", rate, " Hz, result ", (int)status);
         return false;
     }
 
@@ -119,6 +127,7 @@ void VL53L8CX::step()
             warning("Failed to read new data, result ", (int)status);
             return;
         }
+        tick();
 
         update_ptr_type next = allocate_next();
         // Rotate data to match camera frame
@@ -139,7 +148,6 @@ void VL53L8CX::step()
         cv::rotate(src_n_detect, dst_n_detect, cv::ROTATE_90_CLOCKWISE);
 
         swap_data();
-        tick();
     }        
 }
 

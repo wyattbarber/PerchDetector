@@ -1,3 +1,4 @@
 {
-    "sharpener": 20
+    "sharpener": 20,
+    "max_rate_hz": 15
 }
