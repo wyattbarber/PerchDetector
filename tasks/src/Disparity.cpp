@@ -53,6 +53,13 @@ bool DepthCamera::start_impl()
     disp_left = cv::Mat(Height, Width, CV_16S);
     disp_right = cv::Mat(Height, Width, CV_16S);
     depth = cv::Mat(Height, Width, CV_32F);
+    if(downsample)
+    {
+        rect_l_small = cv::Mat(Height/2, Width/2, CV_8U);
+        rect_r_small = cv::Mat(Height/2, Width/2, CV_8U);
+        disp_left_small = cv::Mat(Height/2, Width/2, CV_16S);
+        disp_right_small = cv::Mat(Height/2, Width/2, CV_16S);
+    }
 
     if(!configure_matchers()) return false;
 
@@ -77,8 +84,20 @@ void DepthCamera::step()
     const cv::Mat right_im(Height, Width, CV_8UC1, const_cast<uint8_t*>(latest_right->data));
     rectify(left_im, right_im, rect_l, rect_r);
 
-    stereo_left->compute(rect_l, rect_r, disp_left);
-    stereo_right->compute(rect_r, rect_l, disp_right);
+    if(downsample)
+    {
+        cv::resize(rect_l, rect_l_small, cv::Size(Width/2, Height/2), 0, 0, cv::INTER_AREA);
+        cv::resize(rect_r, rect_r_small, cv::Size(Width/2, Height/2), 0, 0, cv::INTER_AREA);
+        stereo_left->compute(rect_l_small, rect_r_small, disp_left_small);
+        stereo_right->compute(rect_r_small, rect_l_small, disp_right_small);
+        cv::resize(disp_left_small, disp_left, cv::Size(Width, Height), 0, 0, cv::INTER_NEAREST);
+        cv::resize(disp_right_small, disp_right, cv::Size(Width, Height), 0, 0, cv::INTER_NEAREST);
+    }
+    else
+    {
+        stereo_left->compute(rect_l, rect_r, disp_left);
+        stereo_right->compute(rect_r, rect_l, disp_right);
+    }    
     update_ptr_type next = allocate_next();
     filter->filter(
         disp_left, 
@@ -120,7 +139,8 @@ bool DepthCamera::configure_matchers()
         "preFilterCap", preFilterCap,
         "uniquenessRatio", uniquenessRatio,
         "speckleWindowSize", speckleWindowSize,
-        "speckleRange", speckleRange
+        "speckleRange", speckleRange,
+        "downsample", downsample
     ))
     {
         error("Failed to load block matcher settings.");
@@ -235,6 +255,11 @@ void DepthCamera::dist_to_disp(double min_dist, double max_dist, int& min_disp, 
     info("Computing disparity range with baseline ", b, "m and focal length ", f, "px.");
     min_disp = static_cast<int>((f*b) / max_dist);
     max_disp = static_cast<int>((f*b) / min_dist);
+    if(downsample)
+    {
+        min_disp /= 2;
+        max_disp /= 2;
+    }
 }
 
 

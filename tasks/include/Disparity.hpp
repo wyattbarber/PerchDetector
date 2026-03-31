@@ -89,11 +89,13 @@ protected:
     std::shared_ptr<CameraWrapper> left, right;
     typename CameraWrapper::update_ptr_const_type latest_left, latest_right;
 
+    bool downsample;
     cv::Ptr<StereoMatcherType> stereo_left, stereo_right;
     cv::Ptr<cv::ximgproc::DisparityWLSFilter> filter;    
     
     // Intermediate matrices
     cv::Mat rect_l, rect_r, disp_left, disp_right, depth;
+    cv::Mat rect_l_small, rect_r_small, disp_left_small, disp_right_small;
 
     // Camera parameters (distance units are cm)
     const std::string left_cal, right_cal, stereo_cal, stereo_param;
