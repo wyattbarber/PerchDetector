@@ -1,6 +1,9 @@
 #include "hough3d_tform.hpp"
 
 
+using Line = std::tuple<Eigen::Vector<double, 3>,Eigen::Vector<double, 3>, Eigen::Vector<double, 3>>;
+
+
 std::pair<double, double> orthogonal_LSQ(const PointCloud &pc, Vector3d* a, Vector3d* b, Vector3d* c){
 
   // anchor point is mean value
@@ -33,7 +36,7 @@ std::pair<double, double> orthogonal_LSQ(const PointCloud &pc, Vector3d* a, Vect
 }
 
 
-auto hough3d(const std::vector<Point> &points, 
+auto hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, 
     size_t min_vote, 
     size_t maxlines, 
     size_t granularity, 
@@ -47,10 +50,10 @@ auto hough3d(const std::vector<Point> &points,
     // Assemble point cloud and get bounding box
     PointCloud X;
     Vector3d minP, maxP, minPshifted, maxPshifted;
-    for(auto p: points)
+    for(size_t i = 0; i < points.cols(); ++i)
     {
         X.points.push_back(
-            Vector3d(std::get<0>(p), std::get<1>(p), std::get<2>(p))
+            Vector3d(points(0,i), points(1,i), points(2,i))
         );
     }
     X.getMinMax3D(&minP, &maxP);
@@ -110,9 +113,9 @@ auto hough3d(const std::vector<Point> &points,
         if((width_err <= width_tol) && (ratio >= min_ratio) && (cos_theta <= std::sin(max_angle)))
         {
             out.push_back(std::make_tuple(
-                std::make_tuple(a.x, a.y, a.z),
-                std::make_tuple(b.x * l * 3.0, b.y * l * 3.0, b.z * l * 3.0),
-                std::make_tuple(c.x * w * 3.0, c.y * w * 3.0, c.z * w * 3.0)
+                Eigen::Vector<double, 3> {a.x, a.y, a.z},
+                Eigen::Vector<double, 3> {b.x * l * 3.0, b.y * l * 3.0, b.z * l * 3.0},
+                Eigen::Vector<double, 3> {c.x * w * 3.0, c.y * w * 3.0, c.z * w * 3.0}
             ));
 
             ++nlines;
@@ -127,13 +130,13 @@ auto hough3d(const std::vector<Point> &points,
 }
 
 
-auto line_inliers(const std::vector<Point> &points, const Point &a, const Point &b)
+auto line_inliers(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b)
 {
     PointCloud X, Y;
-    for(auto p: points)
+    for(size_t i = 0; i < points.cols(); ++i)
     {
         X.points.push_back(
-            Vector3d(std::get<0>(p), std::get<1>(p), std::get<2>(p))
+            Vector3d(points(0,i), points(1,i), points(2,i))
         );
     }
     Vector3d minP, maxP;
@@ -142,8 +145,8 @@ auto line_inliers(const std::vector<Point> &points, const Point &a, const Point 
 
     std::vector<size_t> out;
     X.pointsCloseToLine(
-        Vector3d(std::get<0>(a), std::get<1>(a), std::get<2>(a)), 
-        Vector3d(std::get<0>(b), std::get<1>(b), std::get<2>(b)), 
+        Vector3d(a(0), a(1), a(2)), 
+        Vector3d(b(0), b(1), b(2)), 
         d / 64.0, out
     );
     return out;
