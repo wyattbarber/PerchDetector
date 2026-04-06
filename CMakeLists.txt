@@ -41,6 +41,17 @@ set_source_files_properties(
 target_link_libraries(stsw_img040 PUBLIC util)
 target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/VL53L8CX_ULD_API/inc)
 
+# 3-D Hough Transform helpers
+add_library(hough3d STATIC
+    hough3d/hough.cpp
+    hough3d/hough3dlines.cpp
+    hough3d/pointcloud.cpp
+    hough3d/sphere.cpp
+    hough3d/vector3d.cpp
+)
+target_include_directories(hough3d PUBLIC hough3d)
+target_link_libraries(hough3d PUBLIC Eigen3::Eigen)
+
 # Library of specific task types
 add_library(tasks STATIC 
     tasks/src/CameraWrapper.cpp
