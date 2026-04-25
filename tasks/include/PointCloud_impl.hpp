@@ -5,7 +5,7 @@
 
 
 template<uint8_t X> 
-bool PointCloud<X>::start_impl()
+bool _PointCloud<X>::start_impl()
 {
     if(!stereo->is_alive()) return false;
 
@@ -67,7 +67,7 @@ bool PointCloud<X>::start_impl()
 
 
 template<uint8_t X> 
-void PointCloud<X>::step()
+void _PointCloud<X>::step()
 {
     this->tick();
     // Compute point cloud

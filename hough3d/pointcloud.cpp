@@ -1,5 +1,5 @@
 //
-// pointcloud.cpp
+// HoughPointCloud.cpp
 //     Class for holding a set of 3D points
 //
 // Author:  Tilman Schramke, Christoph Dalitz
@@ -15,7 +15,7 @@
 
 // translate point cloud so that center = origin
 // total shift applied to this point cloud is stored in this->shift
-void PointCloud::shiftToOrigin(){
+void HoughPointCloud::shiftToOrigin(){
   Vector3d p1, p2, newshift;
   this->getMinMax3D(&p1, &p2);
   newshift = (p1 + p2) / 2.0;
@@ -26,7 +26,7 @@ void PointCloud::shiftToOrigin(){
 }
 
 // mean value of all points (center of gravity)
-Vector3d PointCloud::meanValue() const {
+Vector3d HoughPointCloud::meanValue() const {
   Vector3d ret;
   for(size_t i = 0; i < points.size(); i++){
     ret = ret + points[i];
@@ -38,7 +38,7 @@ Vector3d PointCloud::meanValue() const {
 }
 
 // bounding box corners
-void PointCloud::getMinMax3D(Vector3d* min_pt, Vector3d* max_pt){
+void HoughPointCloud::getMinMax3D(Vector3d* min_pt, Vector3d* max_pt){
   if(points.size() > 0){
     *min_pt = points[0];
     *max_pt = points[0];
@@ -60,7 +60,7 @@ void PointCloud::getMinMax3D(Vector3d* min_pt, Vector3d* max_pt){
 
 // reads point cloud data from the given file
 // (see IPOL paper for file format)
-int PointCloud::readFromFile(const char* path){
+int HoughPointCloud::readFromFile(const char* path){
   FILE* f = fopen(path, "r");
   if (!f) return 1;
 
@@ -89,7 +89,7 @@ int PointCloud::readFromFile(const char* path){
 }
 
 // store points closer than dx to line (a, b) in Y
-void PointCloud::pointsCloseToLine(const Vector3d &a, const Vector3d &b, double dx, PointCloud* Y) {
+void HoughPointCloud::pointsCloseToLine(const Vector3d &a, const Vector3d &b, double dx, HoughPointCloud* Y) {
 
   Y->points.clear();
   for (size_t i=0; i < points.size(); i++) {
@@ -103,7 +103,7 @@ void PointCloud::pointsCloseToLine(const Vector3d &a, const Vector3d &b, double 
 }
 
 // store points closer than dx to line (a, b) in Y
-void PointCloud::pointsCloseToLine(const Vector3d &a, const Vector3d &b, 
+void HoughPointCloud::pointsCloseToLine(const Vector3d &a, const Vector3d &b, 
   double dx, std::vector<size_t>& indices) {
   for (size_t i=0; i < points.size(); i++) {
     // distance computation after IPOL paper Eq. (7)
@@ -115,9 +115,9 @@ void PointCloud::pointsCloseToLine(const Vector3d &a, const Vector3d &b,
   }
 }
 
-// removes the points in Y from PointCloud
-// WARNING: only works when points in same order as in pointCloud!
-void PointCloud::removePoints(const PointCloud &Y){
+// removes the points in Y from HoughPointCloud
+// WARNING: only works when points in same order as in HoughPointCloud!
+void HoughPointCloud::removePoints(const HoughPointCloud &Y){
 
   if (Y.points.empty()) return;
   std::vector<Vector3d> newpoints;
@@ -136,4 +136,17 @@ void PointCloud::removePoints(const PointCloud &Y){
     newpoints.push_back(points[i]);
 
   points = newpoints;
+}
+
+
+Eigen::Matrix<double, 3, Eigen::Dynamic> HoughPointCloud::mat()
+{
+  Eigen::Matrix<double, 3, Eigen::Dynamic> out(3, points.size());
+  for(unsigned i = 0; i < points.size(); ++i)
+  {
+    out(0, i) = points[i].x;
+    out(1, i) = points[i].y;
+    out(2, i) = points[i].z;
+  }
+  return out;
 }

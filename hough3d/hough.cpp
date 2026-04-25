@@ -43,7 +43,7 @@ Hough::~Hough() {
 }
 
 // add all points from point cloud to voting space
-void Hough::add(const PointCloud &pc) {
+void Hough::add(const HoughPointCloud &pc) {
   for (std::vector<Vector3d>::const_iterator it = pc.points.begin();
        it != pc.points.end(); it++) {
     pointVote((*it), true);
@@ -63,7 +63,7 @@ void Hough::add(const PointCloud &pc) {
 }
 
 // subtract all points from point cloud to voting space
-void Hough::subtract(const PointCloud &pc) {
+void Hough::subtract(const HoughPointCloud &pc) {
   for (std::vector<Vector3d>::const_iterator it = pc.points.begin();
        it != pc.points.end(); it++) {
     pointVote((*it), false);

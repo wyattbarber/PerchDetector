@@ -13,13 +13,15 @@ template<uint8_t X> using stereo_point_cloud_t = float[3*num_points<X>()];
 
 
 // Forward declarations and traits for datasource interface
-template<uint8_t X> class PointCloud; 
+template<uint8_t X> class _PointCloud; 
 template<uint8_t X> 
-struct DataSourceTraits<PointCloud<X>>
+struct DataSourceTraits<_PointCloud<X>>
 { 
     using value_type = stereo_point_cloud_t<X>; 
 }; 
 
+
+typedef _PointCloud<50> PointCloud;
 
 /** Converts disparity data into point clouds.
 
@@ -30,7 +32,7 @@ points, ranked by confidence
 @tparam X Percentage of pixels to keep in the point cloud, value 1-100
 */
 template<uint8_t X>
-class PointCloud : public DataSource<PointCloud<X>>
+class _PointCloud : public DataSource<_PointCloud<X>>
 {
 public:
     /** Create new point cloud generator.
@@ -39,8 +41,8 @@ public:
     @param stereo Disparity task to get data from.
     @param cal_path Path to folder containing stereo calibration and settings.
     */
-    PointCloud(const char* name, std::shared_ptr<DepthCamera> stereo, const std::string& cal_path):
-        DataSource<PointCloud<X>>(name, {stereo}),
+    _PointCloud(const char* name, std::shared_ptr<DepthCamera> stereo, const std::string& cal_path):
+        DataSource<_PointCloud<X>>(name, {stereo}),
         stereo(stereo),        
         left_cal(cal_path + "/left.json"),
         right_cal(cal_path + "/right.json"),

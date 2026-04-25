@@ -30,7 +30,7 @@ void make_tasks(program_context& context)
     context.tasks.add(make_data_mapper("lidar_feed", lidar, lidar_display_conv()));
     context.tasks.add(lidar);
 
-    auto pointcloud = std::make_shared<PointCloud<50>>("point_cloud", stereo, context.cal_folder);
+    auto pointcloud = std::make_shared<PointCloud>("point_cloud", stereo, context.cal_folder);
     context.tasks.add(pointcloud);
     context.tasks.add(make_data_mapper("point_cloud_feed", pointcloud));
 }

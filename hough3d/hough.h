@@ -35,9 +35,9 @@ public:
   // returns the line with most votes (rc = number of votes)
   unsigned int getLine(Vector3d* point, Vector3d* direction);
   // add all points from point cloud to voting space
-  void add(const PointCloud &pc);
+  void add(const HoughPointCloud &pc);
   // subtract all points from point cloud to voting space
-  void subtract(const PointCloud &pc);
+  void subtract(const HoughPointCloud &pc);
 
 private:
   // add or subtract (add==false) one point from voting space

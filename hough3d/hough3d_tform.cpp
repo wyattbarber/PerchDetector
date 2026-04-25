@@ -1,10 +1,8 @@
 #include "hough3d_tform.hpp"
 
 
-using Line = std::tuple<Eigen::Vector<double, 3>,Eigen::Vector<double, 3>, Eigen::Vector<double, 3>>;
 
-
-std::pair<double, double> orthogonal_LSQ(const PointCloud &pc, Vector3d* a, Vector3d* b, Vector3d* c){
+std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a, Vector3d* b, Vector3d* c){
 
   // anchor point is mean value
   *a = pc.meanValue();
@@ -36,11 +34,12 @@ std::pair<double, double> orthogonal_LSQ(const PointCloud &pc, Vector3d* a, Vect
 }
 
 
-auto hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, 
+std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, 
     size_t min_vote, 
     size_t maxlines, 
     size_t granularity, 
-    double exp_width, double width_tol, 
+    double min_width, 
+    double max_width, 
     double min_ratio,
     double max_angle)
 {
@@ -48,7 +47,7 @@ auto hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points,
     int num_directions[7] = {12, 21, 81, 321, 1281, 5121, 20481};
 
     // Assemble point cloud and get bounding box
-    PointCloud X;
+    HoughPointCloud X;
     Vector3d minP, maxP, minPshifted, maxPshifted;
     for(size_t i = 0; i < points.cols(); ++i)
     {
@@ -70,7 +69,7 @@ auto hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points,
     Hough hough(minPshifted, maxPshifted, opt_dx, granularity);
     hough.add(X);
 
-    PointCloud Y; // points close to line
+    HoughPointCloud Y; // points close to line
     double l, w;
     unsigned int nvotes;
     int nlines = 0;
@@ -88,7 +87,7 @@ auto hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points,
         X.pointsCloseToLine(a, b, opt_dx, &Y);
 
         // Refine line
-        std::tie<double, double>(l,w) = orthogonal_LSQ(Y, &a, &b, &c);
+        orthogonal_LSQ(Y, &a, &b, &c);
         if (l == 0.0)
             break;
         
@@ -100,22 +99,29 @@ auto hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points,
             break;
 
         // Refine line again?
-        std::tie<double, double>(l,w) = orthogonal_LSQ(Y, &a, &b, &c);
+        orthogonal_LSQ(Y, &a, &b, &c);
         if (l == 0.0)
             break;
         
         a = a + X.shift;
 
-        auto width_err = std::abs((3.0 * w) - exp_width);
+        auto inliers = Y.mat();
+        l = projected_length(inliers, {b.x, b.y, b.z});
+        w = projected_length(inliers, {c.x, c.y, c.z});
         auto ratio = l / w;
         auto cos_theta = std::abs(b.z);
 
-        if((width_err <= width_tol) && (ratio >= min_ratio) && (cos_theta <= std::sin(max_angle)))
+        if(
+            (w <= max_width) && 
+            (w >= min_width) && 
+            (ratio >= min_ratio) && 
+            (cos_theta <= std::sin(max_angle))
+        )
         {
             out.push_back(std::make_tuple(
                 Eigen::Vector<double, 3> {a.x, a.y, a.z},
-                Eigen::Vector<double, 3> {b.x * l * 3.0, b.y * l * 3.0, b.z * l * 3.0},
-                Eigen::Vector<double, 3> {c.x * w * 3.0, c.y * w * 3.0, c.z * w * 3.0}
+                Eigen::Vector<double, 3> {b.x * l, b.y * l, b.z * l},
+                Eigen::Vector<double, 3> {c.x * w, c.y * w, c.z * w}
             ));
 
             ++nlines;
@@ -132,7 +138,7 @@ auto hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points,
 
 auto line_inliers(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b)
 {
-    PointCloud X, Y;
+    HoughPointCloud X, Y;
     for(size_t i = 0; i < points.cols(); ++i)
     {
         X.points.push_back(
@@ -149,5 +155,17 @@ auto line_inliers(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const 
         Vector3d(b(0), b(1), b(2)), 
         d / 64.0, out
     );
+    return out;
+}
+
+
+double projected_length(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, const Eigen::Vector<double, 3>& dir)
+{
+    double out = 0.0;
+    for(size_t i = 0; i < points.cols(); ++i)
+    {
+        double x = points.col(i).dot(dir);
+        if(abs(x) > out) out = x;
+    }
     return out;
 }

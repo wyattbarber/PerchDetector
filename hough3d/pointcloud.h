@@ -1,5 +1,5 @@
 //
-// pointcloud.h
+// PointCloud.h
 //     Class for holding a set of 3D points
 //
 // Author:  Tilman Schramke, Christoph Dalitz
@@ -7,16 +7,18 @@
 // License: see LICENSE-BSD2
 //
 
-#ifndef POINTCLOUD_H_
-#define POINTCLOUD_H_
+#ifndef HoughPointCloud_H_
+#define HoughPointCloud_H_
 
 #include "vector3d.h"
 #include <vector>
 #include <string>
+#include <Eigen/Dense>
 
-class PointCloud {
+
+class HoughPointCloud {
 public:
-  // translation of pointCloud as done by shiftToOrigin()
+  // translation of HoughPointCloud as done by shiftToOrigin()
   Vector3d shift;
   // points of the point cloud
   std::vector<Vector3d> points;
@@ -31,13 +33,15 @@ public:
   int readFromFile(const char* path);
   // store points closer than dx to line (a, b) in Y
   void pointsCloseToLine(const Vector3d &a, const Vector3d &b,
-                         double dx, PointCloud* Y);
+                         double dx, HoughPointCloud* Y);
   void pointsCloseToLine(const Vector3d &a, const Vector3d &b, double dx, std::vector<size_t>& indices);
-  // removes the points in Y from PointCloud
-  // WARNING: only works when points in same order as in pointCloud!
-  void removePoints(const PointCloud &Y);
+  // removes the points in Y from HoughPointCloud
+  // WARNING: only works when points in same order as in HoughPointCloud!
+  void removePoints(const HoughPointCloud &Y);
+  // Convert data to matrix
+  Eigen::Matrix<double, 3, Eigen::Dynamic> mat();
 };
 
 
 
-#endif /* POINTCLOUD_H_ */
+#endif /* HoughPointCloud_H_ */

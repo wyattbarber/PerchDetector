@@ -59,8 +59,9 @@ add_library(tasks STATIC
     tasks/src/CameraSim.cpp
     tasks/src/Disparity.cpp
     tasks/src/VL53L8CX.cpp
+    tasks/src/LineFinder.cpp
 )
-target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen)
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
 target_include_directories(tasks PUBLIC tasks/include)
 
 # Main executable

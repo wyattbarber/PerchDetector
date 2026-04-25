@@ -45,7 +45,7 @@ const char* usage = "Usage:\n"
 // orthogonal least squares fit with libeigen
 // rc = largest eigenvalue
 //
-double orthogonal_LSQ(const PointCloud &pc, Vector3d* a, Vector3d* b){
+double orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a, Vector3d* b){
   double rc = 0.0;
 
   // anchor point is mean value
@@ -176,7 +176,7 @@ int main(int argc, char ** argv) {
   }
 
   // read point cloud from file
-  PointCloud X;
+  HoughPointCloud X;
   if (0 != X.readFromFile(infile_name)) {
     fprintf(stderr, "Error: cannot open infile '%s'!\n", infile_name);
     return 1;
@@ -251,7 +251,7 @@ int main(int argc, char ** argv) {
   
   // iterative Hough transform
   // (Algorithm 1 in IPOL paper)
-  PointCloud Y;	// points close to line
+  HoughPointCloud Y;	// points close to line
   double rc;
   unsigned int nvotes;
   int nlines = 0;

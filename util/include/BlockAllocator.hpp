@@ -84,7 +84,7 @@ class BlockPool
      */
     BlockPool(size_t N, size_t S) :
         block_size(S + ctrl_block_size + sizeof(size_t) + alignof(size_t)),
-        arena((char*)std::aligned_alloc(alignof(std::max_align_t), N * block_size)),
+        arena((char*)std::aligned_alloc(alignof(max_align_t), N * block_size)),
         arena_size(N * block_size),
         next_free_block(N-1)
 #ifdef LOG_ALLOC

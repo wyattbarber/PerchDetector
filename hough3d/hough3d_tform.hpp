@@ -5,7 +5,10 @@
 #include <hough.h>
 
 
-std::pair<double, double> orthogonal_LSQ(const PointCloud &pc, Vector3d* a, Vector3d* b, Vector3d* c);
+using Line = std::tuple<Eigen::Vector<double, 3>,Eigen::Vector<double, 3>, Eigen::Vector<double, 3>>;
+
+
+std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a, Vector3d* b, Vector3d* c);
 
 
 /** Perform a 3D Hough transform on a set of points.
@@ -13,17 +16,19 @@ std::pair<double, double> orthogonal_LSQ(const PointCloud &pc, Vector3d* a, Vect
 @param min_vote Minimum votes required to count a line.
 @param maxlines Maximum number of lines to count before exiting.
 @param granularity Granularity of the parameter space.
+@param min_width Minimum line width to count as a detection.
 @param max_width Maximum line width to count as a detection.
 @param min_ratio Minimum ratio between magnitude of first and second principle components.
 @param max_angle Maximum angle to allow between a detected line and the camera plane.
 
 @return Vector of line parameters
 */
-auto hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, 
+std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, 
     size_t min_vote, 
     size_t maxlines, 
     size_t granularity, 
-    double exp_width, double width_tol, 
+    double min_width, 
+    double max_width, 
     double min_ratio,
     double max_angle);
 
@@ -39,3 +44,13 @@ specified by the given anchor and direction.
 @return Vector of inlier indices
 */
 auto line_inliers(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, const Eigen::Vector<double, 3>& a, const Eigen::Vector<double, 3> &b);
+
+
+/** Measures the width of a point cloud along a direction.
+ * 
+ * 
+ * 
+ * @param points Point cloud to measure
+ * @param dir Unit vector giving the direction along which to measure length.
+ */
+double projected_length(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, const Eigen::Vector<double, 3>& dir);
