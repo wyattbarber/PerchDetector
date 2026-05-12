@@ -12,14 +12,18 @@
 #include "sphere.h"
 
 #include <math.h>
+#include <iostream>
 
 
 // creates the directions by subdivisions of icosahedron
 void Sphere::fromIcosahedron(int subDivisions){
+  std::cout << "Icosahedroning" << std::endl;
   this->getIcosahedron();
+  std::cout << "Subdividing" << std::endl;
   for(int i = 0; i < subDivisions; i++) {
     subDivide();
   }
+  std::cout << "Uniqueing" << std::endl;
   this->makeUnique();
 }
 

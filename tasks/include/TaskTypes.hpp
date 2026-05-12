@@ -8,3 +8,4 @@
 #include <VL53L8CX.hpp>
 #include <DataEncoder.hpp>
 #include <DataMapper.hpp>
+#include <LineFinder.hpp>

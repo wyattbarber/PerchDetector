@@ -33,6 +33,9 @@ void make_tasks(program_context& context)
     auto pointcloud = std::make_shared<PointCloud>("point_cloud", stereo, context.cal_folder);
     context.tasks.add(pointcloud);
     context.tasks.add(make_data_mapper("point_cloud_feed", pointcloud));
+
+    auto detector = std::make_shared<LineFinder>("detector", pointcloud, context.cal_folder);
+    context.tasks.add(detector);
 }
 
 

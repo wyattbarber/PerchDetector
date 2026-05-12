@@ -1,4 +1,5 @@
 #include "hough3d_tform.hpp"
+#include <iostream>
 
 
 
@@ -47,6 +48,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
     int num_directions[7] = {12, 21, 81, 321, 1281, 5121, 20481};
 
     // Assemble point cloud and get bounding box
+    std::cout << "Assembling point cloud" << std::endl;
     HoughPointCloud X;
     Vector3d minP, maxP, minPshifted, maxPshifted;
     for(size_t i = 0; i < points.cols(); ++i)
@@ -60,13 +62,16 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
     X.shiftToOrigin();
     X.getMinMax3D(&minPshifted, &maxPshifted);
 
+    std::cout << "Estimating parameter space" << std::endl;
     // estimate size of Hough space
     double opt_dx = d / 64.0;
     double num_x = floor(d / opt_dx + 0.5);
     double num_cells = num_x * num_x * num_directions[granularity];
 
     // Perform hough transform iteratively
+    std::cout << "Initializing hough tform" << std::endl;
     Hough hough(minPshifted, maxPshifted, opt_dx, granularity);
+    std::cout << "Performing hough tform" << std::endl;
     hough.add(X);
 
     HoughPointCloud Y; // points close to line
@@ -76,6 +81,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
     std::vector<Line> out; // Identified lines
     do
     {
+        std::cout << "Detecting line " << nlines << std::endl;
         Vector3d a; // anchor point of line
         Vector3d b; // direction of line
         Vector3d c; // perpendicular of line

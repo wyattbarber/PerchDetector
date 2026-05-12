@@ -4,7 +4,17 @@
 #include <Eigen/Dense>
 #include <hough.h>
 
+/** Line parameters
 
+Tuple of 3 Eigen vectors, each with 3 double elements. The vectors are:
+
+* anchor: The center of the line
+
+* direction: Vector pointing along the major axis of the line, with length equal to half the measured line length.
+
+* normal: Vector pointing along the minor axis of the line, with length equal to half the measured line width.
+
+*/
 using Line = std::tuple<Eigen::Vector<double, 3>,Eigen::Vector<double, 3>, Eigen::Vector<double, 3>>;
 
 

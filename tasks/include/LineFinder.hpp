@@ -3,11 +3,12 @@
 
 #include "DataSource.hpp"
 #include "PointCloud.hpp"
+#include <hough3d_tform.hpp>
 
 
 typedef struct {
-    float anchor[3];
-    float dir[3];
+    double anchor[3];
+    double dir[3];
 } LineFinderUpdate_t;
 
 FWD_DECL_DATA_SOURCE(LineFinder, LineFinderUpdate_t)
