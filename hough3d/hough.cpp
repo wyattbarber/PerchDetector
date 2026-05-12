@@ -11,7 +11,6 @@
 #include <math.h>
 
 #include <cstdlib>
-#include <iostream>
 
 
 static double roundToNearest(double num) {
@@ -22,14 +21,11 @@ Hough::Hough(const Vector3d& minP, const Vector3d& maxP, double var_dx,
              unsigned int sphereGranularity) {
 
   // compute directional vectors
-  std::cout << "Initializing directional vectors" << std::endl;
   sphere = new Sphere();
-  std::cout << "Computing directional vectors" << std::endl;
   sphere->fromIcosahedron(sphereGranularity);
   num_b = sphere->vertices.size();
 
   // compute x'y' discretization
-  std::cout << "Computing discretization" << std::endl;
   max_x = std::max(maxP.norm(), minP.norm());
   double range_x = 2 * max_x;
   dx = var_dx;
@@ -39,7 +35,6 @@ Hough::Hough(const Vector3d& minP, const Vector3d& maxP, double var_dx,
   num_x = roundToNearest(range_x / dx);
 
   // allocate voting space
-  std::cout << "Allocating voting space" << std::endl;
   VotingSpace.resize(num_x * num_x * num_b);
 }
 
@@ -49,7 +44,6 @@ Hough::~Hough() {
 
 // add all points from point cloud to voting space
 void Hough::add(const HoughPointCloud &pc) {
-  std::cout << "Performing voting" << std::endl;
   for (std::vector<Vector3d>::const_iterator it = pc.points.begin();
        it != pc.points.end(); it++) {
     pointVote((*it), true);
@@ -158,4 +152,11 @@ unsigned int Hough::getLine(Vector3d* a, Vector3d* b){
   a->z = - x * b->x - y * b->y;
 
   return votes;
+}
+
+
+void Hough::reset(){
+  for(auto& x: VotingSpace){
+    x = 0;
+  }
 }

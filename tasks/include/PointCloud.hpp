@@ -58,6 +58,15 @@ public:
     void stop_impl(){}
 
     std::vector<size_t> dims(){ return {num_points<X>(), 3}; }
+
+    /** Provides the maximum dimensions of the point cloud.
+    
+    Returns the dimensions, x (width), y (height), and z (depth),
+    of the bounding box the point cloud may occupy.
+
+    @return Bounding box dimensions.
+    */
+    std::array<double, 3> volume() { return stereo->volume(); }
   
 protected:
     std::shared_ptr<DepthCamera> stereo;

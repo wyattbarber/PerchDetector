@@ -30,33 +30,38 @@ void LineFinder::step()
 
     // Process new point cloud for lines
     const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(const_cast<float*>(latest->data), 3, cloud->dims()[0]);
-    info("Starting hough tform");
     const auto lines = hough3d(
         points.cast<double>(), 
+        *hough,
         min_vote, 
-        max_lines, 
-        granularity, 
+        max_lines,
         min_width, 
         max_width, 
         min_ratio,
         max_angle
     );
-    info("Finished hough tform");
 
-    // Select the canditate line and form data update
-    const auto idx = best_line_idx(lines);
-    const auto anchor = std::get<0>(lines[idx]);
-    const auto dir = std::get<1>(lines[idx]);
-    auto next = allocate_next();
-    memcpy((void*)next->data.anchor, (void*)anchor.data(), 3*sizeof(double));
-    memcpy((void*)next->data.dir, (void*)dir.data(), 3*sizeof(double));
-    swap_data();
+    if(lines.size() > 0)
+    {
+        // Select the canditate line and form data update
+        const auto idx = best_line_idx(lines);
+        const auto anchor = std::get<0>(lines[idx]);
+        const auto dir = std::get<1>(lines[idx]);
+        auto next = allocate_next();
+        memcpy((void*)next->data.anchor, (void*)anchor.data(), 3*sizeof(double));
+        memcpy((void*)next->data.dir, (void*)dir.data(), 3*sizeof(double));
+        swap_data();
+    }
+    else
+    {
+        info("No candidates detected.");
+    }
 }
 
 
 bool LineFinder::start_impl()
 {
-    return load_json_value_pairs(settings,
+    if(!load_json_value_pairs(settings,
         std::make_tuple(),
         "min_vote", min_vote,
         "max_lines", max_lines,
@@ -65,7 +70,22 @@ bool LineFinder::start_impl()
         "max_angle", max_angle,
         "min_width", min_width,
         "max_width", max_width
-    );
+    )) return false;
+    
+    // estimate size of Hough space. Mostly copied from hough 3d library, with size estimated as worst case point cloud bounding box
+    auto volume = cloud->volume();
+    Vector3d min_p(-volume[0]/2.0, -volume[1]/2.0, 0);
+    Vector3d max_p(volume[0]/2.0, volume[1]/2.0, volume[2]);
+    double d = (max_p - min_p).norm();
+    double opt_dx = d / 64.0;
+    hough = new Hough(min_p, max_p, opt_dx, granularity);
+
+    auto next = allocate_next();
+    memset((void*)next->data.anchor, 0, 3*sizeof(double));
+    memset((void*)next->data.dir, 0, 3*sizeof(double));
+    swap_data();
+
+    return true;
 }
 
 

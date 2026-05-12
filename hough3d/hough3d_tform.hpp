@@ -4,6 +4,8 @@
 #include <Eigen/Dense>
 #include <hough.h>
 
+
+
 /** Line parameters
 
 Tuple of 3 Eigen vectors, each with 3 double elements. The vectors are:
@@ -23,9 +25,10 @@ std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a,
 
 /** Perform a 3D Hough transform on a set of points.
 
+@param points Point cloud to process.
+@param hough Initialized hough transform evaluator.
 @param min_vote Minimum votes required to count a line.
 @param maxlines Maximum number of lines to count before exiting.
-@param granularity Granularity of the parameter space.
 @param min_width Minimum line width to count as a detection.
 @param max_width Maximum line width to count as a detection.
 @param min_ratio Minimum ratio between magnitude of first and second principle components.
@@ -33,10 +36,10 @@ std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a,
 
 @return Vector of line parameters
 */
-std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, 
+std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points,
+    Hough& hough,
     size_t min_vote, 
     size_t maxlines, 
-    size_t granularity, 
     double min_width, 
     double max_width, 
     double min_ratio,

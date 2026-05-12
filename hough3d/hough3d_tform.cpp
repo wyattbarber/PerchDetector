@@ -1,10 +1,7 @@
 #include "hough3d_tform.hpp"
-#include <iostream>
-
 
 
 std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a, Vector3d* b, Vector3d* c){
-
   // anchor point is mean value
   *a = pc.meanValue();
 
@@ -36,19 +33,15 @@ std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a,
 
 
 std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, 
+    Hough& hough,
     size_t min_vote, 
     size_t maxlines, 
-    size_t granularity, 
     double min_width, 
     double max_width, 
     double min_ratio,
     double max_angle)
 {
-    // Granularity options
-    int num_directions[7] = {12, 21, 81, 321, 1281, 5121, 20481};
-
     // Assemble point cloud and get bounding box
-    std::cout << "Assembling point cloud" << std::endl;
     HoughPointCloud X;
     Vector3d minP, maxP, minPshifted, maxPshifted;
     for(size_t i = 0; i < points.cols(); ++i)
@@ -57,21 +50,9 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
             Vector3d(points(0,i), points(1,i), points(2,i))
         );
     }
-    X.getMinMax3D(&minP, &maxP);
-    double d = (maxP - minP).norm();
-    X.shiftToOrigin();
-    X.getMinMax3D(&minPshifted, &maxPshifted);
-
-    std::cout << "Estimating parameter space" << std::endl;
-    // estimate size of Hough space
-    double opt_dx = d / 64.0;
-    double num_x = floor(d / opt_dx + 0.5);
-    double num_cells = num_x * num_x * num_directions[granularity];
+    // X.shiftToOrigin();
 
     // Perform hough transform iteratively
-    std::cout << "Initializing hough tform" << std::endl;
-    Hough hough(minPshifted, maxPshifted, opt_dx, granularity);
-    std::cout << "Performing hough tform" << std::endl;
     hough.add(X);
 
     HoughPointCloud Y; // points close to line
@@ -81,7 +62,6 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
     std::vector<Line> out; // Identified lines
     do
     {
-        std::cout << "Detecting line " << nlines << std::endl;
         Vector3d a; // anchor point of line
         Vector3d b; // direction of line
         Vector3d c; // perpendicular of line
@@ -90,7 +70,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         
         // Get the highest voted line
         nvotes = hough.getLine(&a, &b);
-        X.pointsCloseToLine(a, b, opt_dx, &Y);
+        X.pointsCloseToLine(a, b, hough.dx, &Y);
 
         // Refine line
         orthogonal_LSQ(Y, &a, &b, &c);
@@ -98,7 +78,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
             break;
         
         // Refine inliers ?
-        X.pointsCloseToLine(a, b, opt_dx, &Y);
+        X.pointsCloseToLine(a, b, hough.dx, &Y);
         nvotes = Y.points.size();
         if (nvotes < min_vote)
             // Vote threshold not met, exit
@@ -137,6 +117,8 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         X.removePoints(Y);
     } while ((X.points.size() > 1) &&
              ((maxlines == 0) || (maxlines > nlines)));
+
+    hough.reset();
 
     return out;
 }

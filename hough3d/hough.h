@@ -38,6 +38,8 @@ public:
   void add(const HoughPointCloud &pc);
   // subtract all points from point cloud to voting space
   void subtract(const HoughPointCloud &pc);
+  // reset voting space so new point cloud can be accepted
+  void reset();
 
 private:
   // add or subtract (add==false) one point from voting space

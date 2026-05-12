@@ -78,6 +78,15 @@ public:
     void stop_impl(){}
 
     std::vector<size_t> dims(){ return {1}; }
+
+    /** Provides the maximum dimensions of the point cloud.
+    
+    Returns the dimensions, x (width), y (height), and z (depth),
+    of the bounding box the point cloud may occupy.
+
+    @return Bounding box dimensions.
+    */
+    std::array<double, 3> volume();
   
 protected:
     
@@ -102,9 +111,13 @@ protected:
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;
     cv::Mat left_intr, right_intr, left_dist, right_dist, R, T; 
 
+    // Detection bounding box sizes
+    double bb_width, bb_height, bb_depth;
+
     bool configure_matchers();
     bool load_calibration();
     void dist_to_disp(double min_dist, double max_dist, int& min_disp, int& max_disp);
+    std::tuple<double, double> bb_xy(double max_dist);
 };
 
 

@@ -191,6 +191,10 @@ bool DepthCamera::configure_matchers()
     filter->setDepthDiscontinuityRadius(dr);
     filter->setLRCthresh(lrc);
 
+    // Calculate bounding box size
+    bb_depth = max_dist - min_dist;
+    std::tie(bb_width, bb_height) = bb_xy(max_dist);
+
     return true;
 }
 
@@ -260,6 +264,21 @@ void DepthCamera::dist_to_disp(double min_dist, double max_dist, int& min_disp, 
         min_disp /= 2;
         max_disp /= 2;
     }
+}
+
+
+std::tuple<double, double> DepthCamera::bb_xy(double max_dist)
+{
+    auto f = Q.at<double>(2,3);
+    double w = static_cast<double>(CameraWrapper::Width) * max_dist / f;
+    double h = static_cast<double>(CameraWrapper::Height) * max_dist / f;
+    return {w, h};
+}
+
+
+std::array<double, 3> DepthCamera::volume()
+{   
+    return {bb_width, bb_height, bb_depth};
 }
 
 

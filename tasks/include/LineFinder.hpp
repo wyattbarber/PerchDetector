@@ -3,7 +3,7 @@
 
 #include "DataSource.hpp"
 #include "PointCloud.hpp"
-#include <hough3d_tform.hpp>
+#include <hough.h>
 
 
 typedef struct {
@@ -26,8 +26,14 @@ public:
     LineFinder(const char* name, std::shared_ptr<PointCloud> cloud, const std::string& cal_path):
         DataSource<LineFinder>(name, {cloud}),
         cloud(cloud),        
-        settings(cal_path + "/detector.json")
+        settings(cal_path + "/detector.json"),
+        hough(nullptr)
     {}
+
+    ~LineFinder()
+    {
+        if(hough) delete hough;
+    }
 
     void step();
 
@@ -48,4 +54,5 @@ protected:
     double min_width, max_width;
     double min_ratio;
     double max_angle;
+    Hough* hough;
 };
