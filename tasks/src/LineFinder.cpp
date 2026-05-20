@@ -74,8 +74,8 @@ bool LineFinder::start_impl()
     
     // estimate size of Hough space. Mostly copied from hough 3d library, with size estimated as worst case point cloud bounding box
     auto volume = cloud->volume();
-    Vector3d min_p(-volume[0]/2.0, -volume[1]/2.0, 0);
-    Vector3d max_p(volume[0]/2.0, volume[1]/2.0, volume[2]);
+    Eigen::Vector<double, 3> min_p = {-volume[0]/2.0, -volume[1]/2.0, 0};
+    Eigen::Vector<double, 3> max_p = {volume[0]/2.0, volume[1]/2.0, volume[2]};
     double d = (max_p - min_p).norm();
     double opt_dx = d / 64.0;
     hough = new Hough(min_p, max_p, opt_dx, granularity);

@@ -9,7 +9,7 @@
 
 #include "hough.h"
 #include <math.h>
-
+#include "vector3d.h"
 #include <cstdlib>
 
 
@@ -17,7 +17,7 @@ static double roundToNearest(double num) {
   return (num > 0.0) ? floor(num + 0.5) : ceil(num - 0.5);
 }
 
-Hough::Hough(const Vector3d& minP, const Vector3d& maxP, double var_dx,
+Hough::Hough(const Eigen::Vector<double, 3>& minP, const Eigen::Vector<double, 3>& maxP, double var_dx,
              unsigned int sphereGranularity) {
 
   // compute directional vectors
@@ -43,64 +43,38 @@ Hough::~Hough() {
 }
 
 // add all points from point cloud to voting space
-void Hough::add(const HoughPointCloud &pc) {
-  for (std::vector<Vector3d>::const_iterator it = pc.points.begin();
-       it != pc.points.end(); it++) {
-    pointVote((*it), true);
-    // Vote against points that this point would obstruct
-    // for(int x : indices_to_negate)
-    // {
-    //   for(int y : indices_to_negate)
-    //   {
-    //     for(int z : indices_to_negate)
-    //     {
-    //       Vector3d pt(it->x+(dx*x), it->y+(dx*y), it->z+(dx*z));
-    //       pointVote(pt, false);
-    //     }
-    //   }
-    // }
+void Hough::add(const  Eigen::Matrix<double, 3, Eigen::Dynamic> &pc) {
+  for (int i = 0; i < pc.cols(); ++i) {
+    pointVote(pc.col(i), true);
   }
 }
 
 // subtract all points from point cloud to voting space
-void Hough::subtract(const HoughPointCloud &pc) {
-  for (std::vector<Vector3d>::const_iterator it = pc.points.begin();
-       it != pc.points.end(); it++) {
-    pointVote((*it), false);
-    // Undo negation votes
-    // for(int x : indices_to_negate)
-    // {
-    //   for(int y : indices_to_negate)
-    //   {
-    //     for(int z : indices_to_negate)
-    //     {
-    //       Vector3d pt(it->x+(dx*x), it->y+(dx*y), it->z+(dx*z));
-    //       pointVote(pt, true);
-    //     }
-    //   }
-    // }
+void Hough::subtract(const  Eigen::Matrix<double, 3, Eigen::Dynamic> &pc) {
+  for (int i = 0; i < pc.cols(); ++i) {
+    pointVote(pc.col(i), false);
   }
 }
 
 // add or subtract (add==false) one point from voting space
 // (corresponds to inner loop of Algorithm 2 in IPOL paper)
-void Hough::pointVote(const Vector3d& point, bool add){
+void Hough::pointVote(const Eigen::Vector<double, 3>& point, bool add){
 
   // loop over directions B
   for(size_t j = 0; j < sphere->vertices.size(); j++) {
 
-    Vector3d b = sphere->vertices[j];
+    const Vector3d& b = sphere->vertices[j];
     double beta = 1 / (1 + b.z);	// denominator in Eq. (2)
 
     // compute x' according to left hand side of Eq. (2)
-    double x_new = ((1 - (beta * (b.x * b.x))) * point.x)
-      - ((beta * (b.x * b.y)) * point.y)
-      - (b.x * point.z);
+    double x_new = ((1 - (beta * (b.x * b.x))) * point(0))
+      - ((beta * (b.x * b.y)) * point(1))
+      - (b.x * point(2));
 
     // compute y' according to right hand side Eq. (2)
-    double y_new = ((-beta * (b.x * b.y)) * point.x)
-      + ((1 - (beta * (b.y * b.y))) * point.y)
-      - (b.y * point.z);
+    double y_new = ((-beta * (b.x * b.y)) * point(0))
+      + ((1 - (beta * (b.y * b.y))) * point(1))
+      - (b.y * point(2));
 
     size_t x_i = roundToNearest((x_new + max_x) / dx);
     size_t y_i = roundToNearest((y_new + max_x) / dx);
@@ -120,7 +94,7 @@ void Hough::pointVote(const Vector3d& point, bool add){
 }
 
 // returns the line with most votes (rc = number of votes)
-unsigned int Hough::getLine(Vector3d* a, Vector3d* b){
+unsigned int Hough::getLine(Eigen::Vector<double, 3>& a, Eigen::Vector<double, 3>& b){
   unsigned int votes = 0;
   unsigned int index = 0;
 
@@ -142,14 +116,14 @@ unsigned int Hough::getLine(Vector3d* a, Vector3d* b){
   y = y * dx - max_x;
 
   // retrieve directional vector
-  *b = sphere->vertices[index];
+  b = {sphere->vertices[index].x, sphere->vertices[index].y, sphere->vertices[index].z};
 
   // compute anchor point according to Eq. (3)
-  a->x = x * (1 - ((b->x * b->x) / (1 + b->z)))
-    - y * ((b->x * b->y) / (1 + b->z));
-  a->y = x * (-((b->x * b->y) / (1 + b->z)))
-     + y * (1 - ((b->y * b->y) / (1 + b->z)));
-  a->z = - x * b->x - y * b->y;
+  a(0) = x * (1 - ((b(0) * b(0)) / (1 + b(2))))
+    - y * ((b(0) * b(1)) / (1 + b(2)));
+  a(1) = x * (-((b(0) * b(1)) / (1 + b(2))))
+     + y * (1 - ((b(1) * b(1)) / (1 + b(2))));
+  a(2) = - x * b(0) - y * b(1);
 
   return votes;
 }
