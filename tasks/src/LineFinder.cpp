@@ -41,21 +41,26 @@ void LineFinder::step()
         max_angle
     );
 
+    auto next = allocate_next();
     if(lines.size() > 0)
     {
         // Select the canditate line and form data update
+        next->data.valid = true;
         const auto idx = best_line_idx(lines);
         const auto anchor = std::get<0>(lines[idx]);
         const auto dir = std::get<1>(lines[idx]);
-        auto next = allocate_next();
         memcpy((void*)next->data.anchor, (void*)anchor.data(), 3*sizeof(double));
         memcpy((void*)next->data.dir, (void*)dir.data(), 3*sizeof(double));
-        swap_data();
+        next->data.pointcloud = latest;
     }
     else
-    {
-        info("No candidates detected.");
+    {        
+        // Flag update as invalid
+        next->data.valid = false;
+        next->data.pointcloud = latest;
+        warning("No candidates detected.");
     }
+    swap_data();
 }
 
 
@@ -83,7 +88,6 @@ bool LineFinder::start_impl()
     auto next = allocate_next();
     memset((void*)next->data.anchor, 0, 3*sizeof(double));
     memset((void*)next->data.dir, 0, 3*sizeof(double));
-    next->data.pointcloud = latest;
     swap_data();
 
     return true;

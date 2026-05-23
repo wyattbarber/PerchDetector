@@ -7,6 +7,7 @@
 
 
 typedef struct {
+    bool valid;
     double anchor[3];
     double dir[3];
     PointCloud::update_ptr_const_type pointcloud;
