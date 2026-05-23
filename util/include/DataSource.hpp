@@ -82,7 +82,7 @@ public:
 #endif
     { 
         static_assert(
-            std::is_trivially_copy_constructible_v<value_type> || std::is_trivially_default_constructible_v<value_type>, 
+            std::is_copy_constructible_v<value_type> || std::is_default_constructible_v<value_type>, 
             "Datatypes of the DataSource interface must be trivially copy or default constructible."
         ); 
     }

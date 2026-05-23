@@ -110,7 +110,8 @@ void DepthCamera::step()
         cv::Mat(Height, Width, CV_8UC1, next->data.confidence),
         CV_8U
     );
-
+    next->data.left_img = latest_left;
+    next->data.right_img = latest_right;
     swap_data();
 }
 

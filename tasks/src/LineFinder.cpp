@@ -29,7 +29,7 @@ void LineFinder::step()
     tick();
 
     // Process new point cloud for lines
-    const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(const_cast<float*>(latest->data), 3, cloud->dims()[0]);
+    const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(const_cast<float*>(latest->data.cloud), 3, cloud->dims()[0]);
     const auto lines = hough3d(
         points.cast<double>(), 
         *hough,
@@ -83,6 +83,7 @@ bool LineFinder::start_impl()
     auto next = allocate_next();
     memset((void*)next->data.anchor, 0, 3*sizeof(double));
     memset((void*)next->data.dir, 0, 3*sizeof(double));
+    next->data.pointcloud = latest;
     swap_data();
 
     return true;

@@ -9,6 +9,7 @@
 typedef struct {
     double anchor[3];
     double dir[3];
+    PointCloud::update_ptr_const_type pointcloud;
 } LineFinderUpdate_t;
 
 FWD_DECL_DATA_SOURCE(LineFinder, LineFinderUpdate_t)

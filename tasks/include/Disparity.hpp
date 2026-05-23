@@ -10,6 +10,7 @@
 typedef struct {
     int16_t disparity[CameraWrapper::Width * CameraWrapper::Height];
     uint8_t confidence[CameraWrapper::Width * CameraWrapper::Height];
+    CameraWrapper::update_ptr_const_type left_img, right_img;
 } DisparityUpdate_t;
 
 FWD_DECL_DATA_SOURCE(DepthCamera, DisparityUpdate_t)

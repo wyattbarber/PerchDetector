@@ -9,7 +9,13 @@ template<uint8_t X>
 constexpr size_t num_points(){ return (DepthCamera::Height * DepthCamera::Width * X) / 100; }
 
 /// Point cloud type, array of [x0,y0,z0,x1,y1,z1,x2...] coordinates in mm
-template<uint8_t X> using stereo_point_cloud_t = float[3*num_points<X>()];
+template<uint8_t X> 
+class stereo_point_cloud_t
+{
+public:
+    float cloud[3*num_points<X>()];
+    DepthCamera::update_ptr_const_type disparity;
+};
 
 
 // Forward declarations and traits for datasource interface
