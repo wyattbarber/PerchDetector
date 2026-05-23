@@ -2,7 +2,8 @@
 #include <hough3d_tform.hpp>
 #include "json_loader.hpp"
 #include <Eigen/Dense>
-
+#include <iostream>
+#include <fstream>
 
 /** Selects the best candidate line.
 
@@ -97,3 +98,49 @@ bool LineFinder::start_impl()
 void LineFinder::stop_impl()
 {}
 
+
+bool _wait_flag_given(const std::vector<std::string>& args)
+{
+    if(args.size() > 1)
+    {
+        return (args[1] == "--next-valid");
+    }
+    return false;
+}
+
+
+void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
+{
+    // Initialize
+    auto taskptr = (LineFinder*)(task);
+    const auto filename = args[0];
+    std::ofstream file(filename, std::ios::out | std::ios::binary);
+    if(!file.is_open())
+    {
+        out << "Failed to open " << filename << std::endl;
+        return;
+    }
+
+    bool ready = !_wait_flag_given(args);
+    LineFinder::update_ptr_const_type update = taskptr->acquire();
+    // Wait for valid data if not ready
+    while(!ready)
+    {
+        update = taskptr->acquire();
+        ready = update->data.valid;
+    }
+
+    // Pack data
+    const uint32_t n = static_cast<uint32_t>(PointCloud::NumPoints);
+    const uint32_t w = static_cast<uint32_t>(CameraWrapper::Width);
+    const uint32_t h = static_cast<uint32_t>(CameraWrapper::Height);
+
+    file.write((char*)&update->data.anchor, 3*sizeof(double));
+    file.write((char*)&update->data.dir, 3*sizeof(double));
+    file.write((char*)&n, sizeof(uint32_t));
+    file.write((char*)&update->data.pointcloud->data.cloud, n * 3 * sizeof(double));
+    file.write((char*)&w, sizeof(uint32_t));
+    file.write((char*)&h, sizeof(uint32_t));
+    file.write((char*)&update->data.pointcloud->data.disparity->data.left_img->data, w*h*sizeof(uint8_t));
+    file.write((char*)&update->data.pointcloud->data.disparity->data.right_img->data, w*h*sizeof(uint8_t));
+}

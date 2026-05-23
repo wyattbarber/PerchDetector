@@ -41,6 +41,8 @@ template<uint8_t X>
 class _PointCloud : public DataSource<_PointCloud<X>>
 {
 public:
+    static constexpr size_t NumPoints = num_points<X>();
+
     /** Create new point cloud generator.
     
     @param name Name of the new task.
