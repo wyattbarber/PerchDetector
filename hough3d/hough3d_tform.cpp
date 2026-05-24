@@ -21,7 +21,7 @@ void orthogonal_LSQ(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, Eige
 }
 
 
-std::vector<Line> hough3d(const Eigen::Matrix<double, Eigen::Dynamic, 3> &points, 
+std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, 
     Hough& hough,
     size_t min_vote, 
     size_t maxlines, 

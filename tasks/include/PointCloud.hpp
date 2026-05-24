@@ -88,5 +88,19 @@ protected:
     double filter_r;
 };
 
+/** Converts point clouds to flat stream for sharing
+*/
+template<unsigned X>
+class _point_cloud_conv
+{ 
+public:
+    using conversion_type = float[3*num_points<X>()];
+    static std::vector<size_t> dims() { return {3, _PointCloud<X>::NumPoints}; }
+    static void eval(void* dst, const typename _PointCloud<X>::value_type& src)
+    {
+        memcpy(dst, (void*)src.cloud, 3*num_points<X>()*sizeof(float));
+    }
+};
+using point_cloud_conv = _point_cloud_conv<50>;
 
 #include "PointCloud_impl.hpp"

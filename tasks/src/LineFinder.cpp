@@ -138,7 +138,7 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
     file.write((char*)&update->data.anchor, 3*sizeof(double));
     file.write((char*)&update->data.dir, 3*sizeof(double));
     file.write((char*)&n, sizeof(uint32_t));
-    file.write((char*)&update->data.pointcloud->data.cloud, n * 3 * sizeof(double));
+    file.write((char*)&update->data.pointcloud->data.cloud, n * 3 * sizeof(float));
     file.write((char*)&w, sizeof(uint32_t));
     file.write((char*)&h, sizeof(uint32_t));
     file.write((char*)&update->data.pointcloud->data.disparity->data.left_img->data, w*h*sizeof(uint8_t));

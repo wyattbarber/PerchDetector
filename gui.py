@@ -296,7 +296,7 @@ def _pt_cloud_callback_filter(data):
         ptc = np.asarray(o3p.farthest_point_down_sample(elements["point_cloud_n_max"]).points)
     else:
         ptc = data
-    return ptc @ elements["point_cloud_rotation"].T
+    return ptc.T @ elements["point_cloud_rotation"].T 
 
 async def _pt_cloud_callback():
     global elements

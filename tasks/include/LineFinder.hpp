@@ -24,7 +24,7 @@ FWD_DECL_DATA_SOURCE(LineFinder, LineFinderUpdate_t)
  *  - Line anchor [3 * sizeof(double)]
  *  - Line direction [3 * sizeof(double)]
  *  - N, Number of points in point cloud [sizeof(uint32_t)]
- *  - Point cloud vectors, (X, Y, X) form [N * 3 * sizeof(double)]
+ *  - Point cloud vectors, (X, Y, X) form [N * 3 * sizeof(float)]
  *  - W, Image width (px) [sizeof(uint32_t)]
  *  - H, Image height (px) [sizeof(uint32_t)]
  *  - Left grayscale image pixels [W * H * sizeof(uint8_t)]
