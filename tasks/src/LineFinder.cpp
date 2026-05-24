@@ -2,7 +2,8 @@
 #include <hough3d_tform.hpp>
 #include "json_loader.hpp"
 #include <Eigen/Dense>
-
+#include <iostream>
+#include <fstream>
 
 /** Selects the best candidate line.
 
@@ -29,7 +30,7 @@ void LineFinder::step()
     tick();
 
     // Process new point cloud for lines
-    const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(const_cast<float*>(latest->data), 3, cloud->dims()[0]);
+    const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(const_cast<float*>(latest->data.cloud), 3, cloud->dims()[0]);
     const auto lines = hough3d(
         points.cast<double>(), 
         *hough,
@@ -41,21 +42,26 @@ void LineFinder::step()
         max_angle
     );
 
+    auto next = allocate_next();
     if(lines.size() > 0)
     {
         // Select the canditate line and form data update
+        next->data.valid = true;
         const auto idx = best_line_idx(lines);
         const auto anchor = std::get<0>(lines[idx]);
         const auto dir = std::get<1>(lines[idx]);
-        auto next = allocate_next();
         memcpy((void*)next->data.anchor, (void*)anchor.data(), 3*sizeof(double));
         memcpy((void*)next->data.dir, (void*)dir.data(), 3*sizeof(double));
-        swap_data();
+        next->data.pointcloud = latest;
     }
     else
-    {
-        info("No candidates detected.");
+    {        
+        // Flag update as invalid
+        next->data.valid = false;
+        next->data.pointcloud = latest;
+        warning("No candidates detected.");
     }
+    swap_data();
 }
 
 
@@ -74,8 +80,8 @@ bool LineFinder::start_impl()
     
     // estimate size of Hough space. Mostly copied from hough 3d library, with size estimated as worst case point cloud bounding box
     auto volume = cloud->volume();
-    Vector3d min_p(-volume[0]/2.0, -volume[1]/2.0, 0);
-    Vector3d max_p(volume[0]/2.0, volume[1]/2.0, volume[2]);
+    Eigen::Vector<double, 3> min_p = {-volume[0]/2.0, -volume[1]/2.0, 0};
+    Eigen::Vector<double, 3> max_p = {volume[0]/2.0, volume[1]/2.0, volume[2]};
     double d = (max_p - min_p).norm();
     double opt_dx = d / 64.0;
     hough = new Hough(min_p, max_p, opt_dx, granularity);
@@ -92,3 +98,49 @@ bool LineFinder::start_impl()
 void LineFinder::stop_impl()
 {}
 
+
+bool _wait_flag_given(const std::vector<std::string>& args)
+{
+    if(args.size() > 1)
+    {
+        return (args[1] == "--next-valid");
+    }
+    return false;
+}
+
+
+void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
+{
+    // Initialize
+    auto taskptr = (LineFinder*)(task);
+    const auto filename = args[0];
+    std::ofstream file(filename, std::ios::out | std::ios::binary);
+    if(!file.is_open())
+    {
+        out << "Failed to open " << filename << std::endl;
+        return;
+    }
+
+    bool ready = !_wait_flag_given(args);
+    LineFinder::update_ptr_const_type update = taskptr->acquire();
+    // Wait for valid data if not ready
+    while(!ready)
+    {
+        update = taskptr->acquire();
+        ready = update->data.valid;
+    }
+
+    // Pack data
+    const uint32_t n = static_cast<uint32_t>(PointCloud::NumPoints);
+    const uint32_t w = static_cast<uint32_t>(CameraWrapper::Width);
+    const uint32_t h = static_cast<uint32_t>(CameraWrapper::Height);
+
+    file.write((char*)&update->data.anchor, 3*sizeof(double));
+    file.write((char*)&update->data.dir, 3*sizeof(double));
+    file.write((char*)&n, sizeof(uint32_t));
+    file.write((char*)&update->data.pointcloud->data.cloud, n * 3 * sizeof(double));
+    file.write((char*)&w, sizeof(uint32_t));
+    file.write((char*)&h, sizeof(uint32_t));
+    file.write((char*)&update->data.pointcloud->data.disparity->data.left_img->data, w*h*sizeof(uint8_t));
+    file.write((char*)&update->data.pointcloud->data.disparity->data.right_img->data, w*h*sizeof(uint8_t));
+}

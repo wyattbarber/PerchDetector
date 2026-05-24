@@ -87,10 +87,11 @@ void _PointCloud<X>::step()
     {
         auto idx_orig = confidence_w_indices[i].second;
         // Copy best points and convert to mm
-        next->data[3*i] = point_clout_ptr[3*idx_orig] * 1000.0; // x
-        next->data[3*i + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
-        next->data[3*i + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
+        next->data.cloud[3*i] = point_clout_ptr[3*idx_orig] * 1000.0; // x
+        next->data.cloud[3*i + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
+        next->data.cloud[3*i + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
     }
+    next->data.disparity = latest_disparity;
     this->swap_data();
 
     // Wait for next update

@@ -15,33 +15,12 @@
 #include <string>
 #include <Eigen/Dense>
 
-
-class HoughPointCloud {
-public:
-  // translation of HoughPointCloud as done by shiftToOrigin()
-  Vector3d shift;
-  // points of the point cloud
-  std::vector<Vector3d> points;
-
-  // translate point cloud so that center = origin
-  void shiftToOrigin();
-  // mean value of all points (center of gravity)
-  Vector3d meanValue() const;
-  // bounding box corners
-  void getMinMax3D(Vector3d* min_pt, Vector3d* max_pt);
-  // reads point cloud data from the given file
-  int readFromFile(const char* path);
-  // store points closer than dx to line (a, b) in Y
-  void pointsCloseToLine(const Vector3d &a, const Vector3d &b,
-                         double dx, HoughPointCloud* Y);
-  void pointsCloseToLine(const Vector3d &a, const Vector3d &b, double dx, std::vector<size_t>& indices);
-  // removes the points in Y from HoughPointCloud
-  // WARNING: only works when points in same order as in HoughPointCloud!
-  void removePoints(const HoughPointCloud &Y);
-  // Convert data to matrix
-  Eigen::Matrix<double, 3, Eigen::Dynamic> mat();
-};
-
-
+// store points closer than dx to line (a, b) in Y
+Eigen::Matrix<double, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic>& X, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b,  double dx);
+std::vector<size_t> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic>& Y, const Eigen::Vector<double,3> &a, const Eigen::Vector<double,3> &b, double dx);
+  
+// removes the points in Y from HoughPointCloud
+// WARNING: only works when points in same order as in HoughPointCloud!
+Eigen::Matrix<double, 3, Eigen::Dynamic> removePoints(const Eigen::Matrix<double, 3, Eigen::Dynamic>& X, const Eigen::Matrix<double, 3, Eigen::Dynamic>& Y);
 
 #endif /* HoughPointCloud_H_ */

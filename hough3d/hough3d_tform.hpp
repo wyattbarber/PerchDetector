@@ -20,8 +20,7 @@ Tuple of 3 Eigen vectors, each with 3 double elements. The vectors are:
 using Line = std::tuple<Eigen::Vector<double, 3>,Eigen::Vector<double, 3>, Eigen::Vector<double, 3>>;
 
 
-std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a, Vector3d* b, Vector3d* c);
-
+void orthogonal_LSQ(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, Eigen::Vector<double, 3>& a, Eigen::Vector<double, 3>& b, Eigen::Vector<double, 3>& c);
 
 /** Perform a 3D Hough transform on a set of points.
 
