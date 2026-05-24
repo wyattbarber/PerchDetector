@@ -1,17 +1,9 @@
 #include "hough3d_tform.hpp"
 
 
-std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a, Vector3d* b, Vector3d* c){
+std::pair<double, double> orthogonal_LSQ(const Eigen::Matrix<double, Eigen::Dynamic, 3> &points, Vector3d* a, Vector3d* b, Vector3d* c){
   // anchor point is mean value
-  *a = pc.meanValue();
-
-  // copy points to libeigen matrix
-  Eigen::MatrixXf points = Eigen::MatrixXf::Constant(pc.points.size(), 3, 0);
-  for (int i = 0; i < points.rows(); i++) {
-    points(i,0) = pc.points.at(i).x;
-    points(i,1) = pc.points.at(i).y;
-    points(i,2) = pc.points.at(i).z;
-  }
+  *a = points.mean();
 
   // compute scatter matrix ...
   Eigen::MatrixXf centered = points.rowwise() - points.colwise().mean();
@@ -32,7 +24,7 @@ std::pair<double, double> orthogonal_LSQ(const HoughPointCloud &pc, Vector3d* a,
 }
 
 
-std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, 
+std::vector<Line> hough3d(const Eigen::Matrix<double, Eigen::Dynamic, 3> &points, 
     Hough& hough,
     size_t min_vote, 
     size_t maxlines, 
@@ -41,21 +33,10 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
     double min_ratio,
     double max_angle)
 {
-    // Assemble point cloud and get bounding box
-    HoughPointCloud X;
-    Vector3d minP, maxP, minPshifted, maxPshifted;
-    for(size_t i = 0; i < points.cols(); ++i)
-    {
-        X.points.push_back(
-            Vector3d(points(0,i), points(1,i), points(2,i))
-        );
-    }
-    // X.shiftToOrigin();
-
     // Perform hough transform iteratively
-    hough.add(X);
+    hough.add(points);
 
-    HoughPointCloud Y; // points close to line
+    Eigen::Matrix<double, Eigen::Dynamic, 3> Y; // points close to line
     double l, w;
     unsigned int nvotes;
     int nlines = 0;
@@ -70,7 +51,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         
         // Get the highest voted line
         nvotes = hough.getLine(&a, &b);
-        X.pointsCloseToLine(a, b, hough.dx, &Y);
+        pointsCloseToLine(X, a, b, hough.dx, Y);
 
         // Refine line
         orthogonal_LSQ(Y, &a, &b, &c);
@@ -78,8 +59,8 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
             break;
         
         // Refine inliers ?
-        X.pointsCloseToLine(a, b, hough.dx, &Y);
-        nvotes = Y.points.size();
+        pointsCloseToLine(X, a, b, hough.dx, Y);
+        nvotes = Y.cols();
         if (nvotes < min_vote)
             // Vote threshold not met, exit
             break;
@@ -89,11 +70,10 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         if (l == 0.0)
             break;
         
-        a = a + X.shift;
+        // a = a + X.shift;
 
-        auto inliers = Y.mat();
-        l = projected_length(inliers, {b.x, b.y, b.z});
-        w = projected_length(inliers, {c.x, c.y, c.z});
+        l = projected_length(Y, {b.x, b.y, b.z});
+        w = projected_length(Y, {c.x, c.y, c.z});
         auto ratio = l / w;
         auto cos_theta = std::abs(b.z);
 
@@ -114,8 +94,8 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         }
         
         // Remove this line to prepare to get the next highest voted
-        X.removePoints(Y);
-    } while ((X.points.size() > 1) &&
+        removePoints(X, Y);
+    } while ((X.cols() > 1) &&
              ((maxlines == 0) || (maxlines > nlines)));
 
     hough.reset();
@@ -127,7 +107,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
 auto line_inliers(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b)
 {
     HoughPointCloud X, Y;
-    for(size_t i = 0; i < points.cols(); ++i)
+    for(int i = 0; i < points.cols(); ++i)
     {
         X.points.push_back(
             Vector3d(points(0,i), points(1,i), points(2,i))
@@ -147,10 +127,10 @@ auto line_inliers(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const 
 }
 
 
-double projected_length(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, const Eigen::Vector<double, 3>& dir)
+double projected_length(const Eigen::Matrix<double, Eigen::Dynamic, 3>& points, const Eigen::Vector<double, 3>& dir)
 {
     double out = 0.0;
-    for(size_t i = 0; i < points.cols(); ++i)
+    for(int i = 0; i < points.cols(); ++i)
     {
         double x = points.col(i).dot(dir);
         if(abs(x) > out) out = x;

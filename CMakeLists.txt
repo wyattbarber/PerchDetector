@@ -45,7 +45,7 @@ target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/V
 add_library(hough3d STATIC
     hough3d/hough3d_tform.cpp
     hough3d/hough.cpp
-    hough3d/hough3dlines.cpp
+#    hough3d/hough3dlines.cpp
     hough3d/pointcloud.cpp
     hough3d/sphere.cpp
     hough3d/vector3d.cpp

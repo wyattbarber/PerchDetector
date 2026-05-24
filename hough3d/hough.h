@@ -16,6 +16,8 @@
 #include "pointcloud.h"
 #include <vector>
 #include <deque>
+#include <Eigen/Dense>
+
 
 class Hough {
 public:
@@ -35,9 +37,9 @@ public:
   // returns the line with most votes (rc = number of votes)
   unsigned int getLine(Vector3d* point, Vector3d* direction);
   // add all points from point cloud to voting space
-  void add(const HoughPointCloud &pc);
+  void add(const Eigen::Matrix<double, Eigen::Dynamic, 3> &pc);
   // subtract all points from point cloud to voting space
-  void subtract(const HoughPointCloud &pc);
+  void subtract(const Eigen::Matrix<double, Eigen::Dynamic, 3> &pc);
   // reset voting space so new point cloud can be accepted
   void reset();
 

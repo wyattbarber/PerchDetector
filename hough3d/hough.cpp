@@ -43,42 +43,16 @@ Hough::~Hough() {
 }
 
 // add all points from point cloud to voting space
-void Hough::add(const HoughPointCloud &pc) {
-  for (std::vector<Vector3d>::const_iterator it = pc.points.begin();
-       it != pc.points.end(); it++) {
-    pointVote((*it), true);
-    // Vote against points that this point would obstruct
-    // for(int x : indices_to_negate)
-    // {
-    //   for(int y : indices_to_negate)
-    //   {
-    //     for(int z : indices_to_negate)
-    //     {
-    //       Vector3d pt(it->x+(dx*x), it->y+(dx*y), it->z+(dx*z));
-    //       pointVote(pt, false);
-    //     }
-    //   }
-    // }
+void Hough::add(const  Eigen::Matrix<double, Eigen::Dynamic, 3> &pc) {
+  for (int i = 0; i < pc.rows(); ++i) {
+    pointVote({pc(i,0),pc(i,1),pc(i,2)}, true);
   }
 }
 
 // subtract all points from point cloud to voting space
-void Hough::subtract(const HoughPointCloud &pc) {
-  for (std::vector<Vector3d>::const_iterator it = pc.points.begin();
-       it != pc.points.end(); it++) {
-    pointVote((*it), false);
-    // Undo negation votes
-    // for(int x : indices_to_negate)
-    // {
-    //   for(int y : indices_to_negate)
-    //   {
-    //     for(int z : indices_to_negate)
-    //     {
-    //       Vector3d pt(it->x+(dx*x), it->y+(dx*y), it->z+(dx*z));
-    //       pointVote(pt, true);
-    //     }
-    //   }
-    // }
+void Hough::subtract(const  Eigen::Matrix<double, Eigen::Dynamic, 3> &pc) {
+  for (int i = 0; i < pc.rows(); ++i) {
+    pointVote({pc(i,0),pc(i,1),pc(i,2)}, false);
   }
 }
 
