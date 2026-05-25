@@ -14,6 +14,7 @@ class stereo_point_cloud_t
 {
 public:
     float cloud[3*num_points<X>()];
+    size_t n_valid;
     DepthCamera::update_ptr_const_type disparity;
 };
 
@@ -84,6 +85,7 @@ protected:
     cv::Mat Q, point_cloud;
     std::pair<uint8_t, size_t> confidence_w_indices[DepthCamera::Height*DepthCamera::Width];
 
+    double max_dist, min_dist;
     unsigned filter_n;
     double filter_r;
 };

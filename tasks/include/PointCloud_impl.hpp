@@ -49,6 +49,17 @@ bool _PointCloud<X>::start_impl()
         0 
     );
 
+    if(!load_json_value_pairs(
+        stereo_param,
+        std::make_tuple("stereo"),
+        "minDistance", min_dist,
+        "maxDistance", max_dist
+    ))
+    {
+        this->error("Failed to load point cloud distance settings.");
+        return false;
+    }
+
     // Load filtering settings
     if(!load_json_value_pairs(
         stereo_param,
@@ -94,16 +105,21 @@ void _PointCloud<X>::step()
     );
     // Copy best points to new update
     auto next = this->allocate_next();        
+    next->data.n_valid = 0;
+    next->data.disparity = latest_disparity;
     auto point_clout_ptr = reinterpret_cast<float*>(point_cloud.data);
-    for(size_t i = split_idx, j = 0; i < DepthCamera::Height*DepthCamera::Width; ++i, ++j)
+    for(size_t i = split_idx; i < DepthCamera::Height*DepthCamera::Width; ++i)
     {
         auto idx_orig = confidence_w_indices[i].second;
-        // Copy best points and convert to mm
-        next->data.cloud[3*j] = point_clout_ptr[3*idx_orig] * 1000.0; // x
-        next->data.cloud[3*j + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
-        next->data.cloud[3*j + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
+        if((point_clout_ptr[3*idx_orig + 2] >= min_dist) && (point_clout_ptr[3*idx_orig + 2] <= max_dist))
+        {
+            // Copy best points and convert to mm
+            next->data.cloud[3*next->data.n_valid] = point_clout_ptr[3*idx_orig] * 1000.0; // x
+            next->data.cloud[3*next->data.n_valid + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
+            next->data.cloud[3*next->data.n_valid + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
+            ++next->data.n_valid;
+        }
     }
-    next->data.disparity = latest_disparity;
     this->swap_data();
 
     // Wait for next update

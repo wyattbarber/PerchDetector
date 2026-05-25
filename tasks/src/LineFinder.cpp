@@ -30,7 +30,10 @@ void LineFinder::step()
     tick();
 
     // Process new point cloud for lines
-    const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(const_cast<float*>(latest->data.cloud), 3, cloud->dims()[0]);
+    const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(
+        const_cast<float*>(latest->data.cloud),
+        3, latest->data.n_valid
+    );
     const auto lines = hough3d(
         points.cast<double>(), 
         *hough,
