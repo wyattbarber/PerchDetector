@@ -33,7 +33,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
     // Perform hough transform iteratively
     hough.add(points);
 
-    Eigen::Matrix<double, 3, Eigen::Dynamic> Y; // points close to line
+    std::vector<size_t> Y; // points close to line
     double l, w;
     unsigned int nvotes;
     int nlines = 0;
@@ -44,29 +44,28 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         Eigen::Vector<double, 3> b; // direction of line
         Eigen::Vector<double, 3> c; // perpendicular of line
 
-        hough.subtract(Y); // do it here to save one call
+        hough.subtract(points(Eigen::placeholders::all, Y)); // do it here to save one call
 
         // Get the highest voted line
-        nvotes = hough.getLine(a, b);        
-        Y = pointsCloseToLine(points, a, b, hough.dx);
+        Y = indicesCloseToLine(points, a, b, hough.dx);
 
         // Refine line
-        orthogonal_LSQ(Y, a, b, c);
+        orthogonal_LSQ(points(Eigen::placeholders::all, Y), a, b, c);
 
         // Refine inliers ?
-        Y = pointsCloseToLine(points, a, b, hough.dx);
-        nvotes = Y.cols();
+        Y = indicesCloseToLine(points, a, b, hough.dx);
+        nvotes = Y.size();
         if (nvotes < min_vote)
             // Vote threshold not met, exit
             break;
 
         // Refine line again?
-        orthogonal_LSQ(Y, a, b, c);
+        orthogonal_LSQ(points(Eigen::placeholders::all, Y), a, b, c);
 
         // a += shift;
 
-        std::tie(l, w) = dimensions(Y, a, b, c);
-        
+        std::tie(l, w) = dimensions(points(Eigen::placeholders::all, Y), a, b, c);
+
         auto ratio = l / w;
         auto cos_theta = std::abs(b(2));
 
