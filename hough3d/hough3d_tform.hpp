@@ -63,6 +63,8 @@ auto line_inliers(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, const 
  * 
  * 
  * @param points Point cloud to measure
+ * @param anchor Point on line
  * @param dir Unit vector giving the direction along which to measure length.
+ * @param normal Unit vector giving the direction along which to measure width.
  */
-double projected_length(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points, const Eigen::Vector<double, 3>& dir);
+ std::pair<double, double> dimensions(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const Eigen::Vector<double, 3> &anchor, const Eigen::Vector<double, 3> &dir, const Eigen::Vector<double, 3> &normal);

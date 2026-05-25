@@ -60,6 +60,9 @@ bool _PointCloud<X>::start_impl()
         this->error("Failed to load point cloud filter settings.");
         return false;
     }
+
+    // Allocate intermediate
+    point_cloud = cv::Mat(DepthCamera::Height, DepthCamera::Width, CV_32FC3);
     
     latest_disparity = stereo->acquire();
     return true;
@@ -79,17 +82,26 @@ void _PointCloud<X>::step()
         confidence_w_indices[i].first = latest_disparity->data.confidence[i];
         confidence_w_indices[i].second = i;
     }
-    std::partial_sort(confidence_w_indices, confidence_w_indices+num_points<X>(), confidence_w_indices+(DepthCamera::Height*DepthCamera::Width));
+    const size_t split_idx = (DepthCamera::Height*DepthCamera::Width) - num_points<X>();
+    std::partial_sort(
+        confidence_w_indices, 
+        confidence_w_indices+split_idx, 
+        confidence_w_indices+(DepthCamera::Height*DepthCamera::Width),
+        [](const std::pair<uint8_t, size_t>& a, const std::pair<uint8_t, size_t>& b)
+        {
+            return a.first < b.first;
+        }
+    );
     // Copy best points to new update
     auto next = this->allocate_next();        
     auto point_clout_ptr = reinterpret_cast<float*>(point_cloud.data);
-    for(size_t i = 0; i < num_points<X>(); ++i)
+    for(size_t i = split_idx, j = 0; i < DepthCamera::Height*DepthCamera::Width; ++i, ++j)
     {
         auto idx_orig = confidence_w_indices[i].second;
         // Copy best points and convert to mm
-        next->data.cloud[3*i] = point_clout_ptr[3*idx_orig] * 1000.0; // x
-        next->data.cloud[3*i + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
-        next->data.cloud[3*i + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
+        next->data.cloud[3*j] = point_clout_ptr[3*idx_orig] * 1000.0; // x
+        next->data.cloud[3*j + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
+        next->data.cloud[3*j + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
     }
     next->data.disparity = latest_disparity;
     this->swap_data();

@@ -65,8 +65,8 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
 
         // a += shift;
 
-        l = projected_length(Y, b);
-        w = projected_length(Y, c);
+        std::tie(l, w) = dimensions(Y, a, b, c);
+        
         auto ratio = l / w;
         auto cos_theta = std::abs(b(2));
 
@@ -101,14 +101,18 @@ auto line_inliers(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const 
 }
 
 
-double projected_length(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const Eigen::Vector<double, 3> &dir)
+std::pair<double, double> dimensions(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const Eigen::Vector<double, 3> &anchor, const Eigen::Vector<double, 3> &dir, const Eigen::Vector<double, 3> &normal)
 {
-    double out = 0.0;
-    for (int i = 0; i < points.cols(); ++i)
+    const auto shifted = points.colwise() - anchor;
+    double length_max = 0.0, length_min = 0.0, width_max = 0.0, width_min = 0.0;
+    for (int i = 0; i < shifted.cols(); ++i)
     {
-        double x = abs(points.col(i).dot(dir));
-        if (x > out)
-            out = x;
+        double l = std::abs(shifted.col(i).dot(dir));
+        length_max = std::max(l, length_max);
+        length_min = std::min(l, length_min);
+        double w = std::abs(shifted.col(i).dot(normal));
+        width_max = std::max(w, width_max);
+        width_min = std::min(w, width_min);
     }
-    return out;
+    return {(length_max - length_min) / 2.0, (width_max - width_min) / 2.0};
 }
