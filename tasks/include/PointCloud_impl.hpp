@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <json_loader.hpp>
+#include <open3d/Open3D.h>
 
 
 template<uint8_t X> 
@@ -120,6 +121,18 @@ void _PointCloud<X>::step()
             ++next->data.n_valid;
         }
     }
+    // Remove noisy outliers
+    open3d::core::Tensor mapped_points(
+        next->data.cloud,
+        {next->data.n_valid, 3},
+        open3d::core::Float32,
+        open3d::core::Device("CPU:0")
+    );
+    open3d::t::geometry::PointCloud ptc;
+    ptc.SetPointPositions(mapped_points);
+    const auto filtered_points = std::get<0>(ptc.RemoveRadiusOutliers(filter_n, filter_r)).GetPointPositions();
+    memcpy(next->data.cloud, filtered_points.GetDataPtr<float>(), filtered_points.GetLength() * 3 * sizeof(float));
+    next->data.n_valid = filtered_points.GetLength();
     this->swap_data();
 
     // Wait for next update

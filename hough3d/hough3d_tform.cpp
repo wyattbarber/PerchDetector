@@ -44,13 +44,13 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         Eigen::Vector<double, 3> b; // direction of line
         Eigen::Vector<double, 3> c; // perpendicular of line
 
-        hough.subtract(points(Eigen::placeholders::all, Y)); // do it here to save one call
+        hough.subtract(points(Eigen::all, Y)); // do it here to save one call
 
         // Get the highest voted line
         Y = indicesCloseToLine(points, a, b, hough.dx);
 
         // Refine line
-        orthogonal_LSQ(points(Eigen::placeholders::all, Y), a, b, c);
+        orthogonal_LSQ(points(Eigen::all, Y), a, b, c);
 
         // Refine inliers ?
         Y = indicesCloseToLine(points, a, b, hough.dx);
@@ -60,11 +60,11 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
             break;
 
         // Refine line again?
-        orthogonal_LSQ(points(Eigen::placeholders::all, Y), a, b, c);
+        orthogonal_LSQ(points(Eigen::all, Y), a, b, c);
 
         // a += shift;
 
-        std::tie(l, w) = dimensions(points(Eigen::placeholders::all, Y), a, b, c);
+        std::tie(l, w) = dimensions(points(Eigen::all, Y), a, b, c);
 
         auto ratio = l / w;
         auto cos_theta = std::abs(b(2));
@@ -106,10 +106,10 @@ std::pair<double, double> dimensions(const Eigen::Matrix<double, 3, Eigen::Dynam
     double length_max = 0.0, length_min = 0.0, width_max = 0.0, width_min = 0.0;
     for (int i = 0; i < shifted.cols(); ++i)
     {
-        double l = std::abs(shifted.col(i).dot(dir));
+        double l = shifted.col(i).dot(dir);
         length_max = std::max(l, length_max);
         length_min = std::min(l, length_min);
-        double w = std::abs(shifted.col(i).dot(normal));
+        double w = shifted.col(i).dot(normal);
         width_max = std::max(w, width_max);
         width_min = std::min(w, width_min);
     }

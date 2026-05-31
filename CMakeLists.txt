@@ -7,6 +7,7 @@ find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
 find_package(jsoncpp REQUIRED)
+find_package(Open3D REQUIRED HINTS $ENV{HOME}/open3d_install)
 
 set(CMAKE_CXX_FLAGS "-DBLOCK_ALLOC") # Use custom allocator in default build
 set(CMAKE_CXX_FLAGS_DEBUG "-fopenmp -Wall -g")
@@ -61,7 +62,7 @@ add_library(tasks STATIC
     tasks/src/VL53L8CX.cpp
     tasks/src/LineFinder.cpp
 )
-target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d Open3D::Open3D)
 target_include_directories(tasks PUBLIC tasks/include)
 
 # Main executable
