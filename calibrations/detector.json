@@ -1,6 +1,6 @@
 {    
     "min_vote": 100,
-    "max_lines": 10,
+    "max_lines": 2,
     "granularity": 3,
     "min_ratio": 0.1,
     "max_angle": 0.261799, 

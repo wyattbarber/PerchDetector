@@ -90,6 +90,8 @@ void DepthCamera::step()
         cv::resize(rect_r, rect_r_small, cv::Size(Width/2, Height/2), 0, 0, cv::INTER_AREA);
         stereo_left->compute(rect_l_small, rect_r_small, disp_left_small);
         stereo_right->compute(rect_r_small, rect_l_small, disp_right_small);
+        disp_left_small *= 2;
+        disp_right_small *= 2;
         cv::resize(disp_left_small, disp_left, cv::Size(Width, Height), 0, 0, cv::INTER_NEAREST);
         cv::resize(disp_right_small, disp_right, cv::Size(Width, Height), 0, 0, cv::INTER_NEAREST);
     }

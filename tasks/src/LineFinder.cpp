@@ -134,7 +134,7 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
     }
 
     // Pack data
-    const uint32_t n = static_cast<uint32_t>(PointCloud::NumPoints);
+    const uint32_t n = static_cast<uint32_t>(update->data.pointcloud->data.n_valid);
     const uint32_t w = static_cast<uint32_t>(CameraWrapper::Width);
     const uint32_t h = static_cast<uint32_t>(CameraWrapper::Height);
 
@@ -146,4 +146,6 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
     file.write((char*)&h, sizeof(uint32_t));
     file.write((char*)&update->data.pointcloud->data.disparity->data.left_img->data, w*h*sizeof(uint8_t));
     file.write((char*)&update->data.pointcloud->data.disparity->data.right_img->data, w*h*sizeof(uint8_t));
+    file.write((char*)&update->data.pointcloud->data.disparity->data.confidence, w*h*sizeof(uint8_t));
+    file.write((char*)&update->data.pointcloud->data.disparity->data.disparity, w*h*sizeof(int16_t));
 }

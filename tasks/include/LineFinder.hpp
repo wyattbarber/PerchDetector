@@ -29,6 +29,8 @@ FWD_DECL_DATA_SOURCE(LineFinder, LineFinderUpdate_t)
  *  - H, Image height (px) [sizeof(uint32_t)]
  *  - Left grayscale image pixels [W * H * sizeof(uint8_t)]
  *  - Right grayscale image pixels [W * H * sizeof(uint8_t)]
+ *  - Confidence map [W * H * sizeof(uint8_t)]
+ *  - Disparity map [W * H * sizeof(int16_t)]
  * 
  *  
  * The command accepts the following arguments:
