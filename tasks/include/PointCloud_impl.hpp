@@ -112,8 +112,8 @@ void _PointCloud<X>::step()
     {
         auto idx_orig = unconfidence_w_indices[i].second;
         if(
-            (point_clout_ptr[3*idx_orig + 2] >= (min_dist * 1000.0)) && 
-            (point_clout_ptr[3*idx_orig + 2] <= (max_dist * 1000.0))
+            (point_clout_ptr[3*idx_orig + 2] >= min_dist) && 
+            (point_clout_ptr[3*idx_orig + 2] <= max_dist)
             )
         {
             // Copy best points and convert to mm
@@ -124,17 +124,20 @@ void _PointCloud<X>::step()
         }
     }
     // Remove noisy outliers
-    // open3d::core::Tensor mapped_points(
-    //     next->data.cloud,
-    //     {next->data.n_valid, 3},
-    //     open3d::core::Float32,
-    //     open3d::core::Device("CPU:0")
-    // );
-    // open3d::t::geometry::PointCloud ptc;
-    // ptc.SetPointPositions(mapped_points);
-    // const auto filtered_points = std::get<0>(ptc.RemoveRadiusOutliers(filter_n, filter_r)).GetPointPositions();
-    // memcpy((void*)next->data.cloud, (void*)filtered_points.GetDataPtr<float>(), filtered_points.GetLength() * 3 * sizeof(float));
-    // next->data.n_valid = filtered_points.GetLength();
+    if(next->data.n_valid > 0)
+    {
+        open3d::core::Tensor mapped_points(
+            next->data.cloud,
+            {next->data.n_valid, 3},
+            open3d::core::Float32,
+            open3d::core::Device("CPU:0")
+        );
+        open3d::t::geometry::PointCloud ptc;
+        ptc.SetPointPositions(mapped_points);
+        const auto filtered_points = std::get<0>(ptc.RemoveRadiusOutliers(filter_n, filter_r*1000.0)).GetPointPositions();
+        memcpy((void*)next->data.cloud, (void*)filtered_points.GetDataPtr<float>(), filtered_points.GetLength() * 3 * sizeof(float));
+        next->data.n_valid = filtered_points.GetLength();
+    }
     this->swap_data();
 
     // Wait for next update
