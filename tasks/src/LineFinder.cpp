@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <iostream>
 #include <fstream>
+#include <cmath>
 
 /** Selects the best candidate line.
 
@@ -148,4 +149,36 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
     file.write((char*)&update->data.pointcloud->data.disparity->data.right_img->data, w*h*sizeof(uint8_t));
     file.write((char*)&update->data.pointcloud->data.disparity->data.confidence, w*h*sizeof(uint8_t));
     file.write((char*)&update->data.pointcloud->data.disparity->data.disparity, w*h*sizeof(int16_t));
+}
+
+
+void report_line_detect(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
+{
+    bool ready = !_wait_flag_given(args);
+    auto taskptr = (LineFinder*)(task);
+    LineFinder::update_ptr_const_type update = taskptr->acquire();
+    // Wait for valid data if not ready
+    while(!ready)
+    {
+        update = taskptr->acquire();
+        ready = update->data.valid;
+    }
+
+    if(!update->data.valid)
+    {
+        out << "No perch detected." << std::endl;
+        return;
+    }
+
+    auto d = Eigen::Map<const Eigen::Vector3d>(update->data.dir);
+    double angle_z = std::acos(d(2) / d.norm()); // Angle in radians to z axis 
+    const Eigen::Vector3d d_xy = {d(0), d(1), 0};
+    double angle_y = std::acos(d_xy(1) / d_xy.norm()); // Angle in radians to y axis 
+
+
+    out << "Perch found." << std::endl;
+    out << "\tDistance: " << update->data.anchor[2] << " mm" << std::endl;
+    out << "\tAnchor Point: " << update->data.anchor[0] << ", " << update->data.anchor[1] << ", " << update->data.anchor[2] << std::endl;
+    out << "\tAngle From Camera Plane: " << 90.0 - (angle_z * 180.0 / M_PI) << " degrees" << std::endl;
+    out << "\tAngle From Camera Vertical: " << angle_y * 180.0 / M_PI << " degrees" << std::endl;
 }

@@ -45,11 +45,22 @@ FWD_DECL_DATA_SOURCE(LineFinder, LineFinderUpdate_t)
  */
 void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 
+/** Report out detection results to command line.
+ * 
+    Reports basic detections results like perch detected / not detected, distance, 
+    position, and orientation.
+
+ * The command accepts the following arguments:
+ *  
+ * Optional, Named:
+ * - --next-valid: If given, will wait to report until the next valid data update. Otherwise reports the latest update.
+*/
+void report_line_detect(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
+
 
 class LineFinder : public DataSource<LineFinder>
 {
 public:
-    friend void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
     /** Create new point cloud generator.
     
     @param name Name of the new task.
@@ -63,6 +74,7 @@ public:
         hough(nullptr)
     {
         declare_cli_command("save", &save_line_detect);
+        declare_cli_command("report", &report_line_detect);
     }
 
     ~LineFinder()
