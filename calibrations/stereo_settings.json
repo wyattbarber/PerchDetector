@@ -17,7 +17,8 @@
         "sigma": 0.6,
         "DR": 2,
         "LRC": 1,
-        "outlier_n": 50,
-        "outlier_r": 0.01
+        "voxel_size": 0.005,
+        "outlier_n": 10,
+        "outlier_r": 0.02
     }
 }

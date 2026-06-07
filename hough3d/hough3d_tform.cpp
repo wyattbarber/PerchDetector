@@ -1,4 +1,5 @@
 #include "hough3d_tform.hpp"
+#include <iostream>
 
 
 void orthogonal_LSQ(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, Eigen::Vector<double, 3>& a, Eigen::Vector<double, 3>& b, Eigen::Vector<double, 3>& c)
@@ -46,14 +47,18 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
 
         hough.subtract(points(Eigen::all, Y)); // do it here to save one call
 
+        // Get initial line estimate
+        nvotes = hough.getLine(a, b);
+
         // Get the highest voted line
         Y = indicesCloseToLine(points, a, b, hough.dx);
+        std::cout << "Candidate " << nlines << " has " << nvotes << " initial votes and " << Y.size() << " inliers" << std::endl;
 
         // Refine line
         orthogonal_LSQ(points(Eigen::all, Y), a, b, c);
 
-        // Refine inliers ?
-        Y = indicesCloseToLine(points, a, b, hough.dx);
+        // Refine inliers
+        Y = indicesCloseToLine(points(Eigen::all, Y), a, b, hough.dx);
         nvotes = Y.size();
         if (nvotes < min_vote)
             // Vote threshold not met, exit
@@ -77,6 +82,10 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         {
             out.push_back(std::make_tuple(a, b, c));
             ++nlines;
+        }
+        else 
+        {
+            std::cout << "Candidate " << nlines << " rejected with length " << l << " and width " << w << std::endl;
         }
 
         // // Remove this line to prepare to get the next highest voted
