@@ -94,6 +94,7 @@ protected:
     std::shared_ptr<PointCloud> cloud;
     PointCloud::update_ptr_const_type latest;
     const std::string settings;
+    Eigen::Vector<double, 3> center;
 
     unsigned min_vote;
     size_t max_lines;

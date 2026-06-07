@@ -12,8 +12,6 @@
 #include <math.h>
 #include <string>
 
-#include <iostream>
-
 
 // store points closer than dx to line (a, b) in Y
 Eigen::Matrix<double, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic>& X, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b, double dx)
@@ -31,22 +29,17 @@ Eigen::Matrix<double, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<d
 // store points closer than dx to line (a, b) in Y
 std::vector<size_t> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b, double dx)
 {
-  double min_d = 10000000, max_d = 0.0;
   std::vector<size_t> indices;
   for (int i = 0; i < X.cols(); i++)
   {
     // distance computation after IPOL paper Eq. (7)
     double t = b.dot(X.col(i) - a);
     Eigen::Vector<double, 3> d = (X.col(i) - (a + (t * b)));
-    double dn = d.norm();
-    min_d = dn < min_d ? dn : min_d;
-    max_d = dn > max_d ? dn : max_d;
-    if (dn <= dx)
+    if (d.norm() <= dx)
     {
       indices.push_back(i);
     }
   }
-  std::cout << "Points ranged from " << min_d << " to " << max_d << " units away from the line with dx " << dx;
   return indices;
 }
 

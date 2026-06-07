@@ -43,7 +43,8 @@ void LineFinder::step()
         min_width, 
         max_width, 
         min_ratio,
-        max_angle
+        max_angle,
+        center
     );
 
     auto next = allocate_next();
@@ -84,11 +85,11 @@ bool LineFinder::start_impl()
     
     // estimate size of Hough space. Mostly copied from hough 3d library, with size estimated as worst case point cloud bounding box
     auto volume = cloud->volume();
-    Eigen::Vector<double, 3> min_p = {-volume[0]/2.0, -volume[1]/2.0, 0};
-    Eigen::Vector<double, 3> max_p = {volume[0]/2.0, volume[1]/2.0, volume[2]};
-    double d = (max_p - min_p).norm();
-    double opt_dx = d / 64.0;
-    hough = new Hough(min_p, max_p, opt_dx, granularity);
+    auto min_p = Eigen::Vector<double, 3>{-volume[0]/2.0, -volume[1]/2.0, 0} * 1000.0;
+    auto max_p = Eigen::Vector<double, 3>{volume[0]/2.0, volume[1]/2.0, volume[2]} * 1000.0;
+    center = Eigen::Vector<double, 3>{0.0, 0.0, volume[2]/2.0} * 1000.0;
+    hough = new Hough(min_p - center, max_p - center, 0, granularity);
+    info("Configured Hough space with volume of ", volume[0], "m x ", volume[1], "m x ", volume[2], "m, and resolution of ", hough->dx, "mm");
 
     auto next = allocate_next();
     memset((void*)next->data.anchor, 0, 3*sizeof(double));

@@ -1,5 +1,4 @@
 #include "hough3d_tform.hpp"
-#include <iostream>
 
 
 void orthogonal_LSQ(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, Eigen::Vector<double, 3>& a, Eigen::Vector<double, 3>& b, Eigen::Vector<double, 3>& c)
@@ -29,10 +28,12 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
     double min_width, 
     double max_width, 
     double min_ratio,
-    double max_angle)
+    double max_angle,
+    const Eigen::Vector<double, 3>& center)
 {
     // Perform hough transform iteratively
-    hough.add(points);
+    Eigen::Matrix<double, 3, Eigen::Dynamic> centered = points.colwise() - center;
+    hough.add(centered);
 
     std::vector<size_t> Y; // points close to line
     double l, w;
@@ -45,32 +46,31 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
         Eigen::Vector<double, 3> b; // direction of line
         Eigen::Vector<double, 3> c; // perpendicular of line
 
-        hough.subtract(points(Eigen::all, Y)); // do it here to save one call
+        hough.subtract(centered(Eigen::all, Y)); // do it here to save one call
 
         // Get initial line estimate
         nvotes = hough.getLine(a, b);
 
         // Get the highest voted line
-        Y = indicesCloseToLine(points, a, b, hough.dx);
-        std::cout << "Candidate " << nlines << " has " << nvotes << " initial votes and " << Y.size() << " inliers" << std::endl;
+        Y = indicesCloseToLine(centered, a, b, hough.dx);
+        // std::cout << "Candidate " << nlines << " has " << nvotes << " initial votes and " << Y.size() << " inliers" << std::endl;
 
         // Refine line
-        orthogonal_LSQ(points(Eigen::all, Y), a, b, c);
+        orthogonal_LSQ(centered(Eigen::all, Y), a, b, c);
 
         // Refine inliers
-        Y = indicesCloseToLine(points(Eigen::all, Y), a, b, hough.dx);
+        Y = indicesCloseToLine(centered(Eigen::all, Y), a, b, hough.dx);
         nvotes = Y.size();
         if (nvotes < min_vote)
             // Vote threshold not met, exit
             break;
 
         // Refine line again?
-        orthogonal_LSQ(points(Eigen::all, Y), a, b, c);
+        orthogonal_LSQ(centered(Eigen::all, Y), a, b, c);
 
-        // a += shift;
-
-        std::tie(l, w) = dimensions(points(Eigen::all, Y), a, b, c);
-
+        std::tie(l, w) = dimensions(centered(Eigen::all, Y), a, b, c);
+        
+        a += center;
         auto ratio = l / w;
         auto cos_theta = std::abs(b(2));
 
@@ -83,16 +83,14 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
             out.push_back(std::make_tuple(a, b, c));
             ++nlines;
         }
-        else 
-        {
-            std::cout << "Candidate " << nlines << " rejected with length " << l << " and width " << w << std::endl;
-        }
 
-        // // Remove this line to prepare to get the next highest voted
-        // points = removePoints(points, Y);
+        // Remove this line to prepare to get the next highest voted
+        centered = removePoints(centered, centered(Eigen::all, Y));
 
-    } while ((points.cols() > 1) &&
+    } while ((centered.cols() > 1) &&
              ((maxlines == 0) || (maxlines > nlines)));
+
+    hough.reset();
 
     return out;
 }

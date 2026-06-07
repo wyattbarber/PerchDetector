@@ -42,7 +42,8 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points
     double min_width, 
     double max_width, 
     double min_ratio,
-    double max_angle);
+    double max_angle,
+    const Eigen::Vector<double, 3>& center);
 
 
 /** Get the inlier points for a specified line.

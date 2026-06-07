@@ -90,7 +90,6 @@ void _PointCloud<X>::step()
     const cv::Mat disparity(DepthCamera::Height, DepthCamera::Width, CV_16S, const_cast<int16_t*>(latest_disparity->data.disparity));
     cv::reprojectImageTo3D(disparity / 16, point_cloud, Q, false);
     // Partial sort confidence and indices to get low and high confidence partitions
-    this->info("Sorting points by confidence");
     for(size_t i = 0; i < DepthCamera::Height*DepthCamera::Width; ++i)
     {
         unconfidence_w_indices[i].first = 255 - latest_disparity->data.confidence[i];
@@ -106,7 +105,6 @@ void _PointCloud<X>::step()
         }
     );
     // Copy best points to new update
-    this->info("Removing low confidence points");
     auto next = this->allocate_next();  
     next->data.n_valid = 0;
     next->data.disparity = latest_disparity;
@@ -127,7 +125,6 @@ void _PointCloud<X>::step()
         }
     }
     // Remove noisy outliers
-    this->info("Removing outliers from ", next->data.n_valid, " points");
     if(next->data.n_valid > 0)
     {
         open3d::core::Tensor mapped_points(
@@ -143,7 +140,6 @@ void _PointCloud<X>::step()
         memcpy((void*)next->data.cloud, (void*)filtered_points.GetDataPtr<float>(), filtered_points.GetLength() * 3 * sizeof(float));
         next->data.n_valid = filtered_points.GetLength();
     }
-    this->info("Removed outliers");
     this->swap_data();
 
     // Wait for next update
