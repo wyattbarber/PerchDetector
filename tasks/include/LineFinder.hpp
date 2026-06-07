@@ -5,11 +5,18 @@
 #include "PointCloud.hpp"
 #include <hough.h>
 
+typedef struct {
+    double anchor[3];
+    double dir[3];
+} line;
+
+const unsigned MAX_LINES = 20;
 
 typedef struct {
     bool valid;
-    double anchor[3];
-    double dir[3];
+    uint8_t n_lines;
+    uint8_t selected_line;
+    line lines[MAX_LINES];
     PointCloud::update_ptr_const_type pointcloud;
 } LineFinderUpdate_t;
 
@@ -21,17 +28,19 @@ FWD_DECL_DATA_SOURCE(LineFinder, LineFinderUpdate_t)
  * inputs that went into detecting it. 
  * 
  * The binary file data ordering, starting from byte 0 is:
- *  - Line anchor [3 * sizeof(double)]
- *  - Line direction [3 * sizeof(double)]
- *  - N, Number of points in point cloud [sizeof(uint32_t)]
- *  - Point cloud vectors, (X, Y, X) form [N * 3 * sizeof(float)]
+ *  - Line anchor, index 0 is the selected line [3 * sizeof(double)]
+ *  - Line direction, index 0 is the selected line [3 * sizeof(double)]
+ *  - NP, Number of points in point cloud [sizeof(uint32_t)]
+ *  - Point cloud vectors, (X, Y, X) form [NP * 3 * sizeof(float)]
  *  - W, Image width (px) [sizeof(uint32_t)]
  *  - H, Image height (px) [sizeof(uint32_t)]
  *  - Left grayscale image pixels [W * H * sizeof(uint8_t)]
  *  - Right grayscale image pixels [W * H * sizeof(uint8_t)]
  *  - Confidence map [W * H * sizeof(uint8_t)]
  *  - Disparity map [W * H * sizeof(int16_t)]
- * 
+ *  - NL, number of lines rejected [sizeof(uint8_t)]
+ *  - Rejected lines, each as anchor point followed by direction [6 * NL * sizeof(double)]
+ *  - Line ID assignments, 0 to NL-1 for points on line or -1 for points off lines [NP * sizeof(int8_t)]
  *  
  * The command accepts the following arguments:
  * 

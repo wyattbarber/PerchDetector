@@ -53,7 +53,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
 
         // Get the highest voted line
         Y = indicesCloseToLine(centered, a, b, hough.dx);
-        // std::cout << "Candidate " << nlines << " has " << nvotes << " initial votes and " << Y.size() << " inliers" << std::endl;
+        std::cout << "Candidate " << nlines << " has " << nvotes << " initial votes and " << Y.size() << " inliers" << std::endl;
 
         // Refine line
         orthogonal_LSQ(centered(Eigen::all, Y), a, b, c);
@@ -80,7 +80,7 @@ std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points
             (ratio >= min_ratio) &&
             (cos_theta <= std::sin(max_angle)))
         {
-            out.push_back(std::make_tuple(a, b, c));
+            out.push_back(std::make_tuple(a, b*l, c*w));
             ++nlines;
         }
 

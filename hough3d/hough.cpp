@@ -30,7 +30,8 @@ Hough::Hough(const Eigen::Vector<double, 3>& minP, const Eigen::Vector<double, 3
   double range_x = 2 * max_x;
   dx = var_dx;
   if (dx == 0.0) {
-    dx = range_x / 64.0;
+    // dx = range_x / 64.0;
+    dx = range_x / 128.0;
   }
   num_x = roundToNearest(range_x / dx);
 
