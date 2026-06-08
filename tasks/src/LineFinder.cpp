@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 
 /** Selects the best candidate line.
@@ -20,7 +21,17 @@ take the closest (smallest Z coordinate) line.
 */
 size_t best_line_idx(const std::vector<Line>& lines)
 {
-    return 0;
+    double closest_z = std::numeric_limits<double>::infinity();
+    size_t idx_best = 0;
+    for(size_t i = 0; i < lines.size(); ++i)
+    {
+        if(lines[i].anchor[2] < closest_z)
+        {
+            closest_z = lines[i].anchor[2];
+            idx_best = i;
+        }
+    }
+    return idx_best;
 }
 
 
@@ -40,7 +51,8 @@ void LineFinder::step()
         const_cast<float*>(latest->data.cloud),
         3, latest->data.n_valid
     );
-    const auto lines = hough3d(points.cast<double>(), next->data.line_ids);
+    Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>> ids((int8_t*)&next->data.line_ids, latest->data.n_valid);
+    const auto lines = hough3d(points.cast<double>(), ids);
 
     if(lines.size() > 0)
     {
@@ -87,8 +99,7 @@ bool LineFinder::start_impl()
     auto volume = cloud->volume();
     auto min_p = Eigen::Vector<double, 3>{-volume[0]/2.0, -volume[1]/2.0, 0} * 1000.0;
     auto max_p = Eigen::Vector<double, 3>{volume[0]/2.0, volume[1]/2.0, volume[2]} * 1000.0;
-    center = Eigen::Vector<double, 3>{0.0, 0.0, volume[2]/2.0} * 1000.0;
-    hough = new Hough(min_p - center, max_p - center, 0, granularity);
+    hough = new Hough(min_p, max_p, 0, granularity);
     info("Configured Hough space with volume of ", volume[0], "m x ", volume[1], "m x ", volume[2], "m, and resolution of ", hough->dx, "mm");
 
     return true;
@@ -137,11 +148,10 @@ static std::pair<double, double> dimensions(const Eigen::Matrix<double, 3, Eigen
 
 std::vector<Line> LineFinder::hough3d(
     const Eigen::Matrix<double, 3, Eigen::Dynamic> &points,
-    int8_t (&line_ids)[PointCloud::NumPoints])
+    Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>>& ids)
 {
     // Perform hough transform iteratively
-    Eigen::Map<Eigen::Vector<int8_t, PointCloud::NumPoints>> ids((int8_t*)&line_ids);
-    Eigen::Matrix<double, 3, Eigen::Dynamic> centered = points.colwise() - center;
+    Eigen::Matrix<double, 3, Eigen::Dynamic> centered = points;
     // This vector tracks positions in original point cloud as lines get iteratively removed
     Eigen::VectorXi index_map = Eigen::VectorXi::LinSpaced(centered.cols(), 0, centered.cols()-1);
 
@@ -178,7 +188,7 @@ std::vector<Line> LineFinder::hough3d(
 
         std::tie(l, w) = dimensions(centered(Eigen::all, Y), a, b, c);
         
-        a += center;
+        // a += center;
         auto ratio = l / w;
         auto cos_theta = std::abs(b(2));
 
@@ -271,6 +281,8 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
             file.write((char*)&update->data.lines[i].dir, 3*sizeof(double));
         }
     }
+    file.write((char*)&update->data.line_ids, n * sizeof(int8_t));
+
 }
 
 
@@ -305,4 +317,5 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
     out << "\tAnchor Point: " << a << std::endl;
     out << "\tAngle From Camera Plane: " << 90.0 - (angle_z * 180.0 / M_PI) << " degrees" << std::endl;
     out << "\tAngle From Camera Vertical: " << angle_y * 180.0 / M_PI << " degrees" << std::endl;
+    out << "\tTotal Candidate Lines: " << (int)update->data.n_lines << std::endl;
 }
