@@ -8,7 +8,8 @@
 typedef struct {
     double anchor[3];
     double dir[3];
-} line;
+    double normal[3];
+} Line;
 
 const unsigned MAX_LINES = 20;
 
@@ -112,4 +113,6 @@ protected:
     double min_ratio;
     double max_angle;
     Hough* hough;
+
+    std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points);
 };
