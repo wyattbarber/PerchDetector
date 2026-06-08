@@ -1,5 +1,5 @@
 #include "LineFinder.hpp"
-#include <hough->h>
+#include <hough.h>
 #include "json_loader.hpp"
 #include <Eigen/Dense>
 #include <iostream>
@@ -32,24 +32,16 @@ void LineFinder::step()
     latest = cloud->acquire();
     tick();
 
+    auto next = allocate_next();
+    memset((void*)&next->data.line_ids, -1, PointCloud::NumPoints);
+
     // Process new point cloud for lines
     const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(
         const_cast<float*>(latest->data.cloud),
         3, latest->data.n_valid
     );
-    const auto lines = hough3d(
-        points.cast<double>(), 
-        *hough,
-        min_vote, 
-        max_lines,
-        min_width, 
-        max_width, 
-        min_ratio,
-        max_angle,
-        center
-    );
+    const auto lines = hough3d(points.cast<double>(), next->data.line_ids);
 
-    auto next = allocate_next();
     if(lines.size() > 0)
     {
         // Select the canditate line and form data update
@@ -60,10 +52,8 @@ void LineFinder::step()
 
         for(size_t i = 0; i < std::min(static_cast<unsigned>(lines.size()), MAX_LINES); ++i)
         {
-            const auto anchor = std::get<0>(lines[i]);
-            const auto dir = std::get<1>(lines[i]);
-            memcpy((void*)next->data.lines[i].anchor, (void*)anchor.data(), 3*sizeof(double));
-            memcpy((void*)next->data.lines[i].dir, (void*)dir.data(), 3*sizeof(double));
+            memcpy((void*)next->data.lines[i].anchor, (void*)lines[i].anchor, 3*sizeof(double));
+            memcpy((void*)next->data.lines[i].dir, (void*)lines[i].dir, 3*sizeof(double));
         }
         next->data.pointcloud = latest;
     }
@@ -145,15 +135,20 @@ static std::pair<double, double> dimensions(const Eigen::Matrix<double, 3, Eigen
 }
 
 
-std::vector<Line> LineFinder::hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points)
+std::vector<Line> LineFinder::hough3d(
+    const Eigen::Matrix<double, 3, Eigen::Dynamic> &points,
+    int8_t (&line_ids)[PointCloud::NumPoints])
 {
     // Perform hough transform iteratively
+    Eigen::Map<Eigen::Vector<int8_t, PointCloud::NumPoints>> ids((int8_t*)&line_ids);
     Eigen::Matrix<double, 3, Eigen::Dynamic> centered = points.colwise() - center;
+    // This vector tracks positions in original point cloud as lines get iteratively removed
+    Eigen::VectorXi index_map = Eigen::VectorXi::LinSpaced(centered.cols(), 0, centered.cols()-1);
+
     hough->add(centered);
 
     std::vector<size_t> Y; // points close to line
     double l, w;
-    unsigned int nvotes;
     int nlines = 0;
     std::vector<Line> out; // Identified lines
     do
@@ -162,20 +157,17 @@ std::vector<Line> LineFinder::hough3d(const Eigen::Matrix<double, 3, Eigen::Dyna
         Eigen::Vector<double, 3> b; // direction of line
         Eigen::Vector<double, 3> c; // perpendicular of line
 
-        hough->subtract(centered(Eigen::all, Y)); // do it here to save one call
-
         // Get initial line estimate
-        nvotes = hough->getLine(a, b);
+        unsigned nvotes = hough->getLine(a, b);
 
         // Get the highest voted line
         Y = indicesCloseToLine(centered, a, b, hough->dx);
-        std::cout << "Candidate " << nlines << " has " << nvotes << " initial votes and " << Y.size() << " inliers" << std::endl;
 
         // Refine line
         orthogonal_LSQ(centered(Eigen::all, Y), a, b, c);
 
         // Refine inliers
-        Y = indicesCloseToLine(centered(Eigen::all, Y), a, b, hough->dx);
+        Y = indicesCloseToLine(centered, a, b, hough->dx);
         nvotes = Y.size();
         if (nvotes < min_vote)
             // Vote threshold not met, exit
@@ -196,19 +188,26 @@ std::vector<Line> LineFinder::hough3d(const Eigen::Matrix<double, 3, Eigen::Dyna
             (ratio >= min_ratio) &&
             (cos_theta <= std::sin(max_angle)))
         {
+            // Add this line
             Line line;
             memcpy(line.anchor, a.data(), 3*sizeof(double));
-            memcpy(line.dir, (b*l).data(), 3*sizeof(double));
-            memcpy(line.normal, (c*w).data(), 3*sizeof(double));
+            memcpy(line.dir, (b*l).eval().data(), 3*sizeof(double));
+            memcpy(line.normal, (c*w).eval().data(), 3*sizeof(double));
             out.push_back(std::move(line));
+            // Mark points belonging to this line, using index map to point back to original indices
+            ids(index_map(Y)).fill(nlines);
+
             ++nlines;
         }
 
         // Remove this line to prepare to get the next highest voted
-        centered = removePoints(centered, centered(Eigen::all, Y));
+        hough->subtract(centered(Eigen::all, Y));
+        auto idx_new = removePoints(centered, centered(Eigen::all, Y));
+        centered = centered(Eigen::all, idx_new).eval();
+        index_map = index_map(idx_new).eval();
 
     } while ((centered.cols() > 1) &&
-             ((maxlines == 0) || (maxlines > nlines)));
+             ((max_lines == 0) || (max_lines > nlines)));
 
     hough->reset();
 

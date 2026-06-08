@@ -45,12 +45,19 @@ std::vector<size_t> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dyn
 
 // removes the points in Y from HoughPointCloud
 // WARNING: only works when points in same order as in HoughPointCloud!
-Eigen::Matrix<double, 3, Eigen::Dynamic> removePoints(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Matrix<double, 3, Eigen::Dynamic> &Y)
+std::vector<int> removePoints(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Matrix<double, 3, Eigen::Dynamic> &Y)
 {
+  std::vector<int> newindices;
 
   if (Y.cols() == 0)
-    return X;
-  std::vector<size_t> newindices;
+  {
+    for(int i = 0; i < X.cols(); ++i)
+    {
+      newindices.push_back(i);
+    }
+    return newindices;
+  }
+    
   newindices.reserve(X.cols() - Y.cols());
   int i, j;
 
@@ -70,11 +77,5 @@ Eigen::Matrix<double, 3, Eigen::Dynamic> removePoints(const Eigen::Matrix<double
   for (; i < X.cols(); i++)
     newindices.push_back(i);
 
-  // Copy new data
-  Eigen::Matrix<double, 3, Eigen::Dynamic> out(3, newindices.size());
-  for (unsigned i = 0; i < out.cols(); ++i)
-  {
-    out.col(i) = X.col(newindices[i]);
-  }
-  return out;
+  return newindices;
 }

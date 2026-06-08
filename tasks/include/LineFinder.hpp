@@ -17,7 +17,8 @@ typedef struct {
     bool valid;
     uint8_t n_lines;
     uint8_t selected_line;
-    line lines[MAX_LINES];
+    Line lines[MAX_LINES];
+    int8_t line_ids[PointCloud::NumPoints];
     PointCloud::update_ptr_const_type pointcloud;
 } LineFinderUpdate_t;
 
@@ -114,5 +115,7 @@ protected:
     double max_angle;
     Hough* hough;
 
-    std::vector<Line> hough3d(const Eigen::Matrix<double, 3, Eigen::Dynamic>& points);
+    std::vector<Line> hough3d(
+        const Eigen::Matrix<double, 3, Eigen::Dynamic>& points,
+        int8_t (&line_ids)[PointCloud::NumPoints]);
 };

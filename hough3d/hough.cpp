@@ -37,6 +37,7 @@ Hough::Hough(const Eigen::Vector<double, 3>& minP, const Eigen::Vector<double, 3
 
   // allocate voting space
   VotingSpace.resize(num_x * num_x * num_b);
+  reset();
 }
 
 Hough::~Hough() {
@@ -60,6 +61,8 @@ void Hough::subtract(const  Eigen::Matrix<double, 3, Eigen::Dynamic> &pc) {
 // add or subtract (add==false) one point from voting space
 // (corresponds to inner loop of Algorithm 2 in IPOL paper)
 void Hough::pointVote(const Eigen::Vector<double, 3>& point, bool add){
+
+  int inc_dir = add ? 1 : -1;
 
   // loop over directions B
   for(size_t j = 0; j < sphere->vertices.size(); j++) {
@@ -85,11 +88,7 @@ void Hough::pointVote(const Eigen::Vector<double, 3>& point, bool add){
     size_t index = (x_i * num_x * num_b) + (y_i * num_b) + j;
 
     if (index < VotingSpace.size()) {
-      if(add){
-        VotingSpace[index]++;
-      } else {
-        VotingSpace[index]--;
-      }
+        VotingSpace[index] += inc_dir;
     }
   }
 }
