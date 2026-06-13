@@ -10,6 +10,9 @@ import asyncio
 import threading
 import open3d
 from typing import Dict, Any
+import cv2
+from matplotlib.pyplot import get_cmap
+import json
 
 
 _c_to_numpy = {
@@ -177,6 +180,90 @@ class FeedSelection:
         return self._shape
 
 
+class ResultsViewer:
+    _file_path = "/tmp/stereo_gui_results"
+
+    def __init__(self, pm: ProcManager, calibration_path: str):
+        self._pm = pm
+        self._cmap = get_cmap()
+        self._counter_in = 0
+        self._counter_out = 0
+        self._file = None
+        self._mm = None
+        self._latest_file = None
+
+        with open(f"{calibration_path}/left.json") as file:
+            cal_data_left = json.load(file)
+        with open(f"{calibration_path}/right.json") as file:
+            cal_data_right = json.load(file)
+        with open(f"{calibration_path}/stereo_calibration.json") as file:
+            cal_data_stereo = json.load(file)
+
+        _, _, self._Pn1, _, _, _, _ = cv2.stereoRectify(
+            np.array(cal_data_left["intrinsic"]).reshape((3,3)), np.array(cal_data_left["distortion"]),
+            np.array(cal_data_right["intrinsic"]).reshape((3,3)), np.array(cal_data_right["distortion"]),
+            (800,600),
+            np.array(cal_data_stereo["rotation"]).reshape((3,3)), np.array(cal_data_stereo["translation"]),
+            flags=cv2.CALIB_ZERO_DISPARITY,
+            alpha=0
+        )
+
+    async def update(self):
+        await asyncio.to_thread(self._pm.get_lines_out, f"detector save {self._file_path}/map{self._counter_in}")
+        if hasattr(self, "_file") and hasattr(self._file, "close"):
+            self._file.close()
+        self._file = open(f"{self._file_path}/map{self._counter_in}", "rb")
+        self._counter_in += 1
+        return mmap.mmap(self._file.fileno(), 0, prot=mmap.PROT_READ)
+
+    def load(self, data: bytes):
+        n = int.from_bytes(data[
+            (3*8) + (3*8) : (3*8) + (3*8) + 4
+        ], byteorder="little")
+        w = int.from_bytes(data[
+            (3*8) + (3*8) + 4 + (n * 3 * 4): (3*8) + (3*8) + 4 + (n * 3 * 4) + 4
+        ], byteorder="little")
+        h = int.from_bytes(data[
+            (3*8) + (3*8) + 4 + (n * 3 * 4) + 4 : (3*8) + (3*8) + 4 + (n * 3 * 4) + 4 + 4
+        ], byteorder="little")
+
+        start_cloud = (3*8) + (3*8) + 4
+        end_cloud = start_cloud + (n * 3 * 4)
+        start_left = end_cloud + 4 + 4
+        end_left = start_left + (w * h)
+        end_right = end_left + (w * h)
+        end_confidence = end_right + (w * h)
+        end_disparity = end_confidence + (w * h * 2)
+        nl = data[end_disparity]
+        start_rejects = end_disparity + 1
+        start_assignments = start_rejects + nl*8*6
+        
+        cloud = np.ndarray((n, 3), dtype=np.float32, buffer=data[start_cloud:end_cloud]).transpose()
+        left = np.ndarray((h,w), dtype=np.uint8, buffer=data[start_left:end_left])
+        ids = np.ndarray((n, 1), dtype=np.int8, buffer=data[start_assignments:])
+
+        return (left, cloud, ids)
+
+    def render(self, image, pointcloud, line_ids):
+        out = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        image_points, _= cv2.projectPoints(pointcloud, np.zeros((3,1)), np.zeros((3,1)), self._Pn1[:,:3], np.zeros((1,5)))
+        for i in range(pointcloud.shape[1]):
+            if line_ids[i,0] >= 0:
+                x = int(image_points[i,0,0])
+                y = int(image_points[i,0,1])
+                out[y,x,:] = (np.asarray(self._cmap(line_ids[i,0])[:3]) * 255).astype(np.uint8)
+        return out
+    
+    def save(self, image):
+        Image.fromarray(image).resize((800,600)).save(f"{self._file_path}/view{self._counter_out}.png")
+        self._latest_file = f"{self._file_path}/view{self._counter_out}.png"
+        self._counter_out += 1
+
+    @property
+    def latest(self):
+        return self._latest_file
+
+
 pm: ProcManager = None
 elements: Dict[str, Any] = {}
 
@@ -322,10 +409,31 @@ def point_cloud_scene(container):
         elements["point_cloud_colors"] = np.ones((elements["point_cloud_n_max"], 3))
 
 
+async def _load_results():
+    global elements
+    rvd = elements["results_viewer_datasource"]
+    rv = elements["results_view"]
+
+    data = await rvd.update()
+    img = rvd.render(*rvd.load(data))
+    rvd.save(img)
+
+    rv.set_source(rvd.latest)
+
+
+def results_window(container):
+    global pm, elements
+
+    with container:
+        elements["results_viewer_datasource"] = ResultsViewer(pm, "calibrations")
+        elements["results_reload"] = ui.button("Load Detection Results", on_click=_load_results)
+        elements["results_view"] = ui.image("").classes("w-full")
+
+
 def startup():
     global pm
-    if not os.path.exists("/tmp/stereo_gui"):
-        os.makedirs("/tmp/stereo_gui")
+    os.makedirs("/tmp/stereo_gui", exist_ok=True)
+    os.makedirs("/tmp/stereo_gui_results", exist_ok=True)
     pm.init()
 
 
@@ -355,6 +463,7 @@ if __name__ in {"__main__", "__mp_main__"}:
 
             with splitter.before:
                 with ui.tabs().classes("w-full") as tabs:
+                    results = ui.tab("Detection Results")
                     feeds = ui.tab("Image Capture")
                     data = ui.tab("Raw Data")
                     log = ui.tab("Logs")
@@ -362,7 +471,10 @@ if __name__ in {"__main__", "__mp_main__"}:
                     graph = ui.tab("Graph")
                     rates = ui.tab("Rates")
 
-                with ui.tab_panels(tabs, value=feeds).classes("w-full"):
+                with ui.tab_panels(tabs, value=results).classes("w-full"):
+                    with ui.tab_panel(results).classes("w-full") as tb:
+                        results_window(tb)
+
                     with ui.tab_panel(feeds).classes("w-full") as tb:
                         image_window(tb)
 
