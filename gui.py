@@ -13,6 +13,7 @@ from typing import Dict, Any
 import cv2
 from matplotlib.pyplot import get_cmap
 import json
+import shutil
 
 
 _c_to_numpy = {
@@ -242,16 +243,16 @@ class ResultsViewer:
         left = np.ndarray((h,w), dtype=np.uint8, buffer=data[start_left:end_left])
         ids = np.ndarray((n, 1), dtype=np.int8, buffer=data[start_assignments:])
 
-        return (left, cloud, ids)
+        return (left, cloud, ids, nl+1)
 
-    def render(self, image, pointcloud, line_ids):
+    def render(self, image, pointcloud, line_ids, n_lines):
         out = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         image_points, _= cv2.projectPoints(pointcloud, np.zeros((3,1)), np.zeros((3,1)), self._Pn1[:,:3], np.zeros((1,5)))
         for i in range(pointcloud.shape[1]):
             if line_ids[i,0] >= 0:
                 x = int(image_points[i,0,0])
                 y = int(image_points[i,0,1])
-                out[y,x,:] = (np.asarray(self._cmap(line_ids[i,0])[:3]) * 255).astype(np.uint8)
+                out[y,x,:] = (np.asarray(self._cmap(line_ids[i,0] / n_lines)[:3]) * 255).astype(np.uint8)
         return out
     
     def save(self, image):
@@ -432,8 +433,11 @@ def results_window(container):
 
 def startup():
     global pm
-    os.makedirs("/tmp/stereo_gui", exist_ok=True)
-    os.makedirs("/tmp/stereo_gui_results", exist_ok=True)
+    dirs = ["/tmp/stereo_gui", "/tmp/stereo_gui_results"]
+    for d in dirs:
+        if os.path.exists(d):
+            shutil.rmtree(d)
+        os.makedirs(d)
     pm.init()
 
 

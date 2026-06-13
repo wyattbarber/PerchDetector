@@ -27,9 +27,9 @@ Eigen::Matrix<double, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<d
 }
 
 // store points closer than dx to line (a, b) in Y
-std::vector<size_t> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b, double dx)
+std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b, double dx)
 {
-  std::vector<size_t> indices;
+  std::vector<Eigen::Index> indices;
   for (int i = 0; i < X.cols(); i++)
   {
     // distance computation after IPOL paper Eq. (7)
@@ -45,9 +45,9 @@ std::vector<size_t> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dyn
 
 // removes the points in Y from HoughPointCloud
 // WARNING: only works when points in same order as in HoughPointCloud!
-std::vector<int> removePoints(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Matrix<double, 3, Eigen::Dynamic> &Y)
+std::vector<Eigen::Index> removePoints(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Matrix<double, 3, Eigen::Dynamic> &Y)
 {
-  std::vector<int> newindices;
+  std::vector<Eigen::Index> newindices;
 
   if (Y.cols() == 0)
   {

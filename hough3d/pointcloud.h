@@ -17,10 +17,10 @@
 
 // store points closer than dx to line (a, b) in Y
 Eigen::Matrix<double, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic>& X, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b,  double dx);
-std::vector<size_t> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic>& Y, const Eigen::Vector<double,3> &a, const Eigen::Vector<double,3> &b, double dx);
+std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic>& Y, const Eigen::Vector<double,3> &a, const Eigen::Vector<double,3> &b, double dx);
   
 // removes the points in Y from HoughPointCloud
 // WARNING: only works when points in same order as in HoughPointCloud!
-std::vector<int> removePoints(const Eigen::Matrix<double, 3, Eigen::Dynamic>& X, const Eigen::Matrix<double, 3, Eigen::Dynamic>& Y);
+std::vector<Eigen::Index> removePoints(const Eigen::Matrix<double, 3, Eigen::Dynamic>& X, const Eigen::Matrix<double, 3, Eigen::Dynamic>& Y);
 
 #endif /* HoughPointCloud_H_ */

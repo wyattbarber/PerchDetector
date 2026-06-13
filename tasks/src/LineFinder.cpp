@@ -44,14 +44,16 @@ void LineFinder::step()
     tick();
 
     auto next = allocate_next();
-    memset((void*)&next->data.line_ids, -1, PointCloud::NumPoints);
 
     // Process new point cloud for lines
     const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> points(
         const_cast<float*>(latest->data.cloud),
         3, latest->data.n_valid
     );
+    
     Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>> ids((int8_t*)&next->data.line_ids, latest->data.n_valid);
+    ids.fill(-1);
+
     const auto lines = hough3d(points.cast<double>(), ids);
 
     if(lines.size() > 0)
@@ -129,6 +131,7 @@ static void orthogonal_LSQ(const Eigen::Matrix<double, 3, Eigen::Dynamic> &point
     c = eigvecs.col(1);
 }
 
+
 static std::pair<double, double> dimensions(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const Eigen::Vector<double, 3> &anchor, const Eigen::Vector<double, 3> &dir, const Eigen::Vector<double, 3> &normal)
 {
     const auto shifted = points.colwise() - anchor;
@@ -157,7 +160,7 @@ std::vector<Line> LineFinder::hough3d(
 
     hough->add(centered);
 
-    std::vector<size_t> Y; // points close to line
+    std::vector<Eigen::Index> Y; // points close to line
     double l, w;
     int nlines = 0;
     std::vector<Line> out; // Identified lines
@@ -203,7 +206,7 @@ std::vector<Line> LineFinder::hough3d(
             memcpy(line.anchor, a.data(), 3*sizeof(double));
             memcpy(line.dir, (b*l).eval().data(), 3*sizeof(double));
             memcpy(line.normal, (c*w).eval().data(), 3*sizeof(double));
-            out.push_back(std::move(line));
+            out.push_back(line);
             // Mark points belonging to this line, using index map to point back to original indices
             ids(index_map(Y)).fill(nlines);
 
@@ -272,7 +275,8 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
     file.write((char*)&update->data.pointcloud->data.disparity->data.right_img->data, w*h*sizeof(uint8_t));
     file.write((char*)&update->data.pointcloud->data.disparity->data.confidence, w*h*sizeof(uint8_t));
     file.write((char*)&update->data.pointcloud->data.disparity->data.disparity, w*h*sizeof(int16_t));
-    file.write((char*)&update->data.n_lines-1, sizeof(uint8_t));
+    auto n_rejects = update->data.n_lines - 1;
+    file.write((char*)&n_rejects, sizeof(uint8_t));
     for(unsigned i = 0; i < std::min(static_cast<unsigned>(update->data.n_lines), MAX_LINES); ++i)
     {
         if(i != idx)
