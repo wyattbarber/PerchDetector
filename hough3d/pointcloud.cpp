@@ -45,11 +45,11 @@ std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<float, 3, Eigen
 
 // removes the points in Y from HoughPointCloud
 // WARNING: only works when points in same order as in HoughPointCloud!
-std::vector<Eigen::Index> removePoints(const Eigen::Matrix<float, 3, Eigen::Dynamic> &X, const Eigen::Matrix<float, 3, Eigen::Dynamic> &Y)
+std::vector<Eigen::Index> removePoints(const Eigen::Matrix<float, 3, Eigen::Dynamic> &X, const std::vector<Eigen::Index>& Y)
 {
   std::vector<Eigen::Index> newindices;
 
-  if (Y.cols() == 0)
+  if (Y.size() == 0)
   {
     for(int i = 0; i < X.cols(); ++i)
     {
@@ -58,13 +58,13 @@ std::vector<Eigen::Index> removePoints(const Eigen::Matrix<float, 3, Eigen::Dyna
     return newindices;
   }
     
-  newindices.reserve(X.cols() - Y.cols());
+  newindices.reserve(X.cols() - Y.size());
   int i, j;
 
   // important assumption: points in Y appear in same order in points
-  for (i = 0, j = 0; i < X.cols() && j < Y.cols(); i++)
+  for (i = 0, j = 0; i < X.cols() && j < Y.size(); i++)
   {
-    if (X.col(i) == Y.col(j))
+    if (i == Y.at(j))
     {
       j++;
     }

@@ -135,17 +135,16 @@ static void orthogonal_LSQ(const Eigen::Matrix<float, 3, Eigen::Dynamic> &points
 static std::pair<float, float> dimensions(const Eigen::Matrix<float, 3, Eigen::Dynamic> &points, const Eigen::Vector<float, 3> &anchor, const Eigen::Vector<float, 3> &dir, const Eigen::Vector<float, 3> &normal)
 {
     const auto shifted = points.colwise() - anchor;
-    float length_max = 0.0, length_min = 0.0, width_max = 0.0, width_min = 0.0;
-    for (int i = 0; i < shifted.cols(); ++i)
-    {
-        float l = shifted.col(i).dot(dir);
-        length_max = std::max(l, length_max);
-        length_min = std::min(l, length_min);
-        float w = shifted.col(i).dot(normal);
-        width_max = std::max(w, width_max);
-        width_min = std::min(w, width_min);
-    }
-    return {(length_max - length_min) / 2.0, (width_max - width_min) / 2.0};
+
+    const Eigen::VectorXf lengths = dir.transpose() * shifted;
+    const float length_max = lengths.maxCoeff();
+    const float length_min = lengths.minCoeff();
+
+    const Eigen::VectorXf widths = normal.transpose() * shifted;
+    const float width_max = widths.maxCoeff();
+    const float width_min = widths.minCoeff();
+
+    return {(length_max - length_min) / 2.0f, (width_max - width_min) / 2.0f};
 }
 
 
@@ -215,7 +214,7 @@ std::vector<Line> LineFinder::hough3d(
 
         // Remove this line to prepare to get the next highest voted
         hough->subtract(centered(Eigen::all, Y));
-        auto idx_new = removePoints(centered, centered(Eigen::all, Y));
+        auto idx_new = removePoints(centered, Y);
         centered = centered(Eigen::all, idx_new).eval();
         index_map = index_map(idx_new).eval();
 
