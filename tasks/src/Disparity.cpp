@@ -279,11 +279,10 @@ std::tuple<double, double> DepthCamera::bb_xy(double max_dist)
 }
 
 
-std::array<double, 3> DepthCamera::volume()
+std::array<float, 3> DepthCamera::volume()
 {   
     return {bb_width, bb_height, bb_depth};
 }
-
 
 
 void stereo_display_conv::eval(void* dst, const DepthCamera::value_type& src)

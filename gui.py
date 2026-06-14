@@ -223,16 +223,16 @@ class ResultsViewer:
 
     def load(self, data: bytes):
         n = int.from_bytes(data[
-            (3*8) + (3*8) : (3*8) + (3*8) + 4
+            (3*4) + (3*4) : (3*4) + (3*4) + 4
         ], byteorder="little")
         w = int.from_bytes(data[
-            (3*8) + (3*8) + 4 + (n * 3 * 4): (3*8) + (3*8) + 4 + (n * 3 * 4) + 4
+            (3*4) + (3*4) + 4 + (n * 3 * 4): (3*4) + (3*4) + 4 + (n * 3 * 4) + 4
         ], byteorder="little")
         h = int.from_bytes(data[
-            (3*8) + (3*8) + 4 + (n * 3 * 4) + 4 : (3*8) + (3*8) + 4 + (n * 3 * 4) + 4 + 4
+            (3*4) + (3*4) + 4 + (n * 3 * 4) + 4 : (3*4) + (3*4) + 4 + (n * 3 * 4) + 4 + 4
         ], byteorder="little")
 
-        start_cloud = (3*8) + (3*8) + 4
+        start_cloud = (3*4) + (3*4) + 4
         end_cloud = start_cloud + (n * 3 * 4)
         start_left = end_cloud + 4 + 4
         end_left = start_left + (w * h)
@@ -241,13 +241,13 @@ class ResultsViewer:
         end_disparity = end_confidence + (w * h * 2)
         nl = data[end_disparity]
         start_rejects = end_disparity + 1
-        start_assignments = start_rejects + nl*8*6
+        start_assignments = start_rejects + nl*4*6
         
         cloud = np.ndarray((n, 3), dtype=np.float32, buffer=data[start_cloud:end_cloud]).transpose()
         left = np.ndarray((h,w), dtype=np.uint8, buffer=data[start_left:end_left])
         ids = np.ndarray((n, 1), dtype=np.int8, buffer=data[start_assignments:])
-        anchor = np.ndarray((3, 1), buffer = data[0:3*8], dtype=np.float64)
-        dir = np.ndarray((3, 1), buffer = data[3*8:3*8 + 3*8], dtype=np.float64)
+        anchor = np.ndarray((3, 1), buffer = data[0:3*4], dtype=np.float32)
+        dir = np.ndarray((3, 1), buffer = data[3*4:3*4 + 3*8], dtype=np.float32)
 
         return (left, cloud, ids, nl+1, anchor, dir)
 

@@ -13,11 +13,11 @@
 #include <cstdlib>
 
 
-static double roundToNearest(double num) {
+static float roundToNearest(float num) {
   return (num > 0.0) ? floor(num + 0.5) : ceil(num - 0.5);
 }
 
-Hough::Hough(const Eigen::Vector<double, 3>& minP, const Eigen::Vector<double, 3>& maxP, double var_dx,
+Hough::Hough(const Eigen::Vector<float, 3>& minP, const Eigen::Vector<float, 3>& maxP, float var_dx,
              unsigned int sphereGranularity) {
 
   // compute directional vectors
@@ -27,7 +27,7 @@ Hough::Hough(const Eigen::Vector<double, 3>& minP, const Eigen::Vector<double, 3
 
   // compute x'y' discretization
   max_x = std::max(maxP.norm(), minP.norm());
-  double range_x = 2 * max_x;
+  float range_x = 2 * max_x;
   dx = var_dx;
   if (dx == 0.0) {
     // dx = range_x / 64.0;
@@ -45,14 +45,14 @@ Hough::~Hough() {
 }
 
 // add all points from point cloud to voting space
-void Hough::add(const  Eigen::Matrix<double, 3, Eigen::Dynamic> &pc) {
+void Hough::add(const  Eigen::Matrix<float, 3, Eigen::Dynamic> &pc) {
   for (int i = 0; i < pc.cols(); ++i) {
     pointVote(pc.col(i), true);
   }
 }
 
 // subtract all points from point cloud to voting space
-void Hough::subtract(const  Eigen::Matrix<double, 3, Eigen::Dynamic> &pc) {
+void Hough::subtract(const  Eigen::Matrix<float, 3, Eigen::Dynamic> &pc) {
   for (int i = 0; i < pc.cols(); ++i) {
     pointVote(pc.col(i), false);
   }
@@ -60,7 +60,7 @@ void Hough::subtract(const  Eigen::Matrix<double, 3, Eigen::Dynamic> &pc) {
 
 // add or subtract (add==false) one point from voting space
 // (corresponds to inner loop of Algorithm 2 in IPOL paper)
-void Hough::pointVote(const Eigen::Vector<double, 3>& point, bool add){
+void Hough::pointVote(const Eigen::Vector<float, 3>& point, bool add){
 
   int inc_dir = add ? 1 : -1;
 
@@ -68,15 +68,15 @@ void Hough::pointVote(const Eigen::Vector<double, 3>& point, bool add){
   for(size_t j = 0; j < sphere->vertices.size(); j++) {
 
     const Vector3d& b = sphere->vertices[j];
-    double beta = 1 / (1 + b.z);	// denominator in Eq. (2)
+    float beta = 1 / (1 + b.z);	// denominator in Eq. (2)
 
     // compute x' according to left hand side of Eq. (2)
-    double x_new = ((1 - (beta * (b.x * b.x))) * point(0))
+    float x_new = ((1 - (beta * (b.x * b.x))) * point(0))
       - ((beta * (b.x * b.y)) * point(1))
       - (b.x * point(2));
 
     // compute y' according to right hand side Eq. (2)
-    double y_new = ((-beta * (b.x * b.y)) * point(0))
+    float y_new = ((-beta * (b.x * b.y)) * point(0))
       + ((1 - (beta * (b.y * b.y))) * point(1))
       - (b.y * point(2));
 
@@ -94,7 +94,7 @@ void Hough::pointVote(const Eigen::Vector<double, 3>& point, bool add){
 }
 
 // returns the line with most votes (rc = number of votes)
-unsigned int Hough::getLine(Eigen::Vector<double, 3>& a, Eigen::Vector<double, 3>& b){
+unsigned int Hough::getLine(Eigen::Vector<float, 3>& a, Eigen::Vector<float, 3>& b){
   unsigned int votes = 0;
   unsigned int index = 0;
 
@@ -106,12 +106,12 @@ unsigned int Hough::getLine(Eigen::Vector<double, 3>& a, Eigen::Vector<double, 3
   }
 
   // retrieve x' coordinate from VotingSpace[num_x * num_x * num_b]
-  double x = (int) (index / (num_x * num_b));
+  float x = (int) (index / (num_x * num_b));
   index -= (int) x * num_x * num_b;
   x = x * dx - max_x;
 
   // retrieve y' coordinate from VotingSpace[num_x * num_x * num_b]
-  double y = (int) index / num_b;
+  float y = (int) index / num_b;
   index -= (int) y * num_b;
   y = y * dx - max_x;
 

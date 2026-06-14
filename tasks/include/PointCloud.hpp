@@ -75,7 +75,7 @@ public:
 
     @return Bounding box dimensions.
     */
-    std::array<double, 3> volume() { return stereo->volume(); }
+    auto volume() { return stereo->volume(); }
   
 protected:
     std::shared_ptr<DepthCamera> stereo;

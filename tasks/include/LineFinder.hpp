@@ -6,9 +6,9 @@
 #include <hough.h>
 
 typedef struct {
-    double anchor[3];
-    double dir[3];
-    double normal[3];
+    float anchor[3];
+    float dir[3];
+    float normal[3];
 } Line;
 
 const unsigned MAX_LINES = 20;
@@ -105,16 +105,16 @@ protected:
     std::shared_ptr<PointCloud> cloud;
     PointCloud::update_ptr_const_type latest;
     const std::string settings;
-    Eigen::Vector<double, 3> center;
+    Eigen::Vector<float, 3> center;
     unsigned min_vote;
     size_t max_lines;
     size_t granularity; 
-    double min_width, max_width;
-    double min_ratio;
-    double max_angle;
+    float min_width, max_width;
+    float min_ratio;
+    float max_angle;
     Hough* hough;
 
     std::vector<Line> hough3d(
-        const Eigen::Matrix<double, 3, Eigen::Dynamic>& points,
+        const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>>& points,
         Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>>& line_ids);
 };

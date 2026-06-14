@@ -14,11 +14,11 @@
 
 
 // store points closer than dx to line (a, b) in Y
-Eigen::Matrix<double, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic>& X, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b, double dx)
+Eigen::Matrix<float, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<float, 3, Eigen::Dynamic>& X, const Eigen::Vector<float, 3> &a, const Eigen::Vector<float, 3> &b, float dx)
 {
   auto idx = indicesCloseToLine(X, a, b, dx);
   auto n = idx.size();
-  Eigen::Matrix<double, 3, Eigen::Dynamic> out(3, n);
+  Eigen::Matrix<float, 3, Eigen::Dynamic> out(3, n);
   for(size_t i = 0; i < n; ++i)
   {
     out.col(i) = X.col(idx[i]);
@@ -27,14 +27,14 @@ Eigen::Matrix<double, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<d
 }
 
 // store points closer than dx to line (a, b) in Y
-std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Vector<double, 3> &a, const Eigen::Vector<double, 3> &b, double dx)
+std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<float, 3, Eigen::Dynamic> &X, const Eigen::Vector<float, 3> &a, const Eigen::Vector<float, 3> &b, float dx)
 {
   std::vector<Eigen::Index> indices;
   for (int i = 0; i < X.cols(); i++)
   {
     // distance computation after IPOL paper Eq. (7)
-    double t = b.dot(X.col(i) - a);
-    Eigen::Vector<double, 3> d = (X.col(i) - (a + (t * b)));
+    float t = b.dot(X.col(i) - a);
+    Eigen::Vector<float, 3> d = (X.col(i) - (a + (t * b)));
     if (d.norm() <= dx)
     {
       indices.push_back(i);
@@ -45,7 +45,7 @@ std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<double, 3, Eige
 
 // removes the points in Y from HoughPointCloud
 // WARNING: only works when points in same order as in HoughPointCloud!
-std::vector<Eigen::Index> removePoints(const Eigen::Matrix<double, 3, Eigen::Dynamic> &X, const Eigen::Matrix<double, 3, Eigen::Dynamic> &Y)
+std::vector<Eigen::Index> removePoints(const Eigen::Matrix<float, 3, Eigen::Dynamic> &X, const Eigen::Matrix<float, 3, Eigen::Dynamic> &Y)
 {
   std::vector<Eigen::Index> newindices;
 

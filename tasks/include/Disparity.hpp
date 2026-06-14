@@ -87,7 +87,7 @@ public:
 
     @return Bounding box dimensions.
     */
-    std::array<double, 3> volume();
+    std::array<float, 3> volume();
   
 protected:
     

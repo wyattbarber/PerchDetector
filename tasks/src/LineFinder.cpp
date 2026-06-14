@@ -21,7 +21,7 @@ take the closest (smallest Z coordinate) line.
 */
 size_t best_line_idx(const std::vector<Line>& lines)
 {
-    double closest_z = std::numeric_limits<double>::infinity();
+    float closest_z = std::numeric_limits<float>::infinity();
     size_t idx_best = 0;
     for(size_t i = 0; i < lines.size(); ++i)
     {
@@ -54,7 +54,7 @@ void LineFinder::step()
     Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>> ids((int8_t*)&next->data.line_ids, latest->data.n_valid);
     ids.fill(-1);
 
-    const auto lines = hough3d(points.cast<double>(), ids);
+    const auto lines = hough3d(points, ids);
 
     if(lines.size() > 0)
     {
@@ -66,8 +66,8 @@ void LineFinder::step()
 
         for(size_t i = 0; i < std::min(static_cast<unsigned>(lines.size()), MAX_LINES); ++i)
         {
-            memcpy((void*)next->data.lines[i].anchor, (void*)lines[i].anchor, 3*sizeof(double));
-            memcpy((void*)next->data.lines[i].dir, (void*)lines[i].dir, 3*sizeof(double));
+            memcpy((void*)next->data.lines[i].anchor, (void*)lines[i].anchor, 3*sizeof(float));
+            memcpy((void*)next->data.lines[i].dir, (void*)lines[i].dir, 3*sizeof(float));
         }
         next->data.pointcloud = latest;
     }
@@ -99,8 +99,8 @@ bool LineFinder::start_impl()
     
     // estimate size of Hough space. Mostly copied from hough 3d library, with size estimated as worst case point cloud bounding box
     auto volume = cloud->volume();
-    auto min_p = Eigen::Vector<double, 3>{-volume[0]/2.0, -volume[1]/2.0, 0} * 1000.0;
-    auto max_p = Eigen::Vector<double, 3>{volume[0]/2.0, volume[1]/2.0, volume[2]} * 1000.0;
+    auto min_p = Eigen::Vector<float, 3>{-volume[0]/2.0f, -volume[1]/2.0f, 0} * 1000.0f;
+    auto max_p = Eigen::Vector<float, 3>{volume[0]/2.0f, volume[1]/2.0f, volume[2]} * 1000.0f;
     hough = new Hough(min_p, max_p, 0, granularity);
     info("Configured Hough space with volume of ", volume[0], "m x ", volume[1], "m x ", volume[2], "m, and resolution of ", hough->dx, "mm");
 
@@ -112,7 +112,7 @@ void LineFinder::stop_impl()
 {}
 
 
-static void orthogonal_LSQ(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, Eigen::Vector<double, 3>& a, Eigen::Vector<double, 3>& b, Eigen::Vector<double, 3>& c)
+static void orthogonal_LSQ(const Eigen::Matrix<float, 3, Eigen::Dynamic> &points, Eigen::Vector<float, 3>& a, Eigen::Vector<float, 3>& b, Eigen::Vector<float, 3>& c)
 {
     // anchor point is mean value
     a = points.rowwise().mean();
@@ -122,8 +122,8 @@ static void orthogonal_LSQ(const Eigen::Matrix<double, 3, Eigen::Dynamic> &point
     auto scatter = centered * centered.adjoint();
 
     // ... and its eigenvalues and eigenvectors
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 3, 3>> eig(scatter);
-    Eigen::Matrix<double, 3, 3> eigvecs = eig.eigenvectors();
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix<float, 3, 3>> eig(scatter);
+    Eigen::Matrix<float, 3, 3> eigvecs = eig.eigenvectors();
 
     // we need eigenvector to largest eigenvalue
     // libeigen yields it as LAST column
@@ -132,16 +132,16 @@ static void orthogonal_LSQ(const Eigen::Matrix<double, 3, Eigen::Dynamic> &point
 }
 
 
-static std::pair<double, double> dimensions(const Eigen::Matrix<double, 3, Eigen::Dynamic> &points, const Eigen::Vector<double, 3> &anchor, const Eigen::Vector<double, 3> &dir, const Eigen::Vector<double, 3> &normal)
+static std::pair<float, float> dimensions(const Eigen::Matrix<float, 3, Eigen::Dynamic> &points, const Eigen::Vector<float, 3> &anchor, const Eigen::Vector<float, 3> &dir, const Eigen::Vector<float, 3> &normal)
 {
     const auto shifted = points.colwise() - anchor;
-    double length_max = 0.0, length_min = 0.0, width_max = 0.0, width_min = 0.0;
+    float length_max = 0.0, length_min = 0.0, width_max = 0.0, width_min = 0.0;
     for (int i = 0; i < shifted.cols(); ++i)
     {
-        double l = shifted.col(i).dot(dir);
+        float l = shifted.col(i).dot(dir);
         length_max = std::max(l, length_max);
         length_min = std::min(l, length_min);
-        double w = shifted.col(i).dot(normal);
+        float w = shifted.col(i).dot(normal);
         width_max = std::max(w, width_max);
         width_min = std::min(w, width_min);
     }
@@ -150,11 +150,11 @@ static std::pair<double, double> dimensions(const Eigen::Matrix<double, 3, Eigen
 
 
 std::vector<Line> LineFinder::hough3d(
-    const Eigen::Matrix<double, 3, Eigen::Dynamic> &points,
+    const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> &points,
     Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>>& ids)
 {
     // Perform hough transform iteratively
-    Eigen::Matrix<double, 3, Eigen::Dynamic> centered = points;
+    Eigen::Matrix<float, 3, Eigen::Dynamic> centered = points;
     // This vector tracks positions in original point cloud as lines get iteratively removed
     Eigen::VectorXi index_map = Eigen::VectorXi::LinSpaced(centered.cols(), 0, centered.cols()-1);
 
@@ -166,9 +166,9 @@ std::vector<Line> LineFinder::hough3d(
     std::vector<Line> out; // Identified lines
     do
     {
-        Eigen::Vector<double, 3> a; // anchor point of line
-        Eigen::Vector<double, 3> b; // direction of line
-        Eigen::Vector<double, 3> c; // perpendicular of line
+        Eigen::Vector3f a; // anchor point of line
+        Eigen::Vector3f b; // direction of line
+        Eigen::Vector3f c; // perpendicular of line
 
         // Get initial line estimate
         unsigned nvotes = hough->getLine(a, b);
@@ -203,9 +203,9 @@ std::vector<Line> LineFinder::hough3d(
         {
             // Add this line
             Line line;
-            memcpy(line.anchor, a.data(), 3*sizeof(double));
-            memcpy(line.dir, (b*l).eval().data(), 3*sizeof(double));
-            memcpy(line.normal, (c*w).eval().data(), 3*sizeof(double));
+            memcpy(line.anchor, a.data(), 3*sizeof(float));
+            memcpy(line.dir, (b*l).eval().data(), 3*sizeof(float));
+            memcpy(line.normal, (c*w).eval().data(), 3*sizeof(float));
             out.push_back(line);
             // Mark points belonging to this line, using index map to point back to original indices
             ids(index_map(Y)).fill(nlines);
@@ -265,8 +265,8 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
     const uint32_t h = static_cast<uint32_t>(CameraWrapper::Height);
     const uint8_t idx = update->data.selected_line;
 
-    file.write((char*)&update->data.lines[idx].anchor, 3*sizeof(double));
-    file.write((char*)&update->data.lines[idx].dir, 3*sizeof(double));
+    file.write((char*)&update->data.lines[idx].anchor, 3*sizeof(float));
+    file.write((char*)&update->data.lines[idx].dir, 3*sizeof(float));
     file.write((char*)&n, sizeof(uint32_t));
     file.write((char*)&update->data.pointcloud->data.cloud, n * 3 * sizeof(float));
     file.write((char*)&w, sizeof(uint32_t));
@@ -281,8 +281,8 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
     {
         if(i != idx)
         {
-            file.write((char*)&update->data.lines[i].anchor, 3*sizeof(double));
-            file.write((char*)&update->data.lines[i].dir, 3*sizeof(double));
+            file.write((char*)&update->data.lines[i].anchor, 3*sizeof(float));
+            file.write((char*)&update->data.lines[i].dir, 3*sizeof(float));
         }
     }
     file.write((char*)&update->data.line_ids, n * sizeof(int8_t));
@@ -315,11 +315,11 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
     }
 
     auto idx = update->data.selected_line;
-    auto a = Eigen::Map<const Eigen::Vector3d>(update->data.lines[idx].anchor);
-    auto d = Eigen::Map<const Eigen::Vector3d>(update->data.lines[idx].dir);
-    double angle_z = std::acos(d(2) / d.norm()); // Angle in radians to z axis 
-    const Eigen::Vector3d d_xy = {d(0), d(1), 0};
-    double angle_y = std::acos(d_xy(1) / d_xy.norm()); // Angle in radians to y axis 
+    auto a = Eigen::Map<const Eigen::Vector3f>(update->data.lines[idx].anchor);
+    auto d = Eigen::Map<const Eigen::Vector3f>(update->data.lines[idx].dir);
+    float angle_z = std::acos(d(2) / d.norm()); // Angle in radians to z axis 
+    const Eigen::Vector3f d_xy = {d(0), d(1), 0};
+    float angle_y = std::acos(d_xy(1) / d_xy.norm()); // Angle in radians to y axis 
 
     if(json)
     {

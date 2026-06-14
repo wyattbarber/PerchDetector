@@ -27,25 +27,25 @@ public:
   Sphere *sphere;
   size_t num_b;
   // x' and y'
-  double dx, max_x;
+  float dx, max_x;
   size_t num_x;
 
   // parameter space discretization and allocation of voting space
-  Hough(const Eigen::Vector<double, 3>& minP, const Eigen::Vector<double, 3>& maxP, double dx,
+  Hough(const Eigen::Vector<float, 3>& minP, const Eigen::Vector<float, 3>& maxP, float dx,
         unsigned int sphereGranularity);
   ~Hough();
   // returns the line with most votes (rc = number of votes)
-  unsigned int getLine(Eigen::Vector<double, 3>& point, Eigen::Vector<double, 3>& direction);
+  unsigned int getLine(Eigen::Vector<float, 3>& point, Eigen::Vector<float, 3>& direction);
   // add all points from point cloud to voting space
-  void add(const Eigen::Matrix<double, 3, Eigen::Dynamic> &pc);
+  void add(const Eigen::Matrix<float, 3, Eigen::Dynamic> &pc);
   // subtract all points from point cloud to voting space
-  void subtract(const Eigen::Matrix<double, 3, Eigen::Dynamic> &pc);
+  void subtract(const Eigen::Matrix<float, 3, Eigen::Dynamic> &pc);
   // reset voting space so new point cloud can be accepted
   void reset();
 
 private:
   // add or subtract (add==false) one point from voting space
-  void pointVote(const Eigen::Vector<double, 3>& point, bool add);
+  void pointVote(const Eigen::Vector<float, 3>& point, bool add);
 
 };
 
