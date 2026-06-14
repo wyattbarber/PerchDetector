@@ -228,11 +228,11 @@ std::vector<Line> LineFinder::hough3d(
 }
 
 
-bool _wait_flag_given(const std::vector<std::string>& args)
+bool _flag_given(const std::vector<std::string>& args, const std::string& flag)
 {
-    if(args.size() > 1)
+    for(auto& x : args)
     {
-        return (args[1] == "--next-valid");
+        if(x == flag) return true;
     }
     return false;
 }
@@ -250,7 +250,7 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
         return;
     }
 
-    bool ready = !_wait_flag_given(args);
+    bool ready = !_flag_given(args, "--wait");
     LineFinder::update_ptr_const_type update = taskptr->acquire();
     // Wait for valid data if not ready
     while(!ready)
@@ -292,7 +292,8 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
 
 void report_line_detect(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
 {
-    bool ready = !_wait_flag_given(args);
+    bool ready = !_flag_given(args, "--wait");
+    bool json = _flag_given(args, "--json");
     auto taskptr = (LineFinder*)(task);
     LineFinder::update_ptr_const_type update = taskptr->acquire();
     // Wait for valid data if not ready
@@ -304,7 +305,12 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
 
     if(!update->data.valid)
     {
-        out << "No perch detected." << std::endl;
+        if(json)
+        {
+            out << "{\"valid\": false}";
+        } else {
+            out << "No perch detected." << std::endl;
+        }
         return;
     }
 
@@ -315,11 +321,22 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
     const Eigen::Vector3d d_xy = {d(0), d(1), 0};
     double angle_y = std::acos(d_xy(1) / d_xy.norm()); // Angle in radians to y axis 
 
-
-    out << "Perch found." << std::endl;
-    out << "\tDistance: " << a[2] << " mm" << std::endl;
-    out << "\tAnchor Point: " << a << std::endl;
-    out << "\tAngle From Camera Plane: " << 90.0 - (angle_z * 180.0 / M_PI) << " degrees" << std::endl;
-    out << "\tAngle From Camera Vertical: " << angle_y * 180.0 / M_PI << " degrees" << std::endl;
-    out << "\tTotal Candidate Lines: " << (int)update->data.n_lines << std::endl;
+    if(json)
+    {
+        out << "{";
+        out << "\"valid\":true,";
+        out << "\"distance\":" << a[2] << ",";
+        out << "\"anchor\":[" << a[0] << "," << a[1] << "," << a[2] << "], ";
+        out << "\"angle_cam_plane\":" << 90.0 - (angle_z * 180.0 / M_PI) << ",";
+        out << "\"angle_cam_vertical\":" << angle_y * 180.0 / M_PI << ",";
+        out << "\"n_lines\":" << (int)update->data.n_lines;
+        out << "}" << std::endl;
+    } else {
+        out << "Perch found." << std::endl;
+        out << "\tDistance: " << a[2] << " mm" << std::endl;
+        out << "\tAnchor Point: " << a << std::endl;
+        out << "\tAngle From Camera Plane: " << 90.0 - (angle_z * 180.0 / M_PI) << " degrees" << std::endl;
+        out << "\tAngle From Camera Vertical: " << angle_y * 180.0 / M_PI << " degrees" << std::endl;
+        out << "\tTotal Candidate Lines: " << (int)update->data.n_lines << std::endl;
+    }
 }

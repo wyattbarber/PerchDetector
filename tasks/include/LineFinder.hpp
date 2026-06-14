@@ -50,7 +50,7 @@ FWD_DECL_DATA_SOURCE(LineFinder, LineFinderUpdate_t)
  * - file: Name of the file to create and save data to.
  * 
  * Optional, Named:
- * - --next-valid: If given, will wait to save until the next valid data update. Otherwise saves the latest update.
+ * - --wait: If given, will wait to save until the next valid data update. Otherwise saves the latest update.
  * 
  * 
  */
@@ -64,7 +64,7 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
  * The command accepts the following arguments:
  *  
  * Optional, Named:
- * - --next-valid: If given, will wait to report until the next valid data update. Otherwise reports the latest update.
+ * - --wait: If given, will wait to report until the next valid data update. Otherwise reports the latest update.
 */
 void report_line_detect(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args);
 

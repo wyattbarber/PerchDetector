@@ -211,6 +211,10 @@ class ResultsViewer:
 
     async def update(self):
         await asyncio.to_thread(self._pm.get_lines_out, f"detector save {self._file_path}/map{self._counter_in}")
+        report = await asyncio.to_thread(self._pm.get_lines_out, f"detector report --json")
+        with open(f"{self._file_path}/report{self._counter_in}.json", "w") as file:
+            file.write("".join(report))
+
         if hasattr(self, "_file") and hasattr(self._file, "close"):
             self._file.close()
         self._file = open(f"{self._file_path}/map{self._counter_in}", "rb")
@@ -242,17 +246,28 @@ class ResultsViewer:
         cloud = np.ndarray((n, 3), dtype=np.float32, buffer=data[start_cloud:end_cloud]).transpose()
         left = np.ndarray((h,w), dtype=np.uint8, buffer=data[start_left:end_left])
         ids = np.ndarray((n, 1), dtype=np.int8, buffer=data[start_assignments:])
+        anchor = np.ndarray((3, 1), buffer = data[0:3*8], dtype=np.float64)
+        dir = np.ndarray((3, 1), buffer = data[3*8:3*8 + 3*8], dtype=np.float64)
 
-        return (left, cloud, ids, nl+1)
+        return (left, cloud, ids, nl+1, anchor, dir)
 
-    def render(self, image, pointcloud, line_ids, n_lines):
+    def render(self, image, pointcloud, line_ids, n_lines, anchor, dir):
         out = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        # Draw clusters of points assigned to lines
         image_points, _= cv2.projectPoints(pointcloud, np.zeros((3,1)), np.zeros((3,1)), self._Pn1[:,:3], np.zeros((1,5)))
         for i in range(pointcloud.shape[1]):
             if line_ids[i,0] >= 0:
                 x = int(image_points[i,0,0])
                 y = int(image_points[i,0,1])
                 out[y,x,:] = (np.asarray(self._cmap(line_ids[i,0] / n_lines)[:3]) * 255).astype(np.uint8)
+        # Draw selected line
+        pt1 = anchor + dir
+        pt2 = anchor - dir        
+        image_points, _= cv2.projectPoints(np.stack([pt1, pt2], axis=1), np.zeros((3,1)), np.zeros((3,1)), self._Pn1[:,:3], np.zeros((1,5)))
+        cv2.line(out, 
+            (int(image_points[0,0,0]), int(image_points[0,0,1])), 
+            (int(image_points[1,0,0]), int(image_points[1,0,1])), 
+            (255,0,0), 3)
         return out
     
     def save(self, image):
@@ -263,6 +278,10 @@ class ResultsViewer:
     @property
     def latest(self):
         return self._latest_file
+
+    @property
+    def report(self):
+        return f"{self._file_path}/report{self._counter_in-1}.json"
 
 
 pm: ProcManager = None
@@ -421,22 +440,27 @@ async def _load_results():
 
     rv.set_source(rvd.latest)
 
+def _save_results():
+    global elements
+    ui.download.file(elements["results_viewer_datasource"].latest)
+    ui.download.file(elements["results_viewer_datasource"].report)
 
 def results_window(container):
     global pm, elements
 
     with container:
         elements["results_viewer_datasource"] = ResultsViewer(pm, "calibrations")
-        elements["results_reload"] = ui.button("Load Detection Results", on_click=_load_results)
+        with ui.row():
+            elements["results_reload"] = ui.button("Load Detection Results", on_click=_load_results)
+            elements["results_save"] = ui.button("Save Detection Results", on_click=_save_results)
         elements["results_view"] = ui.image("").classes("w-full")
 
 
 def startup():
     global pm
-    dirs = ["/tmp/stereo_gui", "/tmp/stereo_gui_results"]
+    dirs = ["/tmp/stereo_gui/", "/tmp/stereo_gui_results/"]
     for d in dirs:
-        if os.path.exists(d):
-            shutil.rmtree(d)
+        shutil.rmtree(d)
         os.makedirs(d)
     pm.init()
 
