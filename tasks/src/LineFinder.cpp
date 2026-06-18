@@ -153,11 +153,10 @@ std::vector<Line> LineFinder::hough3d(
     Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>>& ids)
 {
     // Perform hough transform iteratively
-    Eigen::Matrix<float, 3, Eigen::Dynamic> centered = points;
     // This vector tracks positions in original point cloud as lines get iteratively removed
-    Eigen::VectorXi index_map = Eigen::VectorXi::LinSpaced(centered.cols(), 0, centered.cols()-1);
+    Eigen::VectorXi index_map = Eigen::VectorXi::LinSpaced(points.cols(), 0, points.cols()-1);
 
-    hough->add(centered);
+    hough->add(points);
 
     std::vector<Eigen::Index> Y; // points close to line
     double l, w;
@@ -173,22 +172,22 @@ std::vector<Line> LineFinder::hough3d(
         unsigned nvotes = hough->getLine(a, b);
 
         // Get the highest voted line
-        Y = indicesCloseToLine(centered, a, b, hough->dx);
+        Y = indicesCloseToLine(points(Eigen::all, index_map), a, b, hough->dx);
 
         // Refine line
-        orthogonal_LSQ(centered(Eigen::all, Y), a, b, c);
+        orthogonal_LSQ(points(Eigen::all, index_map(Y)), a, b, c);
 
         // Refine inliers
-        Y = indicesCloseToLine(centered, a, b, hough->dx);
+        Y = indicesCloseToLine(points(Eigen::all, index_map), a, b, hough->dx);
         nvotes = Y.size();
         if (nvotes < min_vote)
             // Vote threshold not met, exit
             break;
 
         // Refine line again?
-        orthogonal_LSQ(centered(Eigen::all, Y), a, b, c);
+        orthogonal_LSQ(points(Eigen::all, index_map(Y)), a, b, c);
 
-        std::tie(l, w) = dimensions(centered(Eigen::all, Y), a, b, c);
+        std::tie(l, w) = dimensions(points(Eigen::all, index_map(Y)), a, b, c);
         
         // a += center;
         auto ratio = l / w;
@@ -213,12 +212,11 @@ std::vector<Line> LineFinder::hough3d(
         }
 
         // Remove this line to prepare to get the next highest voted
-        hough->subtract(centered(Eigen::all, Y));
-        auto idx_new = removePoints(centered, Y);
-        centered = centered(Eigen::all, idx_new).eval();
+        hough->subtract(points(Eigen::all, index_map(Y)));
+        auto idx_new = removePoints(index_map.size(), Y);
         index_map = index_map(idx_new).eval();
 
-    } while ((centered.cols() > 1) &&
+    } while ((index_map.size() > 1) &&
              ((max_lines == 0) || (max_lines > nlines)));
 
     hough->reset();
