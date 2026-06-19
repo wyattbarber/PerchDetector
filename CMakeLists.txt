@@ -53,6 +53,7 @@ add_library(hough3d STATIC
 )
 target_include_directories(hough3d PUBLIC hough3d)
 target_link_libraries(hough3d PUBLIC Eigen3::Eigen)
+target_compile_definitions(hough3d PUBLIC "HOUGH_VECTORIZE_VOTE")
 
 # Library of specific task types
 add_library(tasks STATIC 

@@ -46,6 +46,7 @@ public:
 private:
   // add or subtract (add==false) one point from voting space
   void pointVote(const Eigen::Vector<float, 3>& point, bool add);
+  void vectorPointVote(const  Eigen::Matrix<float, 3, Eigen::Dynamic> &pc, bool add);
 
 };
 

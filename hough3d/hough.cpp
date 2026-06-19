@@ -46,16 +46,24 @@ Hough::~Hough() {
 
 // add all points from point cloud to voting space
 void Hough::add(const  Eigen::Matrix<float, 3, Eigen::Dynamic> &pc) {
+#ifdef HOUGH_VECTORIZE_VOTE
+    vectorPointVote(pc, true);
+#else
   for (int i = 0; i < pc.cols(); ++i) {
     pointVote(pc.col(i), true);
   }
+#endif
 }
 
 // subtract all points from point cloud to voting space
 void Hough::subtract(const  Eigen::Matrix<float, 3, Eigen::Dynamic> &pc) {
+#ifdef HOUGH_VECTORIZE_VOTE
+    vectorPointVote(pc, false);
+#else
   for (int i = 0; i < pc.cols(); ++i) {
     pointVote(pc.col(i), false);
   }
+#endif
 }
 
 // add or subtract (add==false) one point from voting space
@@ -89,6 +97,36 @@ void Hough::pointVote(const Eigen::Vector<float, 3>& point, bool add){
 
     if (index < VotingSpace.size()) {
         VotingSpace[index] += inc_dir;
+    }
+  }
+}
+
+
+void Hough::vectorPointVote(const  Eigen::Matrix<float, 3, Eigen::Dynamic> &pc, bool add) {
+  int inc_dir = add ? 1 : -1;
+  Eigen::Matrix<int, 2, Eigen::Dynamic> linear_idx_helper = Eigen::Matrix<int, 2, Eigen::Dynamic>::Constant(2, pc.cols(), num_b);
+  linear_idx_helper.row(0) *= num_x;
+
+  // loop over directions B
+  for(size_t j = 0; j < sphere->vertices.size(); j++) {
+    const Vector3d& b = sphere->vertices[j];
+    // u and v vectors that project each point into the x` y` plane for this direction vector
+    float bzp1 = 1.0 + b.z;
+    Eigen::Matrix<float, 2, 3> uv = {
+      1.0 - (b.x*b.x / bzp1), -b.x*b.y / bzp1,    -b.x,
+      -b.x*b.y / bzp1,        1.0 - (b.y / bzp1), -b.y  
+    };
+    // Project points into this direction vectors x`y` plane
+    auto xyp = uv * pc;
+    // Convert to discretized positions
+    auto xyp_d = (xyp.array() + max_x) / dx;
+    // Convert to linear indices
+    Eigen::VectorXi indices = (xyp_d.array() * linear_idx_helper.array()).colwise().sum().array() + j;
+    // Add votes to each index
+    for(size_t i = 0; i < indices.size(), ++i) {
+      if ((indices(i) >= 0) && (indices(i) < VotingSpace.size())) {
+          VotingSpace[indices(i)] += inc_dir;
+      }
     }
   }
 }
