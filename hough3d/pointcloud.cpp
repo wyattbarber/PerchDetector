@@ -29,6 +29,9 @@ Eigen::Matrix<float, 3, Eigen::Dynamic> pointsCloseToLine(const Eigen::Matrix<fl
 // store points closer than dx to line (a, b) in Y
 std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<float, 3, Eigen::Dynamic> &X, const Eigen::Vector<float, 3> &a, const Eigen::Vector<float, 3> &b, float dx)
 {
+#ifdef HOUGH_VECTORIZE_DIST
+  return indicesCloseToLineVectorized(X, a, b, dx);
+#else
   std::vector<Eigen::Index> indices;
   for (int i = 0; i < X.cols(); i++)
   {
@@ -36,6 +39,25 @@ std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<float, 3, Eigen
     float t = b.dot(X.col(i) - a);
     Eigen::Vector<float, 3> d = (X.col(i) - (a + (t * b)));
     if (d.norm() <= dx)
+    {
+      indices.push_back(i);
+    }
+  }
+  return indices;
+#endif
+}
+
+std::vector<Eigen::Index> indicesCloseToLineVectorized(const Eigen::Matrix<float, 3, Eigen::Dynamic> &X, const Eigen::Vector<float, 3> &a, const Eigen::Vector<float, 3> &b, float dx)
+{
+  std::vector<Eigen::Index> indices;
+  auto t = (X.colwise() - a).colwise().dot(b);
+  auto d = X.colwise() - (a + (t.colwise() * b));
+  Eigen::VectorXf n = d.norm();
+
+  float* data = n.data();
+  for (int i = 0; i < n.size(); i++)
+  {
+    if (*(data+i) <= dx)
     {
       indices.push_back(i);
     }

@@ -123,9 +123,9 @@ void Hough::vectorPointVote(const  Eigen::Matrix<float, 3, Eigen::Dynamic> &pc, 
     // Convert to linear indices
     Eigen::VectorXi indices = (xyp_d.array() * linear_idx_helper.array()).colwise().sum().array() + j;
     // Add votes to each index
-    for(size_t i = 0; i < indices.size(), ++i) {
-      if ((indices(i) >= 0) && (indices(i) < VotingSpace.size())) {
-          VotingSpace[indices(i)] += inc_dir;
+    for(const auto& idx : indices) {
+      if( (idx >= 0) && (idx < VotingSpace.size()) ){
+          VotingSpace[idx] += inc_dir;
       }
     }
   }
