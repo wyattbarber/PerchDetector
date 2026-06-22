@@ -2,8 +2,9 @@
 
 #include <algorithm>
 #include <json_loader.hpp>
+#ifdef ENABLE_OPEN3D
 #include <open3d/Open3D.h>
-
+#endif
 
 template<uint8_t X> 
 bool _PointCloud<X>::start_impl()
@@ -123,7 +124,8 @@ void _PointCloud<X>::step()
             next->data.cloud[3*next->data.n_valid + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
             ++next->data.n_valid;
         }
-    }
+    }    
+#ifdef ENABLE_OPEN3D
     // Remove noisy outliers
     if(next->data.n_valid > 0)
     {
@@ -140,6 +142,7 @@ void _PointCloud<X>::step()
         memcpy((void*)next->data.cloud, (void*)filtered_points.GetDataPtr<float>(), filtered_points.GetLength() * 3 * sizeof(float));
         next->data.n_valid = filtered_points.GetLength();
     }
+#endif
     this->swap_data();
 
     // Wait for next update

@@ -50,9 +50,9 @@ std::vector<Eigen::Index> indicesCloseToLine(const Eigen::Matrix<float, 3, Eigen
 std::vector<Eigen::Index> indicesCloseToLineVectorized(const Eigen::Matrix<float, 3, Eigen::Dynamic> &X, const Eigen::Vector<float, 3> &a, const Eigen::Vector<float, 3> &b, float dx)
 {
   std::vector<Eigen::Index> indices;
-  auto t = (X.colwise() - a).colwise().dot(b);
-  auto d = X.colwise() - (a + (t.colwise() * b));
-  Eigen::VectorXf n = d.norm();
+  auto t = b.transpose() * (X.colwise() - a);
+  auto d = X.colwise() - (a + (b * t));
+  Eigen::VectorXf n = d.colwise().norm();
 
   float* data = n.data();
   for (int i = 0; i < n.size(); i++)

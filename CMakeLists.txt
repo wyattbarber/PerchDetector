@@ -7,11 +7,15 @@ find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
 find_package(jsoncpp REQUIRED)
-find_package(Open3D REQUIRED HINTS $ENV{HOME}/open3d_install)
+find_package(Open3D HINTS $ENV{HOME}/open3d_install)
 
-set(CMAKE_CXX_FLAGS "-DBLOCK_ALLOC") # Use custom allocator in default build
-set(CMAKE_CXX_FLAGS_DEBUG "-fopenmp -Wall -g")
-set(CMAKE_CXX_FLAGS_RELEASE "-fopenmp -Wall -O3")
+if(${Open3D_FOUND})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_OPEN3D")
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBLOCK_ALLOC") # Use custom allocator in default build
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -g")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -O3")
 
 # Generic logging and task interface library
 add_library(util STATIC
@@ -53,7 +57,8 @@ add_library(hough3d STATIC
 )
 target_include_directories(hough3d PUBLIC hough3d)
 target_link_libraries(hough3d PUBLIC Eigen3::Eigen)
-target_compile_definitions(hough3d PUBLIC "HOUGH_VECTORIZE_VOTE HOUGH_VECTORIZE_DIST")
+target_compile_definitions(hough3d PUBLIC "HOUGH_VECTORIZE_VOTE")
+target_compile_definitions(hough3d PUBLIC "HOUGH_VECTORIZE_DIST")
 
 # Library of specific task types
 add_library(tasks STATIC 
@@ -64,8 +69,11 @@ add_library(tasks STATIC
     tasks/src/LineFinder.cpp
     tasks/src/GrasperCtl.cpp
 )
-target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d Open3D::Open3D)
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
 target_include_directories(tasks PUBLIC tasks/include)
+if(${Open3D_FOUND})
+    target_link_libraries(tasks PUBLIC Open3D::Open3D)
+endif()
 
 # Main executable
 add_executable(main main.cpp main_cmd.cpp main_exe.cpp)
