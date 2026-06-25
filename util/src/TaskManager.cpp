@@ -57,3 +57,13 @@ size_t TaskManager::get_ticks()
     }
     return tick_counter;
 }
+
+std::vector<std::string> TaskManager::names()
+{
+    std::vector<std::string> out;
+    for(const auto& task : tasks)
+    {
+        out.push_back(task.first);
+    }
+    return out;
+}

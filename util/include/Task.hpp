@@ -152,6 +152,8 @@ public:
 
     const char* name;
 
+    std::vector<std::string> dependencies();
+
 protected:
     /** Adds a CLI action for this task type.
     

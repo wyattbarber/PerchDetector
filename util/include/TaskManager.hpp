@@ -76,6 +76,8 @@ public:
     const auto end(){ return tasks.end(); }
     const auto find(const std::string& name){ return tasks.find(name); }
 
+    std::vector<std::string> names();
+
 protected:
     std::map<std::string, std::shared_ptr<Task>> tasks;
     std::map<std::string, void(*)(std::shared_ptr<Task>, TaskManager*)> executors;

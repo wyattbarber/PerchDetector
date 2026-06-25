@@ -41,8 +41,9 @@ void capture(std::istream&, std::ostream&, const std::vector<std::string>&, prog
 void cmd_list(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void log_dump(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 void set_tick(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
-void call_task_command(const std::string&, std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
+void dot_graph(std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 
+void call_task_command(const std::string&, std::istream&, std::ostream&, const std::vector<std::string>&, program_context&);
 
 // Helpers for program initialization and execution //
 void make_tasks(program_context& context);

@@ -113,3 +113,14 @@ void Task::tick()
     }
     last_tick_call = now;
 }
+
+
+std::vector<std::string> Task::dependencies()
+{
+    std::vector<std::string> out;
+    for(const auto& task: depends_on)
+    {
+        out.push_back(task->name);
+    }
+    return out;
+}

@@ -310,3 +310,17 @@ void set_tick(std::istream& in, std::ostream& out, const std::vector<std::string
     context.tasks.set_tick(f);
     out << "Program tick set to " << f << " Hz." << std::endl;
 }
+
+
+void dot_graph(std::istream& in, std::ostream& out, const std::vector<std::string>& args, program_context& context)
+{
+    out << "digraph {" << std::endl;
+    for(const auto& task : context.tasks.names())
+    {
+        for(const auto& dep : context.tasks.get(task)->dependencies())
+        {
+            out << "\t" << dep << " -> " << task << std::endl;
+        }
+    }
+    out << "}" << std::endl;
+}
