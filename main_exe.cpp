@@ -36,6 +36,9 @@ void make_tasks(program_context& context)
 
     auto detector = std::make_shared<LineFinder>("detector", pointcloud, context.cal_folder);
     context.tasks.add(detector);
+
+    auto ioctl = std::make_shared<GrasperController>("ioctl", "/dev/i2c-89");
+    context.tasks.add(ioctl);
 }
 
 

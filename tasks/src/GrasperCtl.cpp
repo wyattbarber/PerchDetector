@@ -7,6 +7,7 @@
 #include <cerrno>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
+#include <wiringPi.h>
 
 
 /*=== ADC config register definitions (copied from Adafruit code) ===*/
@@ -91,6 +92,19 @@ bool GrasperController::start_impl()
         error("Failed to communicate with device ", adc_addr, ": ", std::strerror(errno));
         return false;
     }
+    // Initialize GPIO
+    if(wiringPiSetupGpio() == -1)
+    {
+        error("GPIO setup failed.");
+        return false;
+    }
+    pinMode(servo_0_pin, PWM_OUTPUT);
+    pinMode(servo_1_pin, PWM_OUTPUT);
+    pinMode(servo_2_pin, PWM_OUTPUT);
+    pwmSetMode(PWM_MODE_MS);
+    pwmSetClock(384);   // Sets a 50 kHz clock tick rate (20 microseconds per tick)
+    pwmSetRange(1000);  // 1000 ticks * 20 microseconds = 20,000 microseconds (20ms/50Hz)
+
 
     return true;
 }
@@ -175,4 +189,40 @@ int16_t GrasperController::read_adc_channel(uint8_t chn)
     }
     
     return res >> 4;
+}
+
+
+void GrasperController::pwm_write(uint8_t chn, uint16_t pulse_width_ms)
+{
+    pwmWrite(1, pulse_width_ms * 1000u / 20u); 
+}
+
+
+void GrasperController::ServoWinder::step()
+{
+    switch(state)
+    {
+        case 0: // Unwound
+        {
+            break;
+        }
+        case 1: // Winding
+        {
+            break;
+        }
+        case 2: // Wound
+        {
+            break;
+        }
+        case 3: // Unwinding
+        {
+            break;
+        }
+        default: state = 0; break;
+    }
+}
+
+void GrasperController::ServoWinder::set_goal(bool wind)
+{
+    goal_wind = wind;
 }

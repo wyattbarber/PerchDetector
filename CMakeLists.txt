@@ -72,7 +72,7 @@ add_library(tasks STATIC
 target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
 target_include_directories(tasks PUBLIC tasks/include)
 if(${Open3D_FOUND})
-    target_link_libraries(tasks PUBLIC Open3D::Open3D)
+    target_link_libraries(tasks PUBLIC Open3D::Open3D wiringPi)
 endif()
 
 # Main executable
