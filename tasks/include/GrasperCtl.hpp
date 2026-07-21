@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Task.hpp"
-
-
+#include <iostream>
+#include <vector>
 
 
 /** Implements I2C an GPIO controlls for the grasper.
@@ -17,10 +17,51 @@ public:
         servo_0_pin(18),
         servo_1_pin(19),
         servo_2_pin(34),
-        servo_0(servo_0_pin),
-        servo_1(servo_1_pin),
-        servo_2(servo_2_pin)
-    {}
+        servo_0(servo_0_pin, 0, 0.3),
+        servo_1(servo_1_pin, 1, 0.3)
+    {
+        state = 0;
+        cmd_grasp = false;
+        cmd_release = false;
+
+        declare_cli_command("close", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            out << "Closing grasper..." << std::endl;
+            static_cast<GrasperController*>(task)->grasp();
+            out << "Closed grasper." << std::endl;
+        });
+        declare_cli_command("open", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            out << "Opening grasper..." << std::endl;
+            static_cast<GrasperController*>(task)->release();
+            out << "Opened grasper." << std::endl;
+        });
+        declare_cli_command("raise", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            if(args.size() < 1)
+            {
+                out << "Direction is required" << std::endl;
+                return;
+            }
+            bool wind = (args[0] == "1") || (args[0] == "true");
+            static_cast<GrasperController*>(task)->servo_0.set_goal(wind);
+        });
+        declare_cli_command("curl", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            if(args.size() < 1)
+            {
+                out << "Direction is required" << std::endl;
+                return;
+            }
+            bool wind = (args[0] == "1") || (args[0] == "true");
+            static_cast<GrasperController*>(task)->servo_1.set_goal(wind);
+        });
+        declare_cli_command("latch", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            if(args.size() < 1)
+            {
+                out << "Direction is required" << std::endl;
+                return;
+            }
+            bool wind = (args[0] == "1") || (args[0] == "true");
+            static_cast<GrasperController*>(task)->pwm_write(static_cast<GrasperController*>(task)->servo_2_pin, wind ? 1250 : 1750);
+        });
+    }
 
     /** Setup i2c bus and configure IO 
     */
@@ -34,6 +75,19 @@ public:
     */
     void step();
 
+    /** Command grasper to close.
+
+    Blocks until motion is complete.
+    Should be called from a separate thread than this task is running in.
+    */
+    void grasp();
+
+    /** Command grasper to open.
+
+    Blocks until motion is complete.
+    Should be called from a separate thread than this task is running in.
+    */
+    void release();
 
 private:
 
@@ -43,9 +97,13 @@ private:
     static constexpr char adc_addr = 0x48;
     static constexpr int16_t adc_max = 0x07FF;
     static constexpr float adc_v_max = 4.096;
+    
     const uint8_t servo_0_pin;
     const uint8_t servo_1_pin;
     const uint8_t servo_2_pin;
+
+    uint8_t state;
+    bool cmd_grasp, cmd_release;
 
     int16_t read_adc_channel(uint8_t chn);
 
@@ -54,16 +112,22 @@ private:
     class ServoWinder
     {
     public:
-        ServoWinder(uint8_t pin) :
-            pin(pin),
+        ServoWinder(uint8_t servo_pin, uint8_t adc_chn, float current_lim) :
+            pin(servo_pin),
+            adc_chn(adc_chn),
+            current_lim(current_lim),
             state(0),
             goal_wind(false),
             wind_count(0)
         {}
-        void step();
-        void set_goal(bool wind);
+        void step(GrasperController* parent);
+        void set_goal(bool wind){ goal_wind = wind; }
+        bool wound(){ return state == 2; }
+        bool unwound(){ return state == 0; }
     private:
         const uint8_t pin;
+        const uint8_t adc_chn;
+        const float current_lim;
         uint8_t state;
         bool goal_wind;
         uint16_t wind_count;
@@ -71,5 +135,4 @@ private:
 
     ServoWinder servo_0;
     ServoWinder servo_1;
-    ServoWinder servo_2;
 };

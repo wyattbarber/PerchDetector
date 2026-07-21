@@ -8,6 +8,10 @@
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <wiringPi.h>
+#include <thread>
+
+
+using namespace std::chrono_literals;
 
 
 /*=== ADC config register definitions (copied from Adafruit code) ===*/
@@ -116,9 +120,100 @@ void GrasperController::stop_impl()
 }
 
 
+void GrasperController::grasp()
+{
+    cmd_grasp = true;
+    while(cmd_grasp)
+    {
+        std::this_thread::sleep_for(50ms);
+    }
+}
+
+
+void GrasperController::release()
+{
+    cmd_release = true;
+    while(cmd_release)
+    {
+        std::this_thread::sleep_for(50ms);
+    }
+}
+
 void GrasperController::step()
 {
+    servo_0.step(this);
+    servo_1.step(this);
 
+    switch(state)
+    {
+        case 0: // Released
+        {
+            if(cmd_grasp)
+            {
+                servo_0.set_goal(true);
+                state = 1;
+            }
+            break;
+        }
+        case 1: // Raise grasper
+        {
+            if(servo_0.wound())
+            {
+                servo_1.set_goal(true);
+                state = 2;
+            }
+            break;
+        }
+        case 2: // Close grasper
+        {
+            if(servo_1.wound())
+            {
+                state = 3;
+            }
+            break;
+        }
+        case 3: // Latch grasper
+        {
+            pwm_write(servo_2_pin, 1250);
+            state = 4;
+            cmd_grasp = false;
+            break;
+        }
+        case 4: // Grasped
+        {
+            if(cmd_release)
+            {
+                state = 5;
+            }
+            break;
+        }
+        case 5: // Unlatch grasper
+        {
+            pwm_write(servo_2_pin, 1750);
+            state = 6;
+            break;
+        }
+        case 6: // Open grasper
+        {
+            servo_1.set_goal(false);
+            if(servo_1.unwound())
+            {
+                servo_0.set_goal(false);
+                state = 7;
+            }
+            break;
+        }
+        case 7: // Lower grasper
+        {   
+            if(servo_0.unwound())
+            {
+                cmd_release = false;
+                state = 0;
+            }
+            break;
+        }
+        default: state = 0; break;
+    }
 }
 
 
@@ -198,31 +293,45 @@ void GrasperController::pwm_write(uint8_t chn, uint16_t pulse_width_ms)
 }
 
 
-void GrasperController::ServoWinder::step()
+void GrasperController::ServoWinder::step(GrasperController* parent)
 {
     switch(state)
     {
         case 0: // Unwound
         {
+            if (goal_wind)
+            {
+                state = 1;
+            }
             break;
         }
         case 1: // Winding
         {
+            ++wind_count;
+            if ((static_cast<float>(parent->read_adc_channel(adc_chn)) * 0.003) > current_lim)
+            {
+                state = 2;
+            }
             break;
         }
         case 2: // Wound
         {
+            if (!goal_wind)
+            {
+                state = 3;
+            }
             break;
         }
         case 3: // Unwinding
         {
+            --wind_count;
+            if (wind_count <= 0)
+            {
+                wind_count = 0;
+                state = 0;
+            }
             break;
         }
         default: state = 0; break;
     }
-}
-
-void GrasperController::ServoWinder::set_goal(bool wind)
-{
-    goal_wind = wind;
 }
