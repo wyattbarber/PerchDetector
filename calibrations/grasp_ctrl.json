@@ -1,0 +1,6 @@
+{
+    "max_offset": 30,
+    "max_dist": 30,
+    "max_z_tilt": 20,
+    "max_y_tilt": 20
+}

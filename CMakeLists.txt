@@ -68,6 +68,7 @@ add_library(tasks STATIC
     tasks/src/VL53L8CX.cpp
     tasks/src/LineFinder.cpp
     tasks/src/GrasperCtl.cpp
+    tasks/src/GraspOnDetect.cpp
 )
 target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
 target_include_directories(tasks PUBLIC tasks/include)

@@ -39,6 +39,9 @@ void make_tasks(program_context& context)
 
     auto ioctl = std::make_shared<GrasperController>("ioctl", "/dev/i2c-89");
     context.tasks.add(ioctl);
+
+    auto graspctl = std::make_shared<GraspOnDetect>("graspctl", context.cal_folder, detector, ioctl);
+    context.tasks.add(graspctl);
 }
 
 
