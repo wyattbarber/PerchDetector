@@ -314,6 +314,7 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
     auto idx = update->data.selected_line;
     auto a = Eigen::Map<const Eigen::Vector3f>(update->data.lines[idx].anchor);
     auto d = Eigen::Map<const Eigen::Vector3f>(update->data.lines[idx].dir);
+    auto n = Eigen::Map<const Eigen::Vector3f>(update->data.lines[idx].normal);
     float angle_z = std::acos(d(2) / d.norm()); // Angle in radians to z axis 
     const Eigen::Vector3f d_xy = {d(0), d(1), 0};
     float angle_y = std::acos(d_xy(1) / d_xy.norm()); // Angle in radians to y axis 
@@ -326,12 +327,14 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
         out << "\"anchor\":[" << a[0] << "," << a[1] << "," << a[2] << "], ";
         out << "\"angle_cam_plane\":" << 90.0 - (angle_z * 180.0 / M_PI) << ",";
         out << "\"angle_cam_vertical\":" << angle_y * 180.0 / M_PI << ",";
-        out << "\"n_lines\":" << (int)update->data.n_lines;
+        out << "\"n_lines\":" << (int)update->data.n_lines << ",";
+        out << "\"width\":" << n.norm();
         out << "}" << std::endl;
     } else {
         out << "Perch found." << std::endl;
         out << "\tDistance: " << a[2] << " mm" << std::endl;
         out << "\tAnchor Point: " << a << std::endl;
+        out << "\tPerch Width: " << n.norm() << std::endl;
         out << "\tAngle From Camera Plane: " << 90.0 - (angle_z * 180.0 / M_PI) << " degrees" << std::endl;
         out << "\tAngle From Camera Vertical: " << angle_y * 180.0 / M_PI << " degrees" << std::endl;
         out << "\tTotal Candidate Lines: " << (int)update->data.n_lines << std::endl;
