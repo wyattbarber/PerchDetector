@@ -458,11 +458,11 @@ def results_window(container):
 
 def startup():
     global pm
-    pm.init()
     dirs = ["/tmp/stereo_gui/", "/tmp/stereo_gui_results/"]
     for d in dirs:
         shutil.rmtree(d)
         os.makedirs(d)
+    pm.init()
 
 
 def shutdown():

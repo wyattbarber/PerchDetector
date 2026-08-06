@@ -4,8 +4,6 @@ env/**
 calibrations/**
 !calibrations/*.json
 __pycache__/**
-# Data and logs
-*.data
 logout.txt
 
 # Build files

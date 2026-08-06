@@ -23,6 +23,6 @@ std::vector<Eigen::Index> indicesCloseToLineVectorized(const Eigen::Matrix<float
 
 // removes the points in Y from HoughPointCloud
 // WARNING: only works when points in same order as in HoughPointCloud!
-std::vector<Eigen::Index> removePoints(Eigen::Index N, const std::vector<Eigen::Index>& Y);
+std::vector<Eigen::Index> removePoints(const Eigen::Matrix<float, 3, Eigen::Dynamic>& X, const std::vector<Eigen::Index>& Y);
 
 #endif /* HoughPointCloud_H_ */
