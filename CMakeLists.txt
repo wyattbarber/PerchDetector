@@ -57,6 +57,8 @@ add_library(hough3d STATIC
 )
 target_include_directories(hough3d PUBLIC hough3d)
 target_link_libraries(hough3d PUBLIC Eigen3::Eigen)
+
+# The following two features aren't broken, don't use
 # target_compile_definitions(hough3d PUBLIC "HOUGH_VECTORIZE_VOTE")
 # target_compile_definitions(hough3d PUBLIC "HOUGH_VECTORIZE_DIST")
 
