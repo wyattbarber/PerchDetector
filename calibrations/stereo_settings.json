@@ -1,7 +1,7 @@
 {
     "stereo" : {
         "minDistance": 0.2,
-        "maxDistance": 1.8,
+        "maxDistance": 3.0,
         "blockSize": 3,
         "preFilterCap": 0,
         "speckleRange": 5,

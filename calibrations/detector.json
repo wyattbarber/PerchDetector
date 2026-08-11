@@ -2,8 +2,8 @@
     "min_vote": 100,
     "max_lines": 10,
     "granularity": 3,
-    "min_ratio": 10.0,
+    "min_ratio": 5,
     "max_angle": 30, 
-    "min_width": 0.001,
-    "max_width": 0.500
+    "min_width": 10,
+    "max_width": 1000
 }
