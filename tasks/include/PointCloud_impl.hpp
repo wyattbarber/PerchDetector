@@ -51,6 +51,8 @@ bool _PointCloud<X>::start_impl()
         0 
     );
 
+    baseline = cv::norm(T);
+
     if(!load_json_value_pairs(
         stereo_param,
         std::make_tuple("stereo"),
@@ -118,8 +120,8 @@ void _PointCloud<X>::step()
             (point_clout_ptr[3*idx_orig + 2] <= max_dist)
             )
         {
-            // Copy best points and convert to mm
-            next->data.cloud[3*next->data.n_valid] = point_clout_ptr[3*idx_orig] * 1000.0; // x
+            // Copy best points and convert to mm, with origin between cameras
+            next->data.cloud[3*next->data.n_valid] = (point_clout_ptr[3*idx_orig] * 1000.0) - (baseline / 2.0f); // x
             next->data.cloud[3*next->data.n_valid + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
             next->data.cloud[3*next->data.n_valid + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
             ++next->data.n_valid;

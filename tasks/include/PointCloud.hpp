@@ -88,6 +88,7 @@ protected:
     double max_dist, min_dist;
     unsigned filter_n;
     double filter_r, filter_v;
+    float baseline;
 };
 
 /** Converts point clouds to flat stream for sharing
