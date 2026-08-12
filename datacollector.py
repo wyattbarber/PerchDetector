@@ -3,6 +3,7 @@ import serial
 import time
 import argparse
 import codecs
+import numpy as np
 
 
 class Interface:
@@ -217,5 +218,8 @@ if __name__ == "__main__":
             data["observations"]["anchor"].append(observation["anchor"])
             data["observations"]["direction"].append(observation["direction"])
 
+    for k in ["distance", "offset", "azimuth", "elevation"]:
+        print(f"Average {k}: {np.mean(data['observations'][k])}")
+        
     with open(args.output, "w") as file:
         json.dump(data, file, indent=4)
