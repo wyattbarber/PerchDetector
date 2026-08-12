@@ -327,6 +327,7 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
         out << "\"valid\":true,";
         out << "\"distance\":" << a[2] << ",";
         out << "\"anchor\":[" << a[0] << "," << a[1] << "," << a[2] << "], ";
+        out << "\"direction\":[" << d[0] << "," << d[1] << "," << d[2] << "], ";
         out << "\"angle_cam_plane\":" << 90.0 - (angle_z * 180.0 / M_PI) << ",";
         out << "\"angle_cam_vertical\":" << angle_y * 180.0 / M_PI << ",";
         out << "\"n_lines\":" << (int)update->data.n_lines << ",";

@@ -88,6 +88,9 @@ class Interface:
                 raise TimeoutError("Failed to get valid detection in 5 minutes")
         return time.time() - ts
 
+    def save_detection(self, filename: str):
+        self.write(f"detector save {filename}\n")
+        self.wait_for(">>>")
 
 def parser(args):
     p = argparse.ArgumentParser()
@@ -185,7 +188,9 @@ if __name__ == "__main__":
             "offset": [],
             "elevation": [],
             "azimuth": [],
-            "width":  []
+            "width":  [],
+            "anchor":  [],
+            "direction":  []
         }
     }
     with Interface(args.port, args.user, args.password, logfile=args.serial_log) as iface:
@@ -196,6 +201,10 @@ if __name__ == "__main__":
         data["observations"]["startup_time"] = iface.wait_for_detection()
         print("Initial detection valid.")
 
+        file_base = os.path.splitext(os.path.basename(args.output))[0]
+        iface.save_detection(f"~/{file_base}_bin")
+        print(f"Saved full detection results to ~/{file_base}_bin")
+
         ts = time.time()
         while (time.time() - ts) <= (args.collection_time * 60):
             observation = iface.get_detection_status()
@@ -205,6 +214,8 @@ if __name__ == "__main__":
             data["observations"]["elevation"].append(observation["angle_cam_plane"])
             data["observations"]["azimuth"].append(observation["angle_cam_vertical"])
             data["observations"]["width"].append(observation["width"])
+            data["observations"]["anchor"].append(observation["anchor"])
+            data["observations"]["direction"].append(observation["direction"])
 
     with open(args.output, "w") as file:
         json.dump(data, file, indent=4)

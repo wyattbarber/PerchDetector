@@ -403,7 +403,7 @@ def _pt_cloud_callback_filter(x):
         ptc = np.asarray(o3p.farthest_point_down_sample(elements["point_cloud_n_max"]).points)
     else:
         ptc = data
-    return ptc @ elements["point_cloud_rotation"].T 
+    return (ptc @ elements["point_cloud_rotation"].T) / 100.0 
 
 async def _pt_cloud_callback():
     global elements
@@ -460,7 +460,8 @@ def startup():
     global pm
     dirs = ["/tmp/stereo_gui/", "/tmp/stereo_gui_results/"]
     for d in dirs:
-        shutil.rmtree(d)
+        if os.path.exists(d):
+            shutil.rmtree(d)
         os.makedirs(d)
     pm.init()
 
