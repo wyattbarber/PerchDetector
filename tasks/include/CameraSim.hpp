@@ -29,15 +29,10 @@ class CameraSimulator : public DataSource<CameraSimulator>
 
     @param name Camera name, for logging
     */
-    CameraSimulator(const char* name, bool right = false) : 
+    CameraSimulator(const char* name, bool right) : 
         DataSource(name, {}),
-        _block_pose_x(CameraWrapper::Width/2),
-        _block_pose_y(CameraWrapper::Height/2),
         right(right)
     {
-        background = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>::Ones(CameraWrapper::Height, CameraWrapper::Width);
-        block = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>::Ones(block_height, block_width) * 255;
-        cv_out = cv::Mat(CameraWrapper::Height, CameraWrapper::Width, CV_8UC1);
     }
 
     /** Starts the camera 
@@ -50,10 +45,9 @@ class CameraSimulator : public DataSource<CameraSimulator>
 
     void step();
 
-protected:
-    std::pair<unsigned, unsigned> get_block_pose(){ return {_block_pose_y, _block_pose_x}; }
+    std::vector<size_t> dims(){ return {Height, Width}; }
 
-    unsigned _block_pose_x, _block_pose_y;
+protected:
     static const unsigned block_width = 100;
     static const unsigned block_height = 50;
     const bool right;

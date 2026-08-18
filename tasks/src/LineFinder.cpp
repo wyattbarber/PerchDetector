@@ -260,8 +260,8 @@ void save_line_detect(Task* task, std::istream& in, std::ostream& out, const std
 
     // Pack data
     const uint32_t n = static_cast<uint32_t>(update->data.pointcloud->data.n_valid);
-    const uint32_t w = static_cast<uint32_t>(CameraWrapper::Width);
-    const uint32_t h = static_cast<uint32_t>(CameraWrapper::Height);
+    const uint32_t w = static_cast<uint32_t>(CameraType::Width);
+    const uint32_t h = static_cast<uint32_t>(CameraType::Height);
     const uint8_t idx = update->data.selected_line;
 
     file.write((char*)&update->data.lines[idx].anchor, 3*sizeof(float));

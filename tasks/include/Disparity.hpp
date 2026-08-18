@@ -1,16 +1,23 @@
 #pragma once
 
 #include <CameraWrapper.hpp>
+#include <CameraSim.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/ximgproc/disparity_filter.hpp>
 #include <memory>
 #include "Task.hpp"
 #include "DataSource.hpp"
 
+#ifdef WSL_SIM
+typedef CameraSimulator CameraType;
+#else
+typedef CameraWrapper CameraType;
+#endif
+
 typedef struct {
-    int16_t disparity[CameraWrapper::Width * CameraWrapper::Height];
-    uint8_t confidence[CameraWrapper::Width * CameraWrapper::Height];
-    CameraWrapper::update_ptr_const_type left_img, right_img;
+    int16_t disparity[CameraType::Width * CameraType::Height];
+    uint8_t confidence[CameraType::Width * CameraType::Height];
+    CameraType::update_ptr_const_type left_img, right_img;
 } DisparityUpdate_t;
 
 FWD_DECL_DATA_SOURCE(DepthCamera, DisparityUpdate_t)
@@ -31,8 +38,8 @@ as output
 class DepthCamera : public DataSource<DepthCamera>
 {
 public:
-    static constexpr auto Height = CameraWrapper::Height;
-    static constexpr auto Width = CameraWrapper::Width;
+    static constexpr auto Height = CameraType::Height;
+    static constexpr auto Width = CameraType::Width;
 
     /** Construct a new disparity generator.
 
@@ -47,7 +54,7 @@ public:
     @param left Left camera task
     @param right Right camera task
     */  
-    DepthCamera(const char* name, const std::string& cal_path, std::shared_ptr<CameraWrapper> left, std::shared_ptr<CameraWrapper> right) : 
+    DepthCamera(const char* name, const std::string& cal_path, std::shared_ptr<CameraType> left, std::shared_ptr<CameraType> right) : 
         DataSource<DepthCamera>(name, {left, right}),
         left(left),
         right(right),
@@ -96,8 +103,8 @@ protected:
     */
     void rectify(const cv::Mat& left_in, const cv::Mat& right_in, cv::Mat& left_out, cv::Mat& right_out);
 
-    std::shared_ptr<CameraWrapper> left, right;
-    typename CameraWrapper::update_ptr_const_type latest_left, latest_right;
+    std::shared_ptr<CameraType> left, right;
+    typename CameraType::update_ptr_const_type latest_left, latest_right;
 
     bool downsample;
     cv::Ptr<StereoMatcherType> stereo_left, stereo_right;

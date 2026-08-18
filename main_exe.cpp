@@ -11,6 +11,15 @@ static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10"
 
 void make_tasks(program_context& context)
 {
+#ifdef WSL_SIM
+    auto cam_left = std::make_shared<CameraSimulator>("camera-left", false);
+    context.tasks.add(make_data_mapper("left_feed", cam_left));
+    context.tasks.add(cam_left);
+
+    auto cam_right = std::make_shared<CameraSimulator>("camera-right", true);
+    context.tasks.add(make_data_mapper("right_feed", cam_right));
+    context.tasks.add(cam_right);
+#else
     auto cam_manager = std::make_shared<CameraManagerTask>();
     context.tasks.add(cam_manager);
     
@@ -21,6 +30,7 @@ void make_tasks(program_context& context)
     auto cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right);
     context.tasks.add(make_data_mapper("right_feed", cam_right));
     context.tasks.add(cam_right);
+#endif
 
     auto stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
     context.tasks.add(make_data_mapper("stereo_feed", stereo, stereo_display_conv()));
@@ -37,11 +47,13 @@ void make_tasks(program_context& context)
     auto detector = std::make_shared<LineFinder>("detector", pointcloud, context.cal_folder);
     context.tasks.add(detector);
 
+#ifndef WSL_SIM
     auto ioctl = std::make_shared<GrasperController>("ioctl", "/dev/i2c-89");
     context.tasks.add(ioctl);
 
     auto graspctl = std::make_shared<GraspOnDetect>("graspctl", context.cal_folder, detector, ioctl);
     context.tasks.add(graspctl);
+#endif
 }
 
 

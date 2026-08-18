@@ -41,12 +41,6 @@ int main(int argc, char** argv)
             context.cal_folder = std::string(argv[i+1]);
             i += 2;
         }
-        else if(strcmp(argv[i], "--simulate") == 0) // Run with simulated inputs
-        {
-            std::cout << "    Warning: Simulation is not supported, ignoring." << std::endl;
-            context.simulation = true;
-            i++;
-        }
         else
         {
             std::cout << "    Unrecognized argument " << argv[i] << std::endl;
@@ -66,8 +60,10 @@ int main(int argc, char** argv)
     context.tasks.launch();
     
     // Start base tasks that should be run without user input
+#ifndef WSL_SIM
     std::cout << "-- Starting core tasks" << std::endl;
     context.tasks.get("_camera_manager")->start();
+#endif
 
     context.running = true;
     std::cout << "Perch detector CLI started" << std::endl;

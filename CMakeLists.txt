@@ -16,6 +16,9 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBLOCK_ALLOC") # Use custom allocator in default build
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -03")
+if(BUILD_WSL_SIM)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWSL_SIM") 
+endif()
 
 # Generic logging and task interface library
 add_library(util STATIC
@@ -69,9 +72,13 @@ add_library(tasks STATIC
     tasks/src/Disparity.cpp
     tasks/src/VL53L8CX.cpp
     tasks/src/LineFinder.cpp
-    tasks/src/GrasperCtl.cpp
-    tasks/src/GraspOnDetect.cpp
 )
+if(NOT BUILD_WSL_SIM) # Add rpi GPIO dependent builds
+    target_sources(tasks PRIVATE
+        tasks/src/GrasperCtl.cpp
+        tasks/src/GraspOnDetect.cpp
+    )
+endif()
 target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
 target_include_directories(tasks PUBLIC tasks/include)
 if(${Open3D_FOUND})

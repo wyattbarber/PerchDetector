@@ -9,5 +9,8 @@
 #include <DataEncoder.hpp>
 #include <DataMapper.hpp>
 #include <LineFinder.hpp>
+
+#ifndef WSL_SIM
 #include <GrasperCtl.hpp>
 #include <GraspOnDetect.hpp>
+#endif
