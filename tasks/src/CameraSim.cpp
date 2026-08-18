@@ -10,20 +10,50 @@ void CameraSimulator::step()
 {
     tick();
 
-    // Initialize image with noise in the range 0-25
-    background.setRandom(Height, Width);
-    background = background.unaryExpr([](uint8_t x){ return x % 25; }).cast<uint8_t>();
-
-    // Set block in middle of frame to white
-    unsigned mid_x = Width / 2;
-    unsigned mid_y = Height / 2;
-    background.block<block_height, block_width>(
-        mid_y - (block_height/2),
-        right ? mid_x - (block_width/2) - 50 : mid_x - (block_width/2)
-    ) = block;
-
-    // Update output data
-    cv::eigen2cv(background, cv_out);
-    swap_data(*reinterpret_cast<uint8_t(*)[Width*Height]>(cv_out.data));
+    auto latest = manager->acquire();
+    swap_data(right ? latest->data.right : latest->data.left);
 }
 
+
+void CameraSimManager::set_source_file(Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args)
+{
+    auto tp = (CameraSimManager*)task;
+
+    if(args.size() < 1)
+    {
+        out << "Need input filename." << std::endl;
+        return;
+    }
+    const auto& filename = args[0];
+
+    std::ifstream file(filename, std::ios::in | std::ios::binary);
+    if(!file.is_open())
+    {
+        out << "Failed to open " << filename << std::endl;
+        return;
+    }
+
+    uint32_t n, w, h;
+    file.seekg(6*sizeof(float));
+    file.read((char*)&n, sizeof(uint32_t));
+    file.seekg(n*3*sizeof(float), std::ios::cur);
+    file.read((char*)&w, sizeof(uint32_t));
+    file.read((char*)&h, sizeof(uint32_t));
+
+    if((w != Width) || (h != Height))
+    {
+        out << "Dimensions stored in file are incorrect. Expected " << Width << " x " << Height;
+        out << ", got " << w << " x " << h << std::endl;
+        return;
+    }
+
+    auto next = tp->allocate_next();
+    CameraSimulator::value_type buffer;
+    file.read((char*)buffer, Width*Height);
+    memcpy((void*)next->data.left, buffer, Width*Height);
+    file.read((char*)buffer, Width*Height);
+    memcpy((void*)next->data.right, buffer, Width*Height);
+    tp->swap_data();
+
+    out << "Loaded new data file." << std::endl;
+}

@@ -12,25 +12,27 @@ static bool id_cam_right(const std::string& id){return id.find("i2c@1/imx219@10"
 void make_tasks(program_context& context)
 {
 #ifdef WSL_SIM
-    auto cam_left = std::make_shared<CameraSimulator>("camera-left", false);
-    context.tasks.add(make_data_mapper("left_feed", cam_left));
+    auto cam_manager = std::make_shared<CameraSimManager>("sim-mgr");
+    context.tasks.add(cam_manager);
+
+    auto cam_left = std::make_shared<CameraSimulator>("camera-left", cam_manager, false);
     context.tasks.add(cam_left);
 
-    auto cam_right = std::make_shared<CameraSimulator>("camera-right", true);
-    context.tasks.add(make_data_mapper("right_feed", cam_right));
+    auto cam_right = std::make_shared<CameraSimulator>("camera-right", cam_manager, true);
     context.tasks.add(cam_right);
 #else
     auto cam_manager = std::make_shared<CameraManagerTask>();
     context.tasks.add(cam_manager);
     
     auto cam_left = std::make_shared<CameraWrapper>("camera-left", cam_manager, id_cam_left);
-    context.tasks.add(make_data_mapper("left_feed", cam_left));
     context.tasks.add(cam_left);
 
     auto cam_right = std::make_shared<CameraWrapper>("camera-right", cam_manager, id_cam_right);
-    context.tasks.add(make_data_mapper("right_feed", cam_right));
     context.tasks.add(cam_right);
 #endif
+
+    context.tasks.add(make_data_mapper("left_feed", cam_left));
+    context.tasks.add(make_data_mapper("right_feed", cam_right));
 
     auto stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
     context.tasks.add(make_data_mapper("stereo_feed", stereo, stereo_display_conv()));
