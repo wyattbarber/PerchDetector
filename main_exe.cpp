@@ -36,6 +36,7 @@ void make_tasks(program_context& context)
 
     auto stereo = std::make_shared<DepthCamera>("stereo", context.cal_folder, cam_left, cam_right);
     context.tasks.add(make_data_mapper("stereo_feed", stereo, stereo_display_conv()));
+    context.tasks.add(make_data_mapper("confidence_feed", stereo, stereo_conf_display_conv()));
     context.tasks.add(stereo);
 
     auto lidar = std::make_shared<VL53L8CX>("lidar", "/dev/spidev0.0", context.cal_folder);

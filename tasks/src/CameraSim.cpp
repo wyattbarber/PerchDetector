@@ -1,6 +1,9 @@
 #include "CameraSim.hpp"
 #include <opencv2/core/eigen.hpp>
 #include <chrono>
+#include <cerrno>
+#include <cstring>
+#include <algorithm>
 
 
 using namespace Eigen;
@@ -38,11 +41,21 @@ void CameraSimManager::set_source_file(Task* task, std::istream& in, std::ostrea
         filename += " ";
         filename += args[i];
     }
+    // Handle windows path nonsense 
+    if((filename.front() == '"') && (filename.back() == '"'))
+    {
+        filename = filename.substr(1, filename.length()-2);
+    }
+    std::replace(filename.begin(), filename.end(), '\\', '/');  
+    if(filename.substr(0,2) == "C:")
+    {
+        filename = std::string("/mnt/c") + filename.substr(2, filename.length()-2);
+    }
 
     std::ifstream file(filename, std::ios::in | std::ios::binary);
     if(!file.is_open())
     {
-        out << "Failed to open " << filename << std::endl;
+        out << "Failed to open " << filename << ": " << std::strerror(errno) << std::endl;
         return;
     }
 

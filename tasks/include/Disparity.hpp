@@ -139,4 +139,11 @@ typedef struct stereo_display_conv
     using conversion_type = int16_t[DepthCamera::Height * DepthCamera::Width];
     static std::vector<size_t> dims() { return {DepthCamera::Height, DepthCamera::Width}; }
     static void eval(void* dst, const DepthCamera::value_type& src);
-} stereo_display_conv;
+} stereo_display_conv; 
+
+typedef struct stereo_conf_display_conv
+{ 
+    using conversion_type = int8_t[DepthCamera::Height * DepthCamera::Width];
+    static std::vector<size_t> dims() { return {DepthCamera::Height, DepthCamera::Width}; }
+    static void eval(void* dst, const DepthCamera::value_type& src);
+} stereo_conf_display_conv;

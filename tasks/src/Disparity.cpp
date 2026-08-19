@@ -50,11 +50,12 @@ auto make_right_matcher(cv::Ptr<T> left)
         right->setMode(left->getMode());
         right->setPreFilterCap(left->getPreFilterCap());
         right->setDisp12MaxDiff(1000000);
+        right->setSpeckleWindowSize(0);
         return right;
     }
     else
     {
-        return std::dynamic_pointer_cast<Task>(cv::ximgproc::createRightMatcher(left));
+        return std::dynamic_pointer_cast<T>(cv::ximgproc::createRightMatcher(left));
     }
 }
 
@@ -75,7 +76,20 @@ auto make_wls_filter(cv::Ptr<T> left)
                           left->getUniquenessRatio(),
                           left->getSpeckleWindowSize(),
                           left->getSpeckleRange());
-        return cv::ximgproc::createDisparityWLSFilter(left_fake);
+        auto wls = cv::ximgproc::createDisparityWLSFilter(left_fake);
+        // Copy params back, since disparity filter factory changes some
+        set_stereo_params(left,
+                          left_fake->getMinDisparity(),
+                          left_fake->getNumDisparities(),
+                          left_fake->getBlockSize(),
+                          left_fake->getP1(),
+                          left_fake->getP2(),
+                          left_fake->getDisp12MaxDiff(),
+                          left_fake->getPreFilterCap(),
+                          left_fake->getUniquenessRatio(),
+                          left_fake->getSpeckleWindowSize(),
+                          left_fake->getSpeckleRange());
+        return wls;
     }
     else
     {
@@ -326,4 +340,9 @@ void stereo_display_conv::eval(void *dst, const DepthCamera::value_type &src)
                          [](int16_t x)
                          { return x > 0 ? x : 0; })
                   .cast<int16_t>();
+}
+
+void stereo_conf_display_conv::eval(void *dst, const DepthCamera::value_type &src)
+{
+    memcpy(dst, (void*) src.confidence, DepthCamera::Width*DepthCamera::Height);
 }

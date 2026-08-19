@@ -456,6 +456,24 @@ def results_window(container):
         elements["results_view"] = ui.image("").classes("w-full")
 
 
+def generic_command_scene(container):
+    global pm, elements
+
+    with container:
+        with ui.card():
+            with ui.row():
+                elements["generic_command_input"] = ui.input()
+                ui.button("Run").on_change(_run_generic_cmd)
+        with ui.card():
+            elements["generic_command_output"] = ui.label()
+
+async def _run_generic_cmd():
+    global pm, elements
+    cmd = elements["generic_command_input"].value
+    res = await asyncio.to_thread(pm.get_lines_out, cmd)
+    elements["generic_command_output"].text = "<br/>".join(out)
+
+
 def startup():
     global pm
     dirs = ["/tmp/stereo_gui/", "/tmp/stereo_gui_results/"]
@@ -497,6 +515,7 @@ if __name__ in {"__main__", "__mp_main__"}:
                     data = ui.tab("Raw Data")
                     log = ui.tab("Logs")
                     cloud = ui.tab("Point Cloud")
+                    command = ui.tab("Command")
                     graph = ui.tab("Graph")
                     rates = ui.tab("Rates")
 
@@ -515,6 +534,9 @@ if __name__ in {"__main__", "__mp_main__"}:
 
                     with ui.tab_panel(cloud).classes("w-full") as tb:
                         point_cloud_scene(tb)
+                                        
+                    with ui.tab_panel(command).classes("w-full") as tb:
+                        generic_command_scene(tb)
 
                     with ui.tab_panel(graph).classes("w-full") as tb:
                         ui.markdown("_To-Do_")
