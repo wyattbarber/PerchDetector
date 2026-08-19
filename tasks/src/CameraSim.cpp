@@ -68,5 +68,5 @@ void CameraSimManager::set_source_file(Task* task, std::istream& in, std::ostrea
     memcpy((void*)next->data.right, buffer, Width*Height);
     tp->swap_data();
 
-    out << "Loaded new data file." << std::endl;
+    out << "Loaded new data from " << filename << std::endl;
 }
