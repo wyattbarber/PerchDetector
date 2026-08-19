@@ -24,7 +24,20 @@ void CameraSimManager::set_source_file(Task* task, std::istream& in, std::ostrea
         out << "Need input filename." << std::endl;
         return;
     }
-    const auto& filename = args[0];
+    // Loop to handle spaces in path
+    size_t path_length = args.size()-1;
+    for(const auto& arg : args)
+    {
+        path_length += arg.length();
+    }
+    std::string filename;
+    filename.reserve(path_length);
+    filename += args[0];
+    for(size_t i = 1; i < args.size(); ++i)
+    {
+        filename += " ";
+        filename += args[i];
+    }
 
     std::ifstream file(filename, std::ios::in | std::ios::binary);
     if(!file.is_open())

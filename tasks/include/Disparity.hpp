@@ -3,7 +3,8 @@
 #include <CameraWrapper.hpp>
 #include <CameraSim.hpp>
 #include <opencv2/calib3d.hpp>
-#include <opencv2/ximgproc/disparity_filter.hpp>
+#include <opencv2/ximgproc.hpp>
+#include <opencv2/stereo.hpp>
 #include <memory>
 #include "Task.hpp"
 #include "DataSource.hpp"
@@ -23,7 +24,7 @@ typedef struct {
 FWD_DECL_DATA_SOURCE(DepthCamera, DisparityUpdate_t)
 
 
-using StereoMatcherType = cv::StereoSGBM; // Select block matching algorithm
+using StereoMatcherType = cv::stereo::StereoBinarySGBM; // Select block matching algorithm
 
 
 /** Generates disparity maps from stereo image pairs.
@@ -126,6 +127,7 @@ protected:
     bool load_calibration();
     void dist_to_disp(double min_dist, double max_dist, int& min_disp, int& max_disp);
     std::tuple<double, double> bb_xy(double max_dist);
+    
 };
 
 

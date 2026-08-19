@@ -3,7 +3,7 @@
         "minDistance": 0.2,
         "maxDistance": 3.0,
         "blockSize": 3,
-        "preFilterCap": 0,
+        "preFilterCap": 10,
         "speckleRange": 5,
         "speckleWindowSize": 150,
         "disp12MaxDiff": 1,
