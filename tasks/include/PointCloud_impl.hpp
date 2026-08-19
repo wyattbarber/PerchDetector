@@ -6,10 +6,10 @@
 #include <open3d/Open3D.h>
 #endif
 
-template<uint8_t X> 
-bool _PointCloud<X>::start_impl()
+template<uint8_t N, uint8_t M>
+bool _PointCloud<N,M>::start_impl()
 {
-    if(!stereo->is_alive()) return false;
+    if(!stereo->is_alive()) return false; 
 
     // Load calibration data
     cv::Mat left_intr(3,3,CV_64F);
@@ -85,66 +85,48 @@ bool _PointCloud<X>::start_impl()
 }
 
 
-template<uint8_t X> 
-void _PointCloud<X>::step()
+template<typename T>
+auto max_confidence_pool(const Eigen::MatrixBase<T>& confidence, const cv::Mat& points)
+{
+    Eigen::Index maxRow, maxCol;
+    typename Eigen::MatrixBase<T>::Scalar maxVal = confidence.maxCoeff(&maxRow, &maxCol);
+    return points.at<cv::Vec3f>(maxRow, maxCol);
+}
+
+
+template<uint8_t N, uint8_t M>
+void _PointCloud<N,M>::step()
 {
     this->tick();
-    // Compute point cloud
-    const cv::Mat disparity(DepthCamera::Height, DepthCamera::Width, CV_16S, const_cast<int16_t*>(latest_disparity->data.disparity));
-    cv::reprojectImageTo3D(disparity / 16, point_cloud, Q, false);
-    // Partial sort confidence and indices to get low and high confidence partitions
-    for(size_t i = 0; i < DepthCamera::Height*DepthCamera::Width; ++i)
-    {
-        unconfidence_w_indices[i].first = 255 - latest_disparity->data.confidence[i];
-        unconfidence_w_indices[i].second = i;
-    }
-    std::partial_sort(
-        unconfidence_w_indices, 
-        unconfidence_w_indices+num_points<X>(), 
-        unconfidence_w_indices+(DepthCamera::Height*DepthCamera::Width),
-        [](const std::pair<uint8_t, size_t>& a, const std::pair<uint8_t, size_t>& b)
-        {
-            return a.first < b.first;
-        }
+    // Compute point cloud and convert confidence to Eigen Matrix
+    const cv::Mat disparity(
+        DepthCamera::Height, DepthCamera::Width, CV_16S, const_cast<int16_t*>(latest_disparity->data.disparity)
     );
-    // Copy best points to new update
+    cv::reprojectImageTo3D(disparity / 16.0, point_cloud, Q, false);
+    Eigen::Map<const Eigen::Matrix<uint8_t, DepthCamera::Height, DepthCamera::Width>> confidence(
+        latest_disparity->data.confidence
+    );
+
+    // Create new update    
     auto next = this->allocate_next();  
     next->data.n_valid = 0;
     next->data.disparity = latest_disparity;
-    auto point_clout_ptr = reinterpret_cast<float*>(point_cloud.data);
-    for(size_t i = 0; i < num_points<X>(); ++i)
+
+    // Copy points after downsampling
+    for(int i = 0; i <= DepthCamera::Height - N; i += N)
     {
-        auto idx_orig = unconfidence_w_indices[i].second;
-        if(
-            (point_clout_ptr[3*idx_orig + 2] >= min_dist) && 
-            (point_clout_ptr[3*idx_orig + 2] <= max_dist)
-            )
-        {
+        for(int j = 0; j <= DepthCamera::Width - M; j += M)
+        {   
+            // Select highest confidence point in this block
+            auto conf_region = confidence.block<N,M>(i,j);
+            auto point = max_confidence_pool(conf_region, point_cloud(cv::Rect(j, i, M, N)));
             // Copy best points and convert to mm, with origin between cameras
-            next->data.cloud[3*next->data.n_valid] = (point_clout_ptr[3*idx_orig] * 1000.0) - (baseline / 2.0f); // x
-            next->data.cloud[3*next->data.n_valid + 1] = point_clout_ptr[3*idx_orig + 1] * 1000.0; // y
-            next->data.cloud[3*next->data.n_valid + 2] = point_clout_ptr[3*idx_orig + 2] * 1000.0; // z
-            ++next->data.n_valid;
+            next->data.cloud[3*next->data.n_valid] = point[0] * 1000.0; // x
+            next->data.cloud[3*next->data.n_valid + 1] = point[1] * 1000.0; // y
+            next->data.cloud[3*next->data.n_valid + 2] = point[2] * 1000.0; // z
+            next->data.n_valid += 1;
         }
-    }    
-#ifdef ENABLE_OPEN3D
-    // Remove noisy outliers
-    if(next->data.n_valid > 0)
-    {
-        open3d::core::Tensor mapped_points(
-            next->data.cloud,
-            {next->data.n_valid, 3},
-            open3d::core::Float32,
-            open3d::core::Device("CPU:0")
-        );
-        open3d::t::geometry::PointCloud ptc;
-        ptc.SetPointPositions(mapped_points);
-        const auto downsampled = ptc.VoxelDownSample(filter_v * 1000.0);
-        const auto filtered_points = std::get<0>(downsampled.RemoveRadiusOutliers(filter_n, filter_r*1000.0)).GetPointPositions();
-        memcpy((void*)next->data.cloud, (void*)filtered_points.GetDataPtr<float>(), filtered_points.GetLength() * 3 * sizeof(float));
-        next->data.n_valid = filtered_points.GetLength();
     }
-#endif
     this->swap_data();
 
     // Wait for next update

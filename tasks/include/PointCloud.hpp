@@ -5,30 +5,30 @@
 #include <opencv2/calib3d.hpp>
 
 /// Point cloud size
-template<uint8_t X> 
-constexpr size_t num_points(){ return (DepthCamera::Height * DepthCamera::Width * X) / 100; }
+template<uint8_t N, uint8_t M> 
+constexpr size_t num_points(){ return (DepthCamera::Height / N) * (DepthCamera::Width / M); }
 
 /// Point cloud type, array of [x0,y0,z0,x1,y1,z1,x2...] coordinates in mm
-template<uint8_t X> 
+template<uint8_t N, uint8_t M> 
 class stereo_point_cloud_t
 {
 public:
-    float cloud[3*num_points<X>()];
+    float cloud[3*num_points<N,M>()];
     size_t n_valid;
     DepthCamera::update_ptr_const_type disparity;
 };
 
 
 // Forward declarations and traits for datasource interface
-template<uint8_t X> class _PointCloud; 
-template<uint8_t X> 
-struct DataSourceTraits<_PointCloud<X>>
+template<uint8_t N, uint8_t M> class _PointCloud; 
+template<uint8_t N, uint8_t M>
+struct DataSourceTraits<_PointCloud<N,M>>
 { 
-    using value_type = stereo_point_cloud_t<X>; 
+    using value_type = stereo_point_cloud_t<N,M>; 
 }; 
 
 
-typedef _PointCloud<50> PointCloud;
+typedef _PointCloud<2,2> PointCloud;
 
 /** Converts disparity data into point clouds.
 
@@ -38,11 +38,12 @@ points, ranked by confidence
 
 @tparam X Percentage of pixels to keep in the point cloud, value 1-100
 */
-template<uint8_t X>
-class _PointCloud : public DataSource<_PointCloud<X>>
+template<uint8_t N, uint8_t M>
+class _PointCloud : public DataSource<_PointCloud<N,M>>
 {
 public:
-    static constexpr size_t NumPoints = num_points<X>();
+    /// Number of points in the output point cloud after filtering
+    static constexpr size_t NumPoints = num_points<N,M>();
 
     /** Create new point cloud generator.
     
@@ -51,14 +52,15 @@ public:
     @param cal_path Path to folder containing stereo calibration and settings.
     */
     _PointCloud(const char* name, std::shared_ptr<DepthCamera> stereo, const std::string& cal_path):
-        DataSource<_PointCloud<X>>(name, {stereo}),
+        DataSource<_PointCloud<N,M>>(name, {stereo}),
         stereo(stereo),        
         left_cal(cal_path + "/left.json"),
         right_cal(cal_path + "/right.json"),
         stereo_cal(cal_path + "/stereo_calibration.json"),
         stereo_param(cal_path + "/stereo_settings.json")
     {
-        static_assert((X >= 1)  && (X <= 100), "Percent of points kept must be an integer between 1 and 100");
+        static_assert((N >= 1)  && (N <= DepthCamera::Height/2), "N must be an integer between 1 and half the image height.");
+        static_assert((M >= 1)  && (M <= DepthCamera::Width/2), "M must be an integer between 1 and half the image width.");
     }
     void step();
 
@@ -66,7 +68,7 @@ public:
 
     void stop_impl(){}
 
-    std::vector<size_t> dims(){ return {num_points<X>(), 3}; }
+    std::vector<size_t> dims(){ return {NumPoints, 3}; }
 
     /** Provides the maximum dimensions of the point cloud.
     
@@ -93,17 +95,17 @@ protected:
 
 /** Converts point clouds to flat stream for sharing
 */
-template<unsigned X>
+template<uint8_t N, uint8_t M>
 class _point_cloud_conv
 { 
 public:
-    using conversion_type = float[3*num_points<X>()];
-    static std::vector<size_t> dims() { return {3, _PointCloud<X>::NumPoints}; }
-    static void eval(void* dst, const typename _PointCloud<X>::value_type& src)
+    using conversion_type = float[3*_PointCloud<N,M>::NumPoints];
+    static std::vector<size_t> dims() { return {3, _PointCloud<N,M>::NumPoints}; }
+    static void eval(void* dst, const typename _PointCloud<N,M>::value_type& src)
     {
-        memcpy(dst, (void*)src.cloud, 3*num_points<X>()*sizeof(float));
+        memcpy(dst, (void*)src.cloud, 3*_PointCloud<N,M>::NumPoints*sizeof(float));
     }
 };
-using point_cloud_conv = _point_cloud_conv<50>;
+using point_cloud_conv = _point_cloud_conv<2,2>;
 
 #include "PointCloud_impl.hpp"

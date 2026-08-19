@@ -24,7 +24,7 @@ typedef struct {
 FWD_DECL_DATA_SOURCE(DepthCamera, DisparityUpdate_t)
 
 
-using StereoMatcherType = cv::stereo::StereoBinarySGBM; // Select block matching algorithm
+using StereoMatcherType = cv::StereoSGBM; // Select block matching algorithm
 
 
 /** Generates disparity maps from stereo image pairs.
