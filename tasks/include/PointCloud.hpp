@@ -4,6 +4,10 @@
 #include "Disparity.hpp"
 #include <opencv2/calib3d.hpp>
 
+
+#define DEFAULT_PTCL_DOWNSCALE 4,4
+
+
 /// Point cloud size
 template<uint8_t N, uint8_t M> 
 constexpr size_t num_points(){ return (DepthCamera::Height / N) * (DepthCamera::Width / M); }
@@ -28,7 +32,7 @@ struct DataSourceTraits<_PointCloud<N,M>>
 }; 
 
 
-typedef _PointCloud<2,2> PointCloud;
+typedef _PointCloud<DEFAULT_PTCL_DOWNSCALE> PointCloud;
 
 /** Converts disparity data into point clouds.
 
@@ -106,6 +110,6 @@ public:
         memcpy(dst, (void*)src.cloud, 3*_PointCloud<N,M>::NumPoints*sizeof(float));
     }
 };
-using point_cloud_conv = _point_cloud_conv<2,2>;
+using point_cloud_conv = _point_cloud_conv<DEFAULT_PTCL_DOWNSCALE>;
 
 #include "PointCloud_impl.hpp"

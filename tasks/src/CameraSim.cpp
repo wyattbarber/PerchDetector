@@ -56,6 +56,7 @@ void CameraSimManager::set_source_file(Task* task, std::istream& in, std::ostrea
     if(!file.is_open())
     {
         out << "Failed to open " << filename << ": " << std::strerror(errno) << std::endl;
+        tp->error("Failed to open ", filename, ": ", std::strerror(errno));
         return;
     }
 
@@ -82,4 +83,5 @@ void CameraSimManager::set_source_file(Task* task, std::istream& in, std::ostrea
     tp->swap_data();
 
     out << "Loaded new data from " << filename << std::endl;
+    tp->info("Loaded new data from ", filename);
 }
