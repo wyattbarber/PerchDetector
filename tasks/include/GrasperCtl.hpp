@@ -18,7 +18,8 @@ public:
         servo_1_pin(19),
         servo_2_pin(34),
         servo_0(servo_0_pin, 0, 0.3),
-        servo_1(servo_1_pin, 1, 0.3)
+        servo_1(servo_1_pin, 1, 0.3),
+        servo_2(servo_2_pin, 1, 0.3)
     {
         state = 0;
         cmd_grasp = false;
@@ -59,7 +60,7 @@ public:
                 return;
             }
             bool wind = (args[0] == "1") || (args[0] == "true");
-            static_cast<GrasperController*>(task)->pwm_write(static_cast<GrasperController*>(task)->servo_2_pin, wind ? 1250 : 1750);
+            static_cast<GrasperController*>(task)->servo_2.set_goal(wind);
         });
     }
 
@@ -135,4 +136,5 @@ private:
 
     ServoWinder servo_0;
     ServoWinder servo_1;
+    ServoWinder servo_2;
 };

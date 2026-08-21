@@ -97,7 +97,7 @@ bool GrasperController::start_impl()
         return false;
     }
     // Initialize GPIO
-    if(wiringPiSetupGpio() == -1)
+    if(wiringPiSetup() == -1)
     {
         error("GPIO setup failed.");
         return false;
@@ -143,6 +143,7 @@ void GrasperController::step()
 {
     servo_0.step(this);
     servo_1.step(this);
+    servo_2.step(this);
 
     switch(state)
     {
@@ -234,7 +235,7 @@ int16_t GrasperController::read_adc_channel(uint8_t chn)
       RATE_ADS1015_1600SPS;
 
     const char config_buf[] = {ADS1X15_REG_POINTER_CONFIG, (config & 0xFF00) >> 8, config & 0x00FF};
-    if (write(i2c_file, config_buf, 3) != 1) {
+    if (write(i2c_file, config_buf, 3) != 3) {
         error("Failed to write to config register: ", std::strerror(errno));
         return -1;
     }
@@ -282,6 +283,8 @@ int16_t GrasperController::read_adc_channel(uint8_t chn)
         error("Failed to check conversion result: ", std::strerror(errno));
         return -1;
     }
+
+    info("Read ADC value ", res >> 4, " from channel ", static_vast<unsigned>(chn));
     
     return res >> 4;
 }
