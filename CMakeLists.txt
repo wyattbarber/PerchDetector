@@ -7,11 +7,6 @@ find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(LibCamera REQUIRED HINTS cmake)
 find_package(jsoncpp REQUIRED)
-find_package(Open3D HINTS $ENV{HOME}/open3d_install)
-
-if(${Open3D_FOUND})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_OPEN3D")
-endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBLOCK_ALLOC") # Use custom allocator in default build
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
@@ -60,7 +55,6 @@ add_library(hough3d STATIC
 )
 target_include_directories(hough3d PUBLIC hough3d)
 target_link_libraries(hough3d PUBLIC Eigen3::Eigen)
-
 # The following two features aren't broken, don't use
 # target_compile_definitions(hough3d PUBLIC "HOUGH_VECTORIZE_VOTE")
 # target_compile_definitions(hough3d PUBLIC "HOUGH_VECTORIZE_DIST")
@@ -82,7 +76,7 @@ endif()
 target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
 target_include_directories(tasks PUBLIC tasks/include)
 if(${Open3D_FOUND})
-    target_link_libraries(tasks PUBLIC Open3D::Open3D wiringPi)
+    target_link_libraries(tasks PUBLIC wiringPi)
 endif()
 
 # Main executable
