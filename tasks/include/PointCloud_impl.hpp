@@ -2,9 +2,7 @@
 
 #include <algorithm>
 #include <json_loader.hpp>
-#ifdef ENABLE_OPEN3D
-#include <open3d/Open3D.h>
-#endif
+
 
 template<uint8_t N, uint8_t M>
 bool _PointCloud<N,M>::start_impl()
@@ -89,7 +87,7 @@ template<typename T>
 auto max_confidence_pool(const Eigen::MatrixBase<T>& confidence, const cv::Mat& points)
 {
     Eigen::Index maxRow, maxCol;
-    typename Eigen::MatrixBase<T>::Scalar maxVal = confidence.maxCoeff(&maxRow, &maxCol);
+    confidence.maxCoeff(&maxRow, &maxCol);
     return points.at<cv::Vec3f>(maxRow, maxCol);
 }
 
@@ -113,9 +111,9 @@ void _PointCloud<N,M>::step()
     next->data.disparity = latest_disparity;
 
     // Copy points after downsampling
-    for(int i = 0; i <= DepthCamera::Height - N; i += N)
+    for(unsigned i = 0; i <= DepthCamera::Height - N; i += N)
     {
-        for(int j = 0; j <= DepthCamera::Width - M; j += M)
+        for(unsigned j = 0; j <= DepthCamera::Width - M; j += M)
         {   
             // Select highest confidence point in this block
             auto conf_region = confidence.block<N,M>(i,j);

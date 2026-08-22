@@ -161,7 +161,7 @@ std::vector<Line> LineFinder::hough3d(
 
     std::vector<Eigen::Index> Y; // points close to line
     double l, w;
-    int nlines = 0;
+    unsigned nlines = 0;
     std::vector<Line> out; // Identified lines
     do
     {

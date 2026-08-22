@@ -67,15 +67,13 @@ add_library(tasks STATIC
     tasks/src/VL53L8CX.cpp
     tasks/src/LineFinder.cpp
 )
-if(NOT BUILD_WSL_SIM) # Add rpi GPIO dependent builds
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
+target_include_directories(tasks PUBLIC tasks/include)
+if(NOT BUILD_WSL_SIM)  # Add rpi GPIO dependent builds
     target_sources(tasks PRIVATE
         tasks/src/GrasperCtl.cpp
         tasks/src/GraspOnDetect.cpp
     )
-endif()
-target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
-target_include_directories(tasks PUBLIC tasks/include)
-if(${Open3D_FOUND})
     target_link_libraries(tasks PUBLIC wiringPi)
 endif()
 

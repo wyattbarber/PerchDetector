@@ -121,7 +121,7 @@ protected:
     cv::Mat left_intr, right_intr, left_dist, right_dist, R, T; 
 
     // Detection bounding box sizes
-    double bb_width, bb_height, bb_depth;
+    float bb_width, bb_height, bb_depth;
 
     bool configure_matchers();
     bool load_calibration();
