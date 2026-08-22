@@ -4,6 +4,7 @@ import time
 import argparse
 import codecs
 import numpy as np
+import os
 
 
 class Interface:
@@ -203,20 +204,22 @@ if __name__ == "__main__":
         print("Initial detection valid.")
 
         file_base = os.path.splitext(os.path.basename(args.output))[0]
-        iface.save_detection(f"~/{file_base}_bin")
-        print(f"Saved full detection results to ~/{file_base}_bin")
 
         ts = time.time()
+        prev_anchor = None
+        i = 0
         while (time.time() - ts) <= (args.collection_time * 60):
             observation = iface.get_detection_status()
-            data["observations"]["timestamp"].append(time.time())
-            data["observations"]["distance"].append(observation["distance"])
-            data["observations"]["offset"].append(observation["anchor"][0])
-            data["observations"]["elevation"].append(observation["angle_cam_plane"])
-            data["observations"]["azimuth"].append(observation["angle_cam_vertical"])
-            data["observations"]["width"].append(observation["width"])
-            data["observations"]["anchor"].append(observation["anchor"])
-            data["observations"]["direction"].append(observation["direction"])
+            if observation["anchor"] != prev_anchor:
+                iface.save_detection(f"/home/wyatt/{file_base}_bin_{len(data["observations"]["distance"])}")
+                data["observations"]["timestamp"].append(time.time())
+                data["observations"]["distance"].append(observation["distance"])
+                data["observations"]["offset"].append(observation["anchor"][0])
+                data["observations"]["elevation"].append(observation["angle_cam_plane"])
+                data["observations"]["azimuth"].append(observation["angle_cam_vertical"])
+                data["observations"]["width"].append(observation["width"])
+                data["observations"]["anchor"].append(observation["anchor"])
+                data["observations"]["direction"].append(observation["direction"])
 
     for k in ["distance", "offset", "azimuth", "elevation"]:
         print(f"Average {k}: {np.mean(data['observations'][k])}")

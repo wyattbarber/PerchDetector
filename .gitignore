@@ -5,6 +5,7 @@ calibrations/**
 !calibrations/*.json
 __pycache__/**
 logout.txt
+log.txt
 
 # Build files
 build/**
