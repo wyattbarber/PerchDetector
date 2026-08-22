@@ -101,6 +101,7 @@ protected:
     size_t stride;
     uint8_t next;
     std::atomic<bool> request_busy;
+    bool settings_finalized;
 };
 
 

@@ -226,18 +226,14 @@ bool CameraWrapper::start_impl()
         requests[i%4]->reuse(Request::ReuseBuffers);
         camera->queueRequest(requests[i%requests.size()].get());
     }
-    info("Setting fixed auto-exposure and auto-awb settings.");
+    info("Checking converged auto-exposure and auto-white-balance settings.");
     info("\tExposureTime ", exposure_time);
     info("\tAnalogueGain ", analog_gain);
     info("\tColourGains {", red_gain, ", ", blue_gain, "}");
-    for(auto& request : requests)
-    {
-        request->controls().set(controls::AeEnable, false);
-        request->controls().set(controls::AwbEnable, false);
-        request->controls().set(controls::ExposureTime, exposure_time);
-        request->controls().set(controls::AnalogueGain, analog_gain);
-        request->controls().set(controls::ColourGains, {red_gain, blue_gain});
-    };
+    
+    // Submit settings to manager
+    cm->submit_settings(name, exposure_time, analog_gain, red_gain, blue_gain);
+    settings_finalized = false;
 
     return true;
 }
@@ -259,18 +255,43 @@ void CameraWrapper::stop_impl()
 
 void CameraWrapper::step()
 {
-    if(!request_busy)
+    if(!settings_finalized)
     {
-        tick();
-        request_busy = true;
-        requests[next]->reuse(Request::ReuseBuffers);
-        camera->queueRequest(requests[next].get());
+        if(cm->n_settings_submitted() >= 2)
+        {
+            int32_t exposure_time;
+            float analog_gain, red_gain, blue_gain;
+            std::tie(exposure_time, analog_gain, red_gain, blue_gain) = cm->get_global_settings();
+            info("Setting fixed auto-exposure and auto-white-balance settings.");
+            info("\tExposureTime ", exposure_time);
+            info("\tAnalogueGain ", analog_gain);
+            info("\tColourGains {", red_gain, ", ", blue_gain, "}");
+            for(auto& request : requests)
+            {
+                request->controls().set(controls::AeEnable, false);
+                request->controls().set(controls::AwbEnable, false);
+                request->controls().set(controls::ExposureTime, exposure_time);
+                request->controls().set(controls::AnalogueGain, analog_gain);
+                request->controls().set(controls::ColourGains, {red_gain, blue_gain});
+            };
+            settings_finalized = true;
+        }
     }
-    ++next;
-    if(next >= requests.size())
+    else
     {
-        next = 0;
-    } 
+        if(!request_busy)
+        {
+            tick();
+            request_busy = true;
+            requests[next]->reuse(Request::ReuseBuffers);
+            camera->queueRequest(requests[next].get());
+        }
+        ++next;
+        if(next >= requests.size())
+        {
+            next = 0;
+        } 
+    }
 }
 
 
