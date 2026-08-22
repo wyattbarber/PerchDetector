@@ -72,6 +72,17 @@ static void delete_cookie(uint64_t cookie)
 }
 
 
+template<typename T>
+std::string opt_string(const std::optional<T>& opt)
+{
+    if(opt) {
+        return std::to_string(*opt);
+    } else {
+        return "???";
+    }
+}
+
+
 /** Callback for the completion of frame buffer requests. 
  * 
  * Setup and called by the camera driver. Uses cookie_to_camera and
@@ -127,6 +138,11 @@ void CameraWrapper::configure()
     // height = config->at(0).size.height;
     info("Validated viewfinder configuration is: ", config->at(0).toString());
     camera->configure(config.get());
+    info("Camera configured with default controls:");
+    for(const auto & item : camera->controls())
+    {
+        info('\t', item.first->name(), " ", item.second.def().toString(), " ", item.second.toString());
+    }
 
     // Allocate all buffers for this config. The number of buffers used is defined by the configuration.
     allocator = new FrameBufferAllocator(camera);
@@ -187,11 +203,42 @@ bool CameraWrapper::start_impl()
 {
     if(!connect()) return false;
 
+    // Initialize basic settings
     camera->acquire();
     configure();
     camera->start();
     camera->queueRequest(requests[0].get());
     request_busy = true;
+    // Let auto-exposue and awb settings converge for 60 frames before fixing them
+    unsigned i = 0;
+    int32_t exposure_time;
+    float analog_gain, red_gain, blue_gain;
+    while(i < 60)
+    {
+        // Wait for completion
+        while(request_busy){}
+        exposure_time = *(requests[i%requests.size()]->metadata().get(controls::ExposureTime));
+        analog_gain = *(requests[i%requests.size()]->metadata().get(controls::AnalogueGain));
+        red_gain = (*(requests[i%requests.size()]->metadata().get(controls::ColourGains)))[0];
+        blue_gain = (*(requests[i%requests.size()]->metadata().get(controls::ColourGains)))[1];
+        ++i;
+        request_busy = true;
+        requests[i%4]->reuse(Request::ReuseBuffers);
+        camera->queueRequest(requests[i%requests.size()].get());
+    }
+    info("Setting fixed auto-exposure and auto-awb settings.");
+    info("\tExposureTime ", exposure_time);
+    info("\tAnalogueGain ", analog_gain);
+    info("\tColourGains {", red_gain, ", ", blue_gain, "}");
+    for(auto& request : requests)
+    {
+        request->controls().set(controls::AeEnable, false);
+        request->controls().set(controls::AwbEnable, false);
+        request->controls().set(controls::ExposureTime, exposure_time);
+        request->controls().set(controls::AnalogueGain, analog_gain);
+        request->controls().set(controls::ColourGains, {red_gain, blue_gain});
+    };
+
     return true;
 }
 

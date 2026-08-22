@@ -284,7 +284,7 @@ int16_t GrasperController::read_adc_channel(uint8_t chn)
         return -1;
     }
 
-    info("Read ADC value ", res >> 4, " from channel ", static_vast<unsigned>(chn));
+    info("Read ADC value ", res >> 4, " from channel ", static_cast<unsigned>(chn));
     
     return res >> 4;
 }

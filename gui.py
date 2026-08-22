@@ -463,7 +463,7 @@ def generic_command_scene(container):
         with ui.card():
             with ui.row():
                 elements["generic_command_input"] = ui.input()
-                ui.button("Run").on_change(_run_generic_cmd)
+                ui.button("Run").on_click(_run_generic_cmd)
         with ui.card():
             elements["generic_command_output"] = ui.label()
 
@@ -471,7 +471,7 @@ async def _run_generic_cmd():
     global pm, elements
     cmd = elements["generic_command_input"].value
     res = await asyncio.to_thread(pm.get_lines_out, cmd)
-    elements["generic_command_output"].text = "<br/>".join(out)
+    elements["generic_command_output"].text = "<br/>".join(res)
 
 
 def startup():
