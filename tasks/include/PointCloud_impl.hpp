@@ -119,10 +119,13 @@ void _PointCloud<N,M>::step()
             auto conf_region = confidence.block<N,M>(i,j);
             auto point = max_confidence_pool(conf_region, point_cloud(cv::Rect(j, i, M, N)));
             // Copy best points and convert to mm, with origin between cameras
-            next->data.cloud[3*next->data.n_valid] = point[0] * 1000.0; // x
-            next->data.cloud[3*next->data.n_valid + 1] = point[1] * 1000.0; // y
-            next->data.cloud[3*next->data.n_valid + 2] = point[2] * 1000.0; // z
-            next->data.n_valid += 1;
+            if((point[2] >= min_dist) && (point[2] <= max_dist))
+            {
+                next->data.cloud[3*next->data.n_valid] = point[0] * 1000.0; // x
+                next->data.cloud[3*next->data.n_valid + 1] = point[1] * 1000.0; // y
+                next->data.cloud[3*next->data.n_valid + 2] = point[2] * 1000.0; // z
+                next->data.n_valid += 1;
+            }
         }
     }
     this->swap_data();
