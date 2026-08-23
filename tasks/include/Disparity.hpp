@@ -119,6 +119,7 @@ protected:
     const std::string left_cal, right_cal, stereo_cal, stereo_param;
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;
     cv::Mat left_intr, right_intr, left_dist, right_dist, R, T; 
+    bool use_wls_filter;
 
     // Detection bounding box sizes
     float bb_width, bb_height, bb_depth;

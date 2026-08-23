@@ -13,12 +13,10 @@
         "downsample": 1
     },
     "filter": {
-        "lambda": 8000,
-        "sigma": 0.6,
+        "lambda": 15000,
+        "sigma": 0.2,
         "DR": 2,
-        "LRC": 1,
-        "voxel_size": 0.005,
-        "outlier_n": 10,
-        "outlier_r": 0.02
+        "LRC": 24,
+        "filter_on": 0
     }
 }

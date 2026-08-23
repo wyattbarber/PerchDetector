@@ -169,6 +169,10 @@ void DepthCamera::step()
         cv::Mat(Height, Width, CV_16S, next->data.disparity),
         disp_right);
     cv::Mat conf = filter->getConfidenceMap();
+    if(!use_wls_filter) // Override filtered results with raw left disparity
+    {
+        memcpy((void*)next->data.disparity, (void*)disp_left.data, Height*Width*sizeof(int16_t));
+    }
     conf.convertTo(
         cv::Mat(Height, Width, CV_8UC1, next->data.confidence),
         CV_8U);
@@ -223,10 +227,15 @@ bool DepthCamera::configure_matchers()
             "lambda", lambda,
             "sigma", sigma,
             "DR", dr,
-            "LRC", lrc))
+            "LRC", lrc,
+            "filter_on", use_wls_filter))
     {
         error("Failed to load WLS filter settings.");
         return false;
+    }
+    if(!use_wls_filter)
+    {
+        info("WLS filtering disabled, using filter only for confidence and producing raw left-right disparity.");
     }
 
     // Initialize stereo matchers and filter

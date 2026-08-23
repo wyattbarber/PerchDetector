@@ -62,19 +62,6 @@ bool _PointCloud<N,M>::start_impl()
         return false;
     }
 
-    // Load filtering settings
-    if(!load_json_value_pairs(
-        stereo_param,
-        std::make_tuple("filter"),
-        "outlier_n", filter_n,
-        "outlier_r", filter_r,
-        "voxel_size", filter_v
-    ))
-    {
-        this->error("Failed to load point cloud filter settings.");
-        return false;
-    }
-
     // Allocate intermediate
     point_cloud = cv::Mat(DepthCamera::Height, DepthCamera::Width, CV_32FC3);
     
@@ -83,12 +70,12 @@ bool _PointCloud<N,M>::start_impl()
 }
 
 
-template<typename T>
-auto max_confidence_pool(const Eigen::MatrixBase<T>& confidence, const cv::Mat& points)
+inline auto max_confidence_pool(const cv::Mat& confidence, const cv::Mat& points)
 {
-    Eigen::Index maxRow, maxCol;
-    confidence.maxCoeff(&maxRow, &maxCol);
-    return points.at<cv::Vec3f>(maxRow, maxCol);
+    double min_val, max_val;
+    cv::Point min_loc, max_loc;
+    cv::minMaxLoc(confidence, &min_val, &max_val, &min_loc, &max_loc);
+    return points.at<cv::Vec3f>(max_loc);
 }
 
 
@@ -101,8 +88,8 @@ void _PointCloud<N,M>::step()
         DepthCamera::Height, DepthCamera::Width, CV_16S, const_cast<int16_t*>(latest_disparity->data.disparity)
     );
     cv::reprojectImageTo3D(disparity / 16.0, point_cloud, Q, false);
-    Eigen::Map<const Eigen::Matrix<uint8_t, DepthCamera::Height, DepthCamera::Width>> confidence(
-        latest_disparity->data.confidence
+    const cv::Mat confidence(
+        DepthCamera::Height, DepthCamera::Width, CV_8U, const_cast<uint8_t*>(latest_disparity->data.confidence)
     );
 
     // Create new update    
@@ -116,8 +103,8 @@ void _PointCloud<N,M>::step()
         for(unsigned j = 0; j <= DepthCamera::Width - M; j += M)
         {   
             // Select highest confidence point in this block
-            auto conf_region = confidence.block<N,M>(i,j);
-            auto point = max_confidence_pool(conf_region, point_cloud(cv::Rect(j, i, M, N)));
+            const auto roi = cv::Rect(j,i,M,N);
+            auto point = max_confidence_pool(confidence(roi), point_cloud(roi));
             // Copy best points and convert to mm, with origin between cameras
             if((point[2] >= min_dist) && (point[2] <= max_dist))
             {

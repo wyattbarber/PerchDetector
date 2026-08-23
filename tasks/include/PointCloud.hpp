@@ -92,8 +92,6 @@ protected:
     std::pair<uint8_t, size_t> unconfidence_w_indices[DepthCamera::Height*DepthCamera::Width];
 
     double max_dist, min_dist;
-    unsigned filter_n;
-    double filter_r, filter_v;
     float baseline;
 };
 
