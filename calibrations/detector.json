@@ -1,9 +1,10 @@
 {    
     "min_vote": 100,
     "max_lines": 10,
-    "granularity": 3,
+    "granularity": 4,
     "min_ratio": 2,
     "max_angle": 30, 
     "min_width": 1,
-    "max_width": 1000
+    "max_width": 1000,
+    "hough_dx": 0
 }

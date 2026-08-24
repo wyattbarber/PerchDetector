@@ -97,7 +97,7 @@ def main(inpath: str, pattern: str, outpath: str):
             print("Retesting " + basename)
 
             pm.get_lines_out("sim-mgr set-source " + src)
-            time.sleep(45.0)
+            time.sleep(60.0)
             pm.get_lines_out("detector save " + dst)
     
 

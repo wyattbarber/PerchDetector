@@ -85,6 +85,7 @@ void LineFinder::step()
 bool LineFinder::start_impl()
 {
     double max_angle_deg;
+    float dx;
     if(!load_json_value_pairs(settings,
         std::make_tuple(),
         "min_vote", min_vote,
@@ -93,7 +94,8 @@ bool LineFinder::start_impl()
         "min_ratio", min_ratio,
         "max_angle", max_angle_deg,
         "min_width", min_width,
-        "max_width", max_width
+        "max_width", max_width,
+        "hough_dx", dx
     )) return false;
     max_angle = max_angle_deg * M_PI / 180.0;
     
@@ -101,7 +103,7 @@ bool LineFinder::start_impl()
     auto volume = cloud->volume();
     auto min_p = Eigen::Vector<float, 3>{-volume[0]/2.0f, -volume[1]/2.0f, 0} * 1000.0f;
     auto max_p = Eigen::Vector<float, 3>{volume[0]/2.0f, volume[1]/2.0f, volume[2]} * 1000.0f;
-    hough = new Hough(min_p, max_p, 0, granularity);
+    hough = new Hough(min_p, max_p, dx, granularity);
     info("Configured Hough space with volume of ", volume[0], "m x ", volume[1], "m x ", volume[2], "m, and resolution of ", hough->dx, "mm");
 
     return true;

@@ -1,5 +1,5 @@
 {
-    "stereo" : {
+    "stereo": {
         "minDistance": 0.2,
         "maxDistance": 3.0,
         "blockSize": 3,
@@ -17,6 +17,6 @@
         "sigma": 0.2,
         "DR": 2,
         "LRC": 24,
-        "filter_on": 0
+        "filter_on": 1
     }
 }
