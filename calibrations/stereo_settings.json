@@ -1,5 +1,5 @@
 {
-    "stereo" : {
+    "stereo": {
         "minDistance": 0.2,
         "maxDistance": 3.0,
         "blockSize": 3,
@@ -10,7 +10,8 @@
         "uniquenessRatio": 15,
         "P1": 72,
         "P2": 288,
-        "downsample": 1
+        "downsample": 1,
+        "margin_px": 75
     },
     "filter": {
         "lambda": 15000,

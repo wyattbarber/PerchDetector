@@ -114,7 +114,8 @@ protected:
     // Intermediate matrices
     cv::Mat rect_l, rect_r, disp_left, disp_right, depth;
     cv::Mat rect_l_small, rect_r_small, disp_left_small, disp_right_small;
-
+    cv::Mat left_blurred, thresh_dst;
+    
     // Camera parameters (distance units are cm)
     const std::string left_cal, right_cal, stereo_cal, stereo_param;
     cv::Mat mapl1, mapl2, mapr1, mapr2, Q;

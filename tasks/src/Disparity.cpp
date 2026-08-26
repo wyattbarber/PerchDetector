@@ -121,6 +121,8 @@ bool DepthCamera::start_impl()
         disp_left_small = cv::Mat(Height / 2, Width / 2, CV_16S);
         disp_right_small = cv::Mat(Height / 2, Width / 2, CV_16S);
     }
+    left_blurred = cv::Mat(Height, Width, CV_8U);
+    thresh_dst = cv::Mat(Height, Width, CV_8U);
 
     if (!configure_matchers())
         return false;
@@ -139,13 +141,17 @@ void DepthCamera::step()
         return;
     tick();
 
+    // Acquire and rectify latest images from each camera
     latest_left = left->acquire();
     latest_right = right->acquire();
-
     const cv::Mat left_im(Height, Width, CV_8UC1, const_cast<uint8_t *>(latest_left->data));
     const cv::Mat right_im(Height, Width, CV_8UC1, const_cast<uint8_t *>(latest_right->data));
     rectify(left_im, right_im, rect_l, rect_r);
 
+    // Compute unfiltered disparity. If downsampling is enabled (a speed optimization),
+    // The images are reduced by 2 in each direction first, then expanded again. This 
+    // requires disparity to be multiplied by 2 to compensate for the rescaling (since
+    // one downsampled pixel of disparity is equal to 2 normal pixels of disparity)
     if (downsample)
     {
         cv::resize(rect_l, rect_l_small, cv::Size(Width / 2, Height / 2), 0, 0, cv::INTER_AREA);
@@ -162,6 +168,8 @@ void DepthCamera::step()
         stereo_left->compute(rect_l, rect_r, disp_left);
         stereo_right->compute(rect_r, rect_l, disp_right);
     }
+
+    // Perform WLS filtering to get filtered image and left-right consistency check confidence map
     update_ptr_type next = allocate_next();
     filter->filter(
         disp_left,
@@ -169,10 +177,26 @@ void DepthCamera::step()
         cv::Mat(Height, Width, CV_16S, next->data.disparity),
         disp_right);
     cv::Mat conf = filter->getConfidenceMap();
-    if(!use_wls_filter) // Override filtered results with raw left disparity
+
+    // Override filtered results with raw left disparity if WLS filter is disabled
+    // (but keep confidence map)
+    if(!use_wls_filter)
     {
         memcpy((void*)next->data.disparity, (void*)disp_left.data, Height*Width*sizeof(int16_t));
     }
+
+    // Perform Otsus's thresholding to filter out background pixels. Setting disparity
+    // for background (assumed to be high-intensity) pixels to a negative value will 
+    // result in them being removed when projected to a point cloud and filtered on Z distance.
+    cv::GaussianBlur(rect_l, left_blurred, cv::Size(5,5), 0);
+    double threshold = cv::threshold(left_blurred, thresh_dst, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    for(size_t i = 0; i < Height*Width; ++i)
+    {
+        ((int16_t*)next->data.disparity)[i] = 
+            rect_l.data[i] > static_cast<uint8_t>(threshold) ? -1 : ((int16_t*)next->data.disparity)[i];
+    }
+
+    // Copy remaining data to new update
     conf.convertTo(
         cv::Mat(Height, Width, CV_8UC1, next->data.confidence),
         CV_8U);

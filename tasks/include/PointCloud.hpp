@@ -91,6 +91,7 @@ protected:
     cv::Mat Q, point_cloud;
     std::pair<uint8_t, size_t> unconfidence_w_indices[DepthCamera::Height*DepthCamera::Width];
 
+    unsigned margin;
     double max_dist, min_dist;
     float baseline;
 };
