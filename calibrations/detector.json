@@ -1,5 +1,5 @@
 {    
-    "min_vote": 200,
+    "min_vote": 100,
     "max_lines": 10,
     "granularity": 4,
     "min_ratio": 2,

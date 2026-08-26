@@ -55,12 +55,14 @@ bool _PointCloud<N,M>::start_impl()
         stereo_param,
         std::make_tuple("stereo"),
         "minDistance", min_dist,
-        "maxDistance", max_dist
+        "maxDistance", max_dist,
+        "margin_px", margin 
     ))
     {
         this->error("Failed to load point cloud distance settings.");
         return false;
     }
+    
 
     // Allocate intermediate
     point_cloud = cv::Mat(DepthCamera::Height, DepthCamera::Width, CV_32FC3);
@@ -98,9 +100,9 @@ void _PointCloud<N,M>::step()
     next->data.disparity = latest_disparity;
 
     // Copy points after downsampling
-    for(unsigned i = 0; i <= DepthCamera::Height - N; i += N)
+    for(unsigned i = margin; i <= DepthCamera::Height - N - margin; i += N)
     {
-        for(unsigned j = 0; j <= DepthCamera::Width - M; j += M)
+        for(unsigned j = margin; j <= DepthCamera::Width - M - margin; j += M)
         {   
             // Select highest confidence point in this block
             const auto roi = cv::Rect(j,i,M,N);
