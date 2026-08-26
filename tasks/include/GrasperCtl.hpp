@@ -3,6 +3,7 @@
 #include "Task.hpp"
 #include <iostream>
 #include <vector>
+#include <atomic>
 
 
 /** Implements I2C an GPIO controlls for the grasper.
@@ -14,6 +15,7 @@ public:
     GrasperController(const char* name, const char* dev) : 
         TaskBase(name, {}),
         i2c_dev(dev),
+        servo_ena_pin(27),
         servo_0_pin(18),
         servo_1_pin(19),
         servo_2_pin(34),
@@ -24,6 +26,7 @@ public:
         state = 0;
         cmd_grasp = false;
         cmd_release = false;
+        servo_enable_count = 0;
 
         declare_cli_command("close", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
             out << "Closing grasper..." << std::endl;
@@ -90,6 +93,9 @@ public:
     */
     void release();
 
+    void acquire_servo_enable();
+    void release_servo_enable();
+
 private:
 
     // ADC i2c params
@@ -99,9 +105,12 @@ private:
     static constexpr int16_t adc_max = 0x07FF;
     static constexpr float adc_v_max = 4.096;
     
+    const uint8_t servo_ena_pin;
     const uint8_t servo_0_pin;
     const uint8_t servo_1_pin;
     const uint8_t servo_2_pin;
+
+    std::atomic<unsigned> servo_enable_count;
 
     uint8_t state;
     bool cmd_grasp, cmd_release;

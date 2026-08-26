@@ -17,6 +17,6 @@
         "sigma": 0.2,
         "DR": 2,
         "LRC": 24,
-        "filter_on": 0
+        "filter_on": 1
     }
 }

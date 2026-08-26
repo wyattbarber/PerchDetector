@@ -102,6 +102,7 @@ bool GrasperController::start_impl()
         error("GPIO setup failed.");
         return false;
     }
+    pinMode(servo_ena_pin, OUTPUT);
     pinMode(servo_0_pin, PWM_OUTPUT);
     pinMode(servo_1_pin, PWM_OUTPUT);
     pinMode(servo_2_pin, PWM_OUTPUT);
@@ -169,34 +170,40 @@ void GrasperController::step()
         {
             if(servo_1.wound())
             {
+                servo_2.set_goal(true);
                 state = 3;
             }
             break;
         }
         case 3: // Latch grasper
         {
-            pwm_write(servo_2_pin, 1250);
-            state = 4;
-            cmd_grasp = false;
+            if(servo_2.wound())
+            {
+                state = 4;
+                cmd_grasp = false;
+            }
             break;
         }
         case 4: // Grasped
         {
             if(cmd_release)
             {
+                servo_2.set_goal(false);
                 state = 5;
             }
             break;
         }
         case 5: // Unlatch grasper
         {
-            pwm_write(servo_2_pin, 1750);
-            state = 6;
+            if(servo_2.unwound())
+            {                
+                servo_1.set_goal(false);
+                state = 6;
+            }
             break;
         }
         case 6: // Open grasper
         {
-            servo_1.set_goal(false);
             if(servo_1.unwound())
             {
                 servo_0.set_goal(false);
@@ -296,40 +303,68 @@ void GrasperController::pwm_write(uint8_t chn, uint16_t pulse_width_ms)
 }
 
 
+void GrasperController::acquire_servo_enable()
+{
+    if(servo_enable_count == 0)
+    {
+        digitalWrite(servo_ena_pin, HIGH);
+    }
+    ++servo_enable_count;
+}
+
+
+void GrasperController::release_servo_enable()
+{
+    --servo_enable_count;
+    if(servo_enable_count == 0)
+    {
+        digitalWrite(servo_ena_pin, LOW);
+    }
+}
+
+
 void GrasperController::ServoWinder::step(GrasperController* parent)
 {
     switch(state)
     {
         case 0: // Unwound
         {
+            parent->pwm_write(pin, 1500);
             if (goal_wind)
             {
                 state = 1;
+                parent->acquire_servo_enable();
             }
             break;
         }
         case 1: // Winding
         {
+            parent->pwm_write(pin, 2000);
             ++wind_count;
             if ((static_cast<float>(parent->read_adc_channel(adc_chn)) * 0.003) > current_lim)
             {
                 state = 2;
+                parent->release_servo_enable();
             }
             break;
         }
         case 2: // Wound
         {
+            parent->pwm_write(pin, 1500);
             if (!goal_wind)
             {
+                parent->acquire_servo_enable();
                 state = 3;
             }
             break;
         }
         case 3: // Unwinding
         {
+            parent->pwm_write(pin, 1000);
             --wind_count;
             if (wind_count <= 0)
             {
+                parent->release_servo_enable();
                 wind_count = 0;
                 state = 0;
             }
