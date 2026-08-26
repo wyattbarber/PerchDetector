@@ -2,5 +2,20 @@
     "max_offset": 30,
     "max_dist": 30,
     "max_z_tilt": 20,
-    "max_y_tilt": 20
+    "max_y_tilt": 20,
+    "servo_0": {
+        "current_lim_ma": 0.3,
+        "reverse": 0,
+        "speed": 500
+    },
+    "servo_1": {
+        "current_lim_ma": 0.3,
+        "reverse": 0,
+        "speed": 500
+    },
+    "servo_2": {
+        "current_lim_ma": 0.3,
+        "reverse": 0,
+        "speed": 500
+    }
 }

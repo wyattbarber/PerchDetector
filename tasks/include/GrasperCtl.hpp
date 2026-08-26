@@ -12,16 +12,17 @@
 class GrasperController : public TaskBase<GrasperController>
 {
 public:
-    GrasperController(const char* name, const char* dev) : 
+    GrasperController(const char* name, const char* dev, const std::string& settings) : 
         TaskBase(name, {}),
         i2c_dev(dev),
+        settings(settings + "/grasp_ctrl.json"),
         servo_ena_pin(27),
         servo_0_pin(18),
         servo_1_pin(19),
         servo_2_pin(34),
-        servo_0(servo_0_pin, 0, 0.3),
-        servo_1(servo_1_pin, 1, 0.3),
-        servo_2(servo_2_pin, 1, 0.3)
+        servo_0(servo_0_pin, 0),
+        servo_1(servo_1_pin, 1),
+        servo_2(servo_2_pin, 2)
     {
         state = 0;
         cmd_grasp = false;
@@ -104,6 +105,8 @@ private:
     static constexpr char adc_addr = 0x48;
     static constexpr int16_t adc_max = 0x07FF;
     static constexpr float adc_v_max = 4.096;
+
+    const std::string settings;
     
     const uint8_t servo_ena_pin;
     const uint8_t servo_0_pin;
@@ -122,22 +125,28 @@ private:
     class ServoWinder
     {
     public:
-        ServoWinder(uint8_t servo_pin, uint8_t adc_chn, float current_lim) :
+        ServoWinder(uint8_t servo_pin, uint8_t adc_chn) :
             pin(servo_pin),
             adc_chn(adc_chn),
-            current_lim(current_lim),
             state(0),
             goal_wind(false),
             wind_count(0)
-        {}
+        {
+            current_lim = 0.3;
+            direction = false;
+            speed = 500;
+        }
         void step(GrasperController* parent);
         void set_goal(bool wind){ goal_wind = wind; }
         bool wound(){ return state == 2; }
         bool unwound(){ return state == 0; }
+        
+        float current_lim;
+        bool direction;
+        unsigned speed;
     private:
         const uint8_t pin;
         const uint8_t adc_chn;
-        const float current_lim;
         uint8_t state;
         bool goal_wind;
         uint16_t wind_count;

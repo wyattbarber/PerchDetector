@@ -9,6 +9,7 @@
 #include <linux/i2c.h>
 #include <wiringPi.h>
 #include <thread>
+#include <json_loader.hpp>
 
 
 using namespace std::chrono_literals;
@@ -110,6 +111,40 @@ bool GrasperController::start_impl()
     pwmSetClock(384);   // Sets a 50 kHz clock tick rate (20 microseconds per tick)
     pwmSetRange(1000);  // 1000 ticks * 20 microseconds = 20,000 microseconds (20ms/50Hz)
 
+    // Configure servo controllers
+    if (!load_json_value_pairs(
+            settings,
+            std::make_tuple("servo_0"),
+            "current_lim_ma", servo_0.current_lim,
+            "reverse", servo_0.direction,
+            "speed", servo_0.speed
+        ))
+    {
+        error("Failed to load servo 0 settings");
+        return false;
+    }
+    if (!load_json_value_pairs(
+            settings,
+            std::make_tuple("servo_1"),
+            "current_lim_ma", servo_1.current_lim,
+            "reverse", servo_1.direction,
+            "speed", servo_1.speed
+        ))
+    {
+        error("Failed to load servo 1 settings");
+        return false;
+    }
+    if (!load_json_value_pairs(
+            settings,
+            std::make_tuple("servo_2"),
+            "current_lim_ma", servo_2.current_lim,
+            "reverse", servo_2.direction,
+            "speed", servo_2.speed
+        ))
+    {
+        error("Failed to load servo 2 settings");
+        return false;
+    }
 
     return true;
 }
@@ -339,7 +374,7 @@ void GrasperController::ServoWinder::step(GrasperController* parent)
         }
         case 1: // Winding
         {
-            parent->pwm_write(pin, 2000);
+            parent->pwm_write(pin, 1500 + ((direction ? 1 : -1) * speed));
             ++wind_count;
             if ((static_cast<float>(parent->read_adc_channel(adc_chn)) * 0.003) > current_lim)
             {
@@ -360,7 +395,7 @@ void GrasperController::ServoWinder::step(GrasperController* parent)
         }
         case 3: // Unwinding
         {
-            parent->pwm_write(pin, 1000);
+            parent->pwm_write(pin, 1500 - ((direction ? 1 : -1) * speed));
             --wind_count;
             if (wind_count <= 0)
             {
