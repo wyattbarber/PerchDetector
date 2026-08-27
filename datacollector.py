@@ -211,7 +211,8 @@ if __name__ == "__main__":
         while (time.time() - ts) <= (args.collection_time * 60):
             observation = iface.get_detection_status()
             if observation["anchor"] != prev_anchor:
-                iface.save_detection(f"/home/wyatt/{file_base}_bin_{len(data["observations"]["distance"])}")
+                prev_anchor = observation["anchor"]
+                iface.save_detection(f'/home/wyatt/{file_base}_bin_{len(data["observations"]["distance"])}')
                 data["observations"]["timestamp"].append(time.time())
                 data["observations"]["distance"].append(observation["distance"])
                 data["observations"]["offset"].append(observation["anchor"][0])
