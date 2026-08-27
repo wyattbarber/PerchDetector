@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <atomic>
+#include <Adafruit_ADS1X15.hpp>
 
 
 /** Implements I2C an GPIO controlls for the grasper.
@@ -14,12 +15,12 @@ class GrasperController : public TaskBase<GrasperController>
 public:
     GrasperController(const char* name, const char* dev, const std::string& settings) : 
         TaskBase(name, {}),
-        i2c_dev(dev),
+        adc(dev),
         settings(settings + "/grasp_ctrl.json"),
         servo_ena_pin(27),
         servo_0_pin(18),
         servo_1_pin(19),
-        servo_2_pin(34),
+        servo_2_pin(26),
         servo_0(servo_0_pin, 0),
         servo_1(servo_1_pin, 1),
         servo_2(servo_2_pin, 2)
@@ -66,6 +67,24 @@ public:
             bool wind = (args[0] == "1") || (args[0] == "true");
             static_cast<GrasperController*>(task)->servo_2.set_goal(wind);
         });
+        declare_cli_command("power", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            if(args.size() < 1)
+            {
+                out << "State is required" << std::endl;
+                return;
+            }
+            bool on = (args[0] == "1") || (args[0] == "true");
+            if(on)
+            {
+                ((GrasperController*)task)->acquire_servo_enable();
+                out << "Enabled servo power." << std::endl;
+            }
+            else
+            {
+                ((GrasperController*)task)->release_servo_enable();
+                out << "Disabled servo power." << std::endl;
+            }
+        });
     }
 
     /** Setup i2c bus and configure IO 
@@ -100,11 +119,11 @@ public:
 private:
 
     // ADC i2c params
-    int i2c_file;
-    const char* i2c_dev;
+    Adafruit_ADS1015 adc;
     static constexpr char adc_addr = 0x48;
     static constexpr int16_t adc_max = 0x07FF;
     static constexpr float adc_v_max = 4.096;
+    static constexpr float curr_meas_res = 1.0;
 
     const std::string settings;
     
@@ -118,7 +137,7 @@ private:
     uint8_t state;
     bool cmd_grasp, cmd_release;
 
-    int16_t read_adc_channel(uint8_t chn);
+    float current_convert(uint8_t chn);
 
     void pwm_write(uint8_t chn, uint16_t pulse_width_ms);
 
@@ -144,7 +163,6 @@ private:
         float current_lim;
         bool direction;
         unsigned speed;
-    private:
         const uint8_t pin;
         const uint8_t adc_chn;
         uint8_t state;

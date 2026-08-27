@@ -44,6 +44,13 @@ set_source_files_properties(
 target_link_libraries(stsw_img040 PUBLIC util)
 target_include_directories(stsw_img040 PUBLIC STSW_IMG040/Platform STSW_IMG040/VL53L8CX_ULD_API/inc)
 
+# Adafruit ADS1X15 API library
+add_library(ads1x15 STATIC 
+    ADS1X15/Adafruit_ADS1X15.cpp
+)
+target_link_libraries(ads1x15 PUBLIC util)
+target_include_directories(ads1x15 PUBLIC ADS1X15)
+
 # 3-D Hough Transform helpers
 add_library(hough3d STATIC
     # hough3d/hough3d_tform.cpp
@@ -67,7 +74,7 @@ add_library(tasks STATIC
     tasks/src/VL53L8CX.cpp
     tasks/src/LineFinder.cpp
 )
-target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d)
+target_link_libraries(tasks PUBLIC util stsw_img040 LibCamera ${OpenCV_LIBS} Eigen3::Eigen hough3d ads1x15)
 target_include_directories(tasks PUBLIC tasks/include)
 if(NOT BUILD_WSL_SIM)  # Add rpi GPIO dependent builds
     target_sources(tasks PRIVATE
