@@ -29,6 +29,7 @@ public:
         cmd_grasp = false;
         cmd_release = false;
         servo_enable_count = 0;
+        manual_override = false;
 
         declare_cli_command("close", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
             out << "Closing grasper..." << std::endl;
@@ -73,7 +74,7 @@ public:
                 out << "State is required" << std::endl;
                 return;
             }
-            bool on = (args[0] == "1") || (args[0] == "true");
+            bool on = (args[0] == "1") || (args[0] == "on");
             if(on)
             {
                 ((GrasperController*)task)->acquire_servo_enable();
@@ -84,6 +85,46 @@ public:
                 ((GrasperController*)task)->release_servo_enable();
                 out << "Disabled servo power." << std::endl;
             }
+        });
+        declare_cli_command("override", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            bool on = true;
+            if(args.size() >= 1)
+            {
+                if((args[0] == "off") || (args[0] == "0"))
+                {
+                    on = false;
+                }
+            }
+            out << "Manual override " << (on ? "activated" : "deactivated") << std::endl;
+            ((GrasperController*)task)->manual_override = on;
+        });
+        declare_cli_command("servo", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            if(args.size() < 2)
+            {
+                out << "Servo number and PWM level are required" << std::endl;
+                return;
+            }
+
+            ServoWinder* servo;
+            if(args[0] == "0")
+            {
+                servo = &((GrasperController*)task)->servo_0;
+            }
+            else if(args[0] == "1")
+            {
+                servo = &((GrasperController*)task)->servo_1;
+            }
+            else if(args[0] == "2")
+            {
+                servo = &((GrasperController*)task)->servo_2;
+            }
+            else
+            {
+                out << "Unknown servo number." << std::endl;
+                return;
+            }
+            unsigned level = std::stoi(args[1]);
+            ((GrasperController*)task)->pwm_write(servo->pin, level);
         });
     }
 
@@ -126,6 +167,8 @@ private:
     static constexpr float curr_meas_res = 1.0;
 
     const std::string settings;
+
+    bool manual_override;
     
     const uint8_t servo_ena_pin;
     const uint8_t servo_0_pin;

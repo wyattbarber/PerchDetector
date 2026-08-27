@@ -8,11 +8,34 @@
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <wiringPi.h>
+#include <softPwm.h>
 #include <thread>
 #include <json_loader.hpp>
 
 
 using namespace std::chrono_literals;
+
+
+void _pwm_mode(unsigned pin)
+{
+    if((pin == 18) || (pin == 19))
+    {
+        pinMode(pin, PWM_OUTPUT);
+    }
+    else
+    {
+        softPwmCreate(pin, 0, 200);
+    }
+}
+
+
+void _pwm_stop(unsigned pin)
+{
+    if((pin != 18) && (pin != 19))
+    {
+        softPwmStop(pin);
+    }
+}
 
 
 bool GrasperController::start_impl()
@@ -32,9 +55,9 @@ bool GrasperController::start_impl()
         return false;
     }
     pinMode(servo_ena_pin, OUTPUT);
-    pinMode(servo_0_pin, PWM_OUTPUT);
-    pinMode(servo_1_pin, PWM_OUTPUT);
-    pinMode(servo_2_pin, PWM_OUTPUT);
+    _pwm_mode(servo_0_pin);
+    _pwm_mode(servo_1_pin);
+    _pwm_mode(servo_2_pin);
     pwmSetMode(PWM_MODE_MS);
     pwmSetClock(192);   
     pwmSetRange(2000); 
@@ -84,9 +107,15 @@ void GrasperController::stop_impl()
 {
     adc.end();
     servo_0.state = 0;
+    servo_0.goal_wind = false;
     servo_1.state = 0;
+    servo_1.goal_wind = false;
     servo_2.state = 0;
+    servo_2.goal_wind = false;
     servo_enable_count = 0;
+    _pwm_stop(servo_0_pin);
+    _pwm_stop(servo_1_pin);
+    _pwm_stop(servo_2_pin);
     digitalWrite(servo_ena_pin, LOW);
 }
 
@@ -112,85 +141,88 @@ void GrasperController::release()
 
 void GrasperController::step()
 {
-    servo_0.step(this);
-    servo_1.step(this);
-    servo_2.step(this);
-
-    switch(state)
+    if(!manual_override)
     {
-        case 0: // Released
+        servo_0.step(this);
+        servo_1.step(this);
+        servo_2.step(this);
+
+        switch(state)
         {
-            if(cmd_grasp)
+            case 0: // Released
             {
-                servo_0.set_goal(true);
-                state = 1;
+                if(cmd_grasp)
+                {
+                    servo_0.set_goal(true);
+                    state = 1;
+                }
+                break;
             }
-            break;
-        }
-        case 1: // Raise grasper
-        {
-            if(servo_0.wound())
+            case 1: // Raise grasper
             {
-                servo_1.set_goal(true);
-                state = 2;
+                if(servo_0.wound())
+                {
+                    servo_1.set_goal(true);
+                    state = 2;
+                }
+                break;
             }
-            break;
-        }
-        case 2: // Close grasper
-        {
-            if(servo_1.wound())
+            case 2: // Close grasper
             {
-                servo_2.set_goal(true);
-                state = 3;
+                if(servo_1.wound())
+                {
+                    servo_2.set_goal(true);
+                    state = 3;
+                }
+                break;
             }
-            break;
-        }
-        case 3: // Latch grasper
-        {
-            if(servo_2.wound())
+            case 3: // Latch grasper
             {
-                state = 4;
-                cmd_grasp = false;
+                if(servo_2.wound())
+                {
+                    state = 4;
+                    cmd_grasp = false;
+                }
+                break;
             }
-            break;
-        }
-        case 4: // Grasped
-        {
-            if(cmd_release)
+            case 4: // Grasped
             {
-                servo_2.set_goal(false);
-                state = 5;
+                if(cmd_release)
+                {
+                    servo_2.set_goal(false);
+                    state = 5;
+                }
+                break;
             }
-            break;
-        }
-        case 5: // Unlatch grasper
-        {
-            if(servo_2.unwound())
-            {                
-                servo_1.set_goal(false);
-                state = 6;
-            }
-            break;
-        }
-        case 6: // Open grasper
-        {
-            if(servo_1.unwound())
+            case 5: // Unlatch grasper
             {
-                servo_0.set_goal(false);
-                state = 7;
+                if(servo_2.unwound())
+                {                
+                    servo_1.set_goal(false);
+                    state = 6;
+                }
+                break;
             }
-            break;
-        }
-        case 7: // Lower grasper
-        {   
-            if(servo_0.unwound())
+            case 6: // Open grasper
             {
-                cmd_release = false;
-                state = 0;
+                if(servo_1.unwound())
+                {
+                    servo_0.set_goal(false);
+                    state = 7;
+                }
+                break;
             }
-            break;
+            case 7: // Lower grasper
+            {   
+                if(servo_0.unwound())
+                {
+                    cmd_release = false;
+                    state = 0;
+                }
+                break;
+            }
+            default: state = 0; break;
         }
-        default: state = 0; break;
     }
     tick();
 }
@@ -204,9 +236,16 @@ float GrasperController::current_convert(uint8_t chn)
 }
 
 
-void GrasperController::pwm_write(uint8_t chn, uint16_t pulse_width_ms)
+void GrasperController::pwm_write(uint8_t pin, uint16_t pulse_width_ms)
 {
-    pwmWrite(chn, pulse_width_ms / 10u); 
+    if((pin == 18) || (pin == 19))
+    {
+        pwmWrite(pin, pulse_width_ms / 10u);
+    }
+    else
+    {        
+        softPwmWrite(pin, pulse_width_ms / 100u);
+    }
 }
 
 
