@@ -41,32 +41,58 @@ public:
             static_cast<GrasperController*>(task)->release();
             out << "Opened grasper." << std::endl;
         });
-        declare_cli_command("raise", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+        
+        declare_cli_command("wind", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
             if(args.size() < 1)
             {
-                out << "Direction is required" << std::endl;
+                out << "Servo number is required" << std::endl;
                 return;
             }
-            bool wind = (args[0] == "1") || (args[0] == "true");
-            static_cast<GrasperController*>(task)->servo_0.set_goal(wind);
+            ServoWinder* servo;
+            if(args[0] == "0")
+            {
+                servo = &((GrasperController*)task)->servo_0;
+            }
+            else if(args[0] == "1")
+            {
+                servo = &((GrasperController*)task)->servo_1;
+            }
+            else if(args[0] == "2")
+            {
+                servo = &((GrasperController*)task)->servo_2;
+            }
+            else
+            {
+                out << "Unknown servo number." << std::endl;
+                return;
+            }
+            servo->set_goal(true);
         });
-        declare_cli_command("curl", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+        declare_cli_command("unwind", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
             if(args.size() < 1)
             {
-                out << "Direction is required" << std::endl;
+                out << "Servo number is required" << std::endl;
                 return;
             }
-            bool wind = (args[0] == "1") || (args[0] == "true");
-            static_cast<GrasperController*>(task)->servo_1.set_goal(wind);
-        });
-        declare_cli_command("latch", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
-            if(args.size() < 1)
+            ServoWinder* servo;
+            if(args[0] == "0")
             {
-                out << "Direction is required" << std::endl;
+                servo = &((GrasperController*)task)->servo_0;
+            }
+            else if(args[0] == "1")
+            {
+                servo = &((GrasperController*)task)->servo_1;
+            }
+            else if(args[0] == "2")
+            {
+                servo = &((GrasperController*)task)->servo_2;
+            }
+            else
+            {
+                out << "Unknown servo number." << std::endl;
                 return;
             }
-            bool wind = (args[0] == "1") || (args[0] == "true");
-            static_cast<GrasperController*>(task)->servo_2.set_goal(wind);
+            servo->set_goal(false);
         });
         declare_cli_command("power", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
             if(args.size() < 1)

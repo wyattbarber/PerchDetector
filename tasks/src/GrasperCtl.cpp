@@ -61,6 +61,9 @@ bool GrasperController::start_impl()
     pwmSetMode(PWM_MODE_MS);
     pwmSetClock(192);   
     pwmSetRange(2000); 
+    pwm_write(servo_0_pin, 1500);
+    pwm_write(servo_1_pin, 1500);
+    pwm_write(servo_2_pin, 1500);
     info("GPIO initialized.");
 
     // Configure servo controllers
