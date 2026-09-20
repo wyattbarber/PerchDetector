@@ -109,13 +109,16 @@ bool GrasperController::start_impl()
 void GrasperController::stop_impl()
 {
     adc.end();
-    servo_0.state = 0;
-    servo_0.goal_close = false;
-    servo_1.state = 0;
-    servo_1.goal_close = false;
-    servo_2.state = 0;
-    servo_2.goal_close = false;
-    servo_enable_count = 0;
+    servo_0.state = ServoWinder::REST;
+    servo_0.request_close = false;
+    servo_0.request_open = false;
+    servo_1.state = ServoWinder::REST;
+    servo_1.request_close = false;
+    servo_1.request_open = false;
+    servo_2.state = ServoWinder::REST;
+    servo_2.request_close = false;
+    servo_2.request_open = false;
+    servo_enable_count = ServoWinder::REST;
     _pwm_stop(servo_0_pin);
     _pwm_stop(servo_1_pin);
     _pwm_stop(servo_2_pin);
@@ -126,7 +129,7 @@ void GrasperController::stop_impl()
 void GrasperController::grasp()
 {
     cmd_grasp = true;
-    while(cmd_grasp)
+    while(!grasp_done)
     {
         std::this_thread::sleep_for(50ms);
     }
@@ -136,7 +139,7 @@ void GrasperController::grasp()
 void GrasperController::release()
 {
     cmd_release = true;
-    while(cmd_release)
+    while(!release_done)
     {
         std::this_thread::sleep_for(50ms);
     }
@@ -153,43 +156,55 @@ void GrasperController::step()
 
         switch(state)
         {
-            case 0: // Opened
+            case REST:
             {
                 if(cmd_grasp)
-                {
+                { 
                     servo_0.set_goal(true);
                     servo_1.set_goal(true);
-                    state = 1;
+                    cmd_grasp = false;
+                    grasp_done = false;
+                    state = CLOSING; 
                 }
-                break;
-            }
-            case 1: // Closing
-            {
-                if(servo_0.closed() && servo_1.closed())
-                {
-                    state = 2;
-                }
-                break;
-            }
-            case 2: // Closed
-            {
-                if(!cmd_grasp)
+                else if(cmd_release)
                 {
                     servo_0.set_goal(false);
                     servo_1.set_goal(false);
-                    state = 1;
+                    cmd_release = false;
+                    release_done = false;
+                    state = OPENING;
                 }
                 break;
             }
-            case 3: // Opening
+            case CLOSING:
             {
-                if(servo_0.opened() && servo_1.opened())
+                if (servo_0.closed() && servo_1.closed())
                 {
-                    state = 0;
+                    state = CLOSED;
                 }
                 break;
             }
-            default: state = 0; break;
+            case CLOSED:
+            {
+                grasp_done = true;
+                state = REST;
+                break;
+            }
+            case OPENING:
+            {
+                if (servo_0.opened() && servo_1.opened())
+                {
+                    state = OPENED;
+                }
+                break;
+            }
+            case OPENED:
+            {
+                release_done = true;
+                state = REST;
+                break;
+            }
+            default: state = REST; break;
         }
     }
     tick();
@@ -247,48 +262,60 @@ void GrasperController::ServoWinder::step(GrasperController* parent)
 {
     switch(state)
     {
-        case 0: // Opened
+        case REST:
         {
-            parent->pwm_write(pin, 1500);
-            if (goal_close)
-            {
-                state = 1;
+            if(request_close)
+            { 
+                parent->pwm_write(pin, 1500);
                 parent->acquire_servo_enable();
+                request_close = false;
+                finished_close = false;
+                state = CLOSING; 
+            }
+            else if(request_open)
+            {
+                parent->pwm_write(pin, 1500);
+                parent->acquire_servo_enable();
+                request_open = false;
+                finished_open = false;
+                state = OPENING;
             }
             break;
         }
-        case 1: // Closing
+        case CLOSING:
         {
             parent->pwm_write(pin, 1500 + ((direction ? 1 : -1) * speed));
             i = parent->current_convert(adc_chn);
             if (i > current_lim)
             {
-                state = 2;
-                parent->release_servo_enable();
+                state = CLOSED;
             }
             break;
         }
-        case 2: // Closed
+        case CLOSED:
         {
-            parent->pwm_write(pin, 1500);
-            if (!goal_close)
-            {
-                parent->acquire_servo_enable();
-                state = 3;
-            }
+            parent->release_servo_enable();
+            finished_close = true;
+            state = REST;
             break;
         }
-        case 3: // Opening
+        case OPENING:
         {
             parent->pwm_write(pin, 1500 - ((direction ? 1 : -1) * speed));
             i = parent->current_convert(adc_chn);
             if (i > current_lim)
             {
-                state = 0;
-                parent->release_servo_enable();
+                state = OPENED;
             }
             break;
         }
-        default: state = 0; break;
+        case OPENED:
+        {
+            parent->release_servo_enable();
+            finished_open = true;
+            state = REST;
+            break;
+        }
+        default: state = REST; break;
     }
 }

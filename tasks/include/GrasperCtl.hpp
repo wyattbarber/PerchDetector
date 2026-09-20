@@ -27,18 +27,20 @@ public:
         servo_1(servo_1_pin, 1),
         servo_2(servo_2_pin, 2)
     {
-        state = 0;
+        state = REST;
         cmd_grasp = false;
         cmd_release = false;
+        grasp_done = false;
+        release_done = false;
         servo_enable_count = 0;
         manual_override = false;
 
-        declare_cli_command("close", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+        declare_cli_command("grasp", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
             out << "Closing grasper..." << std::endl;
             static_cast<GrasperController*>(task)->grasp();
             out << "Closed grasper." << std::endl;
         });
-        declare_cli_command("open", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+        declare_cli_command("release", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
             out << "Opening grasper..." << std::endl;
             static_cast<GrasperController*>(task)->release();
             out << "Opened grasper." << std::endl;
@@ -253,9 +255,16 @@ private:
     const uint8_t servo_2_pin;
 
     std::atomic<unsigned> servo_enable_count;
-
-    uint8_t state;
-    bool cmd_grasp, cmd_release;
+    
+    enum State {
+        REST,
+        CLOSING,
+        CLOSED,
+        OPENING,
+        OPENED
+    };
+    State state;
+    bool cmd_grasp, cmd_release, grasp_done, release_done;
 
     float current_convert(uint8_t chn);
 
@@ -271,13 +280,14 @@ private:
             current_lim = 0.3;
             direction = false;
             speed = 500;
-            state = 0;
-            goal_close = false;
+            state = REST;
+            request_close = false;
+            request_open = false;
         }
         void step(GrasperController* parent);
-        void set_goal(bool close){ goal_close = close; }
-        bool closed(){ return state == 2; }
-        bool opened(){ return state == 0; }
+        void set_goal(bool close){ close ? request_close = true : request_open = true; }
+        bool closed(){ return finished_close; }
+        bool opened(){ return finished_open; }
         float latest_current(){ return i; }
         
         float current_lim;
@@ -286,8 +296,19 @@ private:
         unsigned speed;
         const uint8_t pin;
         const uint8_t adc_chn;
-        uint8_t state;
-        bool goal_close;
+        bool request_close;
+        bool request_open;
+        bool finished_close;
+        bool finished_open;
+
+        enum State {
+            REST,
+            CLOSING,
+            CLOSED,
+            OPENING,
+            OPENED
+        };
+        State state;
     };
 
     ServoWinder servo_0;
