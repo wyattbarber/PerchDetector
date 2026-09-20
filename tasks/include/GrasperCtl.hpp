@@ -2,8 +2,10 @@
 
 #include "Task.hpp"
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <atomic>
+#include <thread>
 #include <Adafruit_ADS1X15.hpp>
 
 
@@ -42,12 +44,15 @@ public:
             out << "Opened grasper." << std::endl;
         });
         
-        declare_cli_command("wind", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+        declare_cli_command("open", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            using namespace std::chrono_literals;
+
             if(args.size() < 1)
             {
                 out << "Servo number is required" << std::endl;
                 return;
             }
+
             ServoWinder* servo;
             if(args[0] == "0")
             {
@@ -66,33 +71,79 @@ public:
                 out << "Unknown servo number." << std::endl;
                 return;
             }
-            servo->set_goal(true);
-        });
-        declare_cli_command("unwind", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
-            if(args.size() < 1)
+
+            bool echo_i = false;
+            if(args.size() > 1)
             {
-                out << "Servo number is required" << std::endl;
-                return;
+                echo_i = args[1] == "--echo-i";
             }
-            ServoWinder* servo;
-            if(args[0] == "0")
-            {
-                servo = &((GrasperController*)task)->servo_0;
-            }
-            else if(args[0] == "1")
-            {
-                servo = &((GrasperController*)task)->servo_1;
-            }
-            else if(args[0] == "2")
-            {
-                servo = &((GrasperController*)task)->servo_2;
-            }
-            else
-            {
-                out << "Unknown servo number." << std::endl;
-                return;
-            }
+
             servo->set_goal(false);
+            while(!servo->opened())
+            {
+                std::this_thread::sleep_for(100ms);
+                if(echo_i)
+                {
+                    out << servo->latest_current() << " A" << std::endl;
+                }
+                if(in.rdbuf()->in_avail() > 0)
+                {
+                    std::stringstream s;
+                    s << in.rdbuf();
+                    return;
+                }
+            }
+        });
+        declare_cli_command("close", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
+            using namespace std::chrono_literals;
+
+            if(args.size() < 1)
+            {
+                out << "Servo number is required" << std::endl;
+                return;
+            }
+
+            ServoWinder* servo;
+            if(args[0] == "0")
+            {
+                servo = &((GrasperController*)task)->servo_0;
+            }
+            else if(args[0] == "1")
+            {
+                servo = &((GrasperController*)task)->servo_1;
+            }
+            else if(args[0] == "2")
+            {
+                servo = &((GrasperController*)task)->servo_2;
+            }
+            else
+            {
+                out << "Unknown servo number." << std::endl;
+                return;
+            }
+
+            bool echo_i = false;
+            if(args.size() > 1)
+            {
+                echo_i = args[1] == "--echo-i";
+            }
+            
+            servo->set_goal(true);
+            while(!servo->closed())
+            {
+                std::this_thread::sleep_for(100ms);
+                if(echo_i)
+                {
+                    out << servo->latest_current() << " A" << std::endl;
+                }                
+                
+                if(in.rdbuf()->in_avail() > 0)
+                {
+                    std::stringstream s;
+                    s << in.rdbuf();
+                    return;
+                }
+            }
         });
         declare_cli_command("power", [](Task* task, std::istream& in, std::ostream& out, const std::vector<std::string>& args){
             if(args.size() < 1)
@@ -215,31 +266,33 @@ private:
     public:
         ServoWinder(uint8_t servo_pin, uint8_t adc_chn) :
             pin(servo_pin),
-            adc_chn(adc_chn),
-            state(0),
-            goal_wind(false),
-            wind_count(0)
+            adc_chn(adc_chn)
         {
             current_lim = 0.3;
             direction = false;
             speed = 500;
+            state = 0;
+            goal_close = false;
         }
         void step(GrasperController* parent);
-        void set_goal(bool wind){ goal_wind = wind; }
-        bool wound(){ return state == 2; }
-        bool unwound(){ return state == 0; }
+        void set_goal(bool close){ goal_close = close; }
+        bool closed(){ return state == 2; }
+        bool opened(){ return state == 0; }
+        float latest_current(){ return i; }
         
         float current_lim;
+        float i;
         bool direction;
         unsigned speed;
         const uint8_t pin;
         const uint8_t adc_chn;
         uint8_t state;
-        bool goal_wind;
-        uint16_t wind_count;
+        bool goal_close;
     };
 
     ServoWinder servo_0;
     ServoWinder servo_1;
     ServoWinder servo_2;
 };
+
+

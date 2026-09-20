@@ -110,11 +110,11 @@ void GrasperController::stop_impl()
 {
     adc.end();
     servo_0.state = 0;
-    servo_0.goal_wind = false;
+    servo_0.goal_close = false;
     servo_1.state = 0;
-    servo_1.goal_wind = false;
+    servo_1.goal_close = false;
     servo_2.state = 0;
-    servo_2.goal_wind = false;
+    servo_2.goal_close = false;
     servo_enable_count = 0;
     _pwm_stop(servo_0_pin);
     _pwm_stop(servo_1_pin);
@@ -142,6 +142,7 @@ void GrasperController::release()
     }
 }
 
+
 void GrasperController::step()
 {
     if(!manual_override)
@@ -152,74 +153,38 @@ void GrasperController::step()
 
         switch(state)
         {
-            case 0: // Released
+            case 0: // Opened
             {
                 if(cmd_grasp)
                 {
                     servo_0.set_goal(true);
+                    servo_1.set_goal(true);
                     state = 1;
                 }
                 break;
             }
-            case 1: // Raise grasper
+            case 1: // Closing
             {
-                if(servo_0.wound())
+                if(servo_0.closed() && servo_1.closed())
                 {
-                    servo_1.set_goal(true);
                     state = 2;
                 }
                 break;
             }
-            case 2: // Close grasper
+            case 2: // Closed
             {
-                if(servo_1.wound())
-                {
-                    servo_2.set_goal(true);
-                    state = 3;
-                }
-                break;
-            }
-            case 3: // Latch grasper
-            {
-                if(servo_2.wound())
-                {
-                    state = 4;
-                    cmd_grasp = false;
-                }
-                break;
-            }
-            case 4: // Grasped
-            {
-                if(cmd_release)
-                {
-                    servo_2.set_goal(false);
-                    state = 5;
-                }
-                break;
-            }
-            case 5: // Unlatch grasper
-            {
-                if(servo_2.unwound())
-                {                
-                    servo_1.set_goal(false);
-                    state = 6;
-                }
-                break;
-            }
-            case 6: // Open grasper
-            {
-                if(servo_1.unwound())
+                if(!cmd_grasp)
                 {
                     servo_0.set_goal(false);
-                    state = 7;
+                    servo_1.set_goal(false);
+                    state = 1;
                 }
                 break;
             }
-            case 7: // Lower grasper
-            {   
-                if(servo_0.unwound())
+            case 3: // Opening
+            {
+                if(servo_0.opened() && servo_1.opened())
                 {
-                    cmd_release = false;
                     state = 0;
                 }
                 break;
@@ -282,52 +247,45 @@ void GrasperController::ServoWinder::step(GrasperController* parent)
 {
     switch(state)
     {
-        case 0: // Unwound
+        case 0: // Opened
         {
             parent->pwm_write(pin, 1500);
-            if (goal_wind)
+            if (goal_close)
             {
                 state = 1;
-                parent->info("Winding servo on pin ", (int)pin);
                 parent->acquire_servo_enable();
             }
             break;
         }
-        case 1: // Winding
+        case 1: // Closing
         {
             parent->pwm_write(pin, 1500 + ((direction ? 1 : -1) * speed));
-            ++wind_count;
-            auto i = parent->current_convert(adc_chn);
-            parent->info("Servo on pin ", (int)pin, " measured current of ", i, 'A');
+            i = parent->current_convert(adc_chn);
             if (i > current_lim)
             {
                 state = 2;
                 parent->release_servo_enable();
-                parent->info("Servo on pin ", (int)pin, " wound completely");
             }
             break;
         }
-        case 2: // Wound
+        case 2: // Closed
         {
             parent->pwm_write(pin, 1500);
-            if (!goal_wind)
+            if (!goal_close)
             {
-                parent->info("Unwinding servo on pin ", (int)pin);
                 parent->acquire_servo_enable();
                 state = 3;
             }
             break;
         }
-        case 3: // Unwinding
+        case 3: // Opening
         {
             parent->pwm_write(pin, 1500 - ((direction ? 1 : -1) * speed));
-            --wind_count;
-            if (wind_count <= 0)
+            i = parent->current_convert(adc_chn);
+            if (i > current_lim)
             {
-                parent->release_servo_enable();
-                parent->info("Servo on pin ", (int)pin, " unwound completely");
-                wind_count = 0;
                 state = 0;
+                parent->release_servo_enable();
             }
             break;
         }

@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     // Set defaults and process arguments
     std::cout << "-- Configuring program" << std::endl;
     context.logfile = std::string("logout.txt");
-    context.cal_folder = std::string("~/camera_calibrations");
+    context.cal_folder = std::string(CMAKE_SOURCE_DIR "/calibrations");
     context.simulation = false;
     
     int i = 1;
