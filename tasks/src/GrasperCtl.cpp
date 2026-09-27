@@ -129,6 +129,10 @@ void GrasperController::stop_impl()
 void GrasperController::grasp()
 {
     cmd_grasp = true;
+    while(cmd_grasp)
+    {
+        std::this_thread::sleep_for(50ms);
+    }
     while(!grasp_done)
     {
         std::this_thread::sleep_for(50ms);
@@ -139,6 +143,10 @@ void GrasperController::grasp()
 void GrasperController::release()
 {
     cmd_release = true;
+    while(cmd_release)
+    {
+        std::this_thread::sleep_for(50ms);
+    }
     while(!release_done)
     {
         std::this_thread::sleep_for(50ms);
@@ -162,16 +170,16 @@ void GrasperController::step()
                 { 
                     servo_0.set_goal(true);
                     servo_1.set_goal(true);
-                    cmd_grasp = false;
                     grasp_done = false;
+                    cmd_grasp = false;
                     state = CLOSING; 
                 }
                 else if(cmd_release)
                 {
                     servo_0.set_goal(false);
                     servo_1.set_goal(false);
-                    cmd_release = false;
                     release_done = false;
+                    cmd_release = false;
                     state = OPENING;
                 }
                 break;
@@ -234,6 +242,8 @@ void GrasperController::pwm_write(uint8_t pin, uint16_t pulse_width_ms)
 
 void GrasperController::acquire_servo_enable()
 {
+    std::lock_guard<std::mutex> lock(servo_enable_mut);
+
     if(servo_enable_count == 0)
     {
         info("Initial servo enable request received, turning on power.");
@@ -245,6 +255,8 @@ void GrasperController::acquire_servo_enable()
 
 void GrasperController::release_servo_enable()
 {
+    std::lock_guard<std::mutex> lock(servo_enable_mut);
+
     if(servo_enable_count >= 1)
     {
         --servo_enable_count;

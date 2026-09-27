@@ -4,8 +4,8 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include <atomic>
 #include <thread>
+#include <mutex>
 #include <Adafruit_ADS1X15.hpp>
 
 
@@ -254,7 +254,8 @@ private:
     const uint8_t servo_1_pin;
     const uint8_t servo_2_pin;
 
-    std::atomic<unsigned> servo_enable_count;
+    std::mutex servo_enable_mut;
+    unsigned servo_enable_count;
     
     enum State {
         REST,

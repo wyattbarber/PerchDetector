@@ -4,17 +4,17 @@
     "max_z_tilt": 20,
     "max_y_tilt": 20,
     "servo_0": {
-        "current_lim_ma": 0.6,
+        "current_lim_ma": 0.51,
         "reverse": 1,
         "speed": 400
     },
     "servo_1": {
-        "current_lim_ma": 0.6,
+        "current_lim_ma": 0.51,
         "reverse": 1,
         "speed": 400
     },
     "servo_2": {
-        "current_lim_ma": 0.5,
+        "current_lim_ma": 0.51,
         "reverse": 0,
         "speed": 400
     }
