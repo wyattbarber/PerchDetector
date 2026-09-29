@@ -1,6 +1,6 @@
 {
     "stereo": {
-        "minDistance": 0.2,
+        "minDistance": 0.04,
         "maxDistance": 3.0,
         "blockSize": 3,
         "preFilterCap": 10,

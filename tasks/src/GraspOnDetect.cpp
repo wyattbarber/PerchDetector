@@ -2,6 +2,10 @@
 #include <json_loader.hpp>
 #include <cmath>
 
+
+using namespace std::chrono_literals;
+
+
 bool GraspOnDetect::start_impl()
 {
     float max_z_tilt_deg, max_y_tilt_deg;
@@ -33,16 +37,24 @@ void GraspOnDetect::step()
         float angle_z = std::acos(d(2) / d.norm()); // Angle in radians to z axis
         const Eigen::Vector3f d_xy = {d(0), d(1), 0};
         float angle_y = std::acos(d_xy(1) / d_xy.norm()); // Angle in radians to y axis 
+        if(angle_y > (M_PI/2)) {angle_y = M_PI - angle_y;}
         
         bool angle_z_ok = max_z_tilt_rad >= ((M_PI / 2.0) - angle_z);
         bool angle_y_ok = max_y_tilt_rad >= angle_y;
         bool dist_h_ok = max_offset >=  std::abs(a(0));
         bool dist_v_ok = max_dist >= a(2);
 
+        info("Perch detected ", a(2), "mm away, at ", a(0), "mm offset, ", angle_y * 180.0 / M_PI, "deg azimuth, and ",  ((M_PI / 2.0) - angle_z) * 180.0 / M_PI, "deg elevation");
+
         if(
             angle_y_ok && angle_z_ok && dist_h_ok && dist_v_ok
         ) {
+            info("Perch in position, grasping.");
             grasp_ctl->grasp();
         }
+    }
+    while(!latest_detect->stale)
+    {
+        std::this_thread::sleep_for(50ms);
     }
 }
