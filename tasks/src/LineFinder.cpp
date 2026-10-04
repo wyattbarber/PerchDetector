@@ -150,6 +150,24 @@ static std::pair<float, float> dimensions(const Eigen::Matrix<float, 3, Eigen::D
 }
 
 
+template<typename Derived>
+static auto stretch(const Eigen::MatrixBase<Derived>& pc, const Eigen::Vector3f fov_near, const Eigen::Vector3f fov_far)
+{
+    Eigen::Matrix<float, 3, Eigen::Dynamic> out(3, pc.cols());
+    int i = 0;
+    for(auto p = pc.colwise().begin(); p != pc.colwise().end(); ++p)
+    {
+        const auto k = (p(2) - fov_near(2)) / (fov_far(2) - fov_near(2));
+        const auto lp = fov_near + k*(fov_far - fov_near);
+        out(2,i) = p(2);
+        out(1,i) = p(1) * fov_far(1) / lp(1);
+        out(0,i) = p(0) * fov_far(0) / lp(0);
+        ++i;
+    }
+    return out;
+}
+
+
 std::vector<Line> LineFinder::hough3d(
     const Eigen::Map<Eigen::Matrix<float, 3, Eigen::Dynamic>> &points,
     Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>>& ids)
