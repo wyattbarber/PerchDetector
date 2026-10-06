@@ -214,7 +214,6 @@ void DepthCamera::rectify(const cv::Mat &left_in, const cv::Mat &right_in, cv::M
 bool DepthCamera::configure_matchers()
 {
     // Load settings
-    double min_dist = 0.0, max_dist = 0.0;
     int minDisparity = 0, maxDisparity = 0, blockSize = 0, P1 = 0, P2 = 0, disp12MaxDiff = 0, preFilterCap = 0, uniquenessRatio = 0, speckleWindowSize = 0, speckleRange = 0;
     if (!load_json_value_pairs(
             stereo_param,
@@ -284,7 +283,7 @@ bool DepthCamera::configure_matchers()
 
     // Calculate bounding box size
     bb_depth = max_dist - min_dist;
-    std::tie(bb_width, bb_height) = bb_xy(max_dist);
+    std::tie(bb_width, bb_height) = bb_xy();
 
     return true;
 }
@@ -351,12 +350,25 @@ void DepthCamera::dist_to_disp(double min_dist, double max_dist, int &min_disp, 
     }
 }
 
-std::tuple<double, double> DepthCamera::bb_xy(double max_dist)
+std::tuple<double, double> DepthCamera::bb_xy()
 {
     auto f = Q.at<double>(2, 3);
     double w = static_cast<double>(CameraWrapper::Width) * max_dist / f;
     double h = static_cast<double>(CameraWrapper::Height) * max_dist / f;
     return {w, h};
+}
+    
+std::pair<std::array<float, 3>,std::array<float, 3>> DepthCamera::bounding_box()
+{
+    auto f = Q.at<double>(2, 3);
+    double w1 = static_cast<double>(CameraWrapper::Width) * min_dist / f;
+    double h1 = static_cast<double>(CameraWrapper::Height) * min_dist / f;
+    double w2 = static_cast<double>(CameraWrapper::Width) * max_dist / f;
+    double h2 = static_cast<double>(CameraWrapper::Height) * max_dist / f;
+    return {
+        {w1/2.0, h1/2.0, min_dist},
+        {w2/2.0, h2/2.0, max_dist},
+    };
 }
 
 std::array<float, 3> DepthCamera::volume()

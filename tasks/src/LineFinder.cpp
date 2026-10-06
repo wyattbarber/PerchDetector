@@ -100,7 +100,7 @@ bool LineFinder::start_impl()
     max_angle = max_angle_deg * M_PI / 180.0;
     
     // estimate size of Hough space. Mostly copied from hough 3d library, with size estimated as worst case point cloud bounding box
-    auto volume = cloud->volume();
+    auto volume = camera->volume();
     auto min_p = Eigen::Vector<float, 3>{-volume[0]/2.0f, -volume[1]/2.0f, 0} * 1000.0f;
     auto max_p = Eigen::Vector<float, 3>{volume[0]/2.0f, volume[1]/2.0f, volume[2]} * 1000.0f;
     hough = new Hough(min_p, max_p, dx, granularity);
@@ -173,7 +173,7 @@ std::vector<Line> LineFinder::hough3d(
     Eigen::Map<Eigen::Vector<int8_t, Eigen::Dynamic>>& ids)
 {
     // Perform hough transform iteratively
-    Eigen::Matrix<float, 3, Eigen::Dynamic> centered = points;
+    Eigen::Matrix<float, 3, Eigen::Dynamic> centered = points.colwise() - Eigen::Vector3f{0, 0, camera->bounding_box().second[2]/2.0};
     // This vector tracks positions in original point cloud as lines get iteratively removed
     Eigen::VectorXi index_map = Eigen::VectorXi::LinSpaced(centered.cols(), 0, centered.cols()-1);
 

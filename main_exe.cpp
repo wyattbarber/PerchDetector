@@ -47,7 +47,7 @@ void make_tasks(program_context& context)
     context.tasks.add(pointcloud);
     context.tasks.add(make_data_mapper("point_cloud_feed", pointcloud, point_cloud_conv()));
 
-    auto detector = std::make_shared<LineFinder>("detector", pointcloud, context.cal_folder);
+    auto detector = std::make_shared<LineFinder>("detector", pointcloud, stereo, context.cal_folder);
     context.tasks.add(detector);
 
 #ifndef WSL_SIM

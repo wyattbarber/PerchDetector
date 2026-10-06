@@ -78,9 +78,10 @@ public:
     @param cloud PointCloud task to get data from.
     @param cal_path Path to folder containing calibration and settings.
     */
-    LineFinder(const char* name, std::shared_ptr<PointCloud> cloud, const std::string& cal_path):
-        DataSource<LineFinder>(name, {cloud}),
-        cloud(cloud),        
+    LineFinder(const char* name, std::shared_ptr<PointCloud> cloud, std::shared_ptr<DepthCamera> camera, const std::string& cal_path):
+        DataSource<LineFinder>(name, {cloud, camera}),
+        cloud(cloud),       
+        camera(camera), 
         settings(cal_path + "/detector.json"),
         hough(nullptr)
     {
@@ -103,6 +104,7 @@ public:
   
 protected:
     std::shared_ptr<PointCloud> cloud;
+    std::shared_ptr<DepthCamera> camera;
     PointCloud::update_ptr_const_type latest;
     const std::string settings;
     Eigen::Vector<float, 3> center;

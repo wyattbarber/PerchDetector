@@ -93,9 +93,24 @@ public:
     Returns the dimensions, x (width), y (height), and z (depth),
     of the bounding box the point cloud may occupy.
 
+    Unlike bounding_box(), this method returns the dimensions
+    of a bounding box that does not acccount or field of view shrinkage
+    at small depths.
+
     @return Bounding box dimensions.
     */
     std::array<float, 3> volume();
+
+    /** Provides the maximum dimensions of the point cloud.
+    
+    Returns two corners (upper right foreground, upper right background) 
+    of the bounding box of detectable positions. Returns these points as
+    a pair, where the first member is the foreground point and the second
+    is the background.
+
+    @return Bounding box corners.
+    */
+    std::pair<std::array<float, 3>,std::array<float, 3>> bounding_box();
   
 protected:
     
@@ -106,6 +121,7 @@ protected:
 
     std::shared_ptr<CameraType> left, right;
     typename CameraType::update_ptr_const_type latest_left, latest_right;
+    double min_dist, max_dist;
 
     bool downsample;
     cv::Ptr<StereoMatcherType> stereo_left, stereo_right;
@@ -128,7 +144,7 @@ protected:
     bool configure_matchers();
     bool load_calibration();
     void dist_to_disp(double min_dist, double max_dist, int& min_disp, int& max_disp);
-    std::tuple<double, double> bb_xy(double max_dist);
+    std::tuple<double, double> bb_xy();
     
 };
 
