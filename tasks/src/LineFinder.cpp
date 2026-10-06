@@ -210,7 +210,7 @@ std::vector<Line> LineFinder::hough3d(
 
         std::tie(l, w) = dimensions(centered(Eigen::all, Y), a, b, c);
         
-        // a += center;
+        a += Eigen::Vector3f{0, 0, camera->bounding_box().second[2]/2.0};
         auto ratio = l / w;
         auto cos_theta = std::abs(b(2));
 
