@@ -83,7 +83,7 @@ std::vector<Eigen::Index> removePoints(const Eigen::Matrix<float, 3, Eigen::Dyna
   }
     
   newindices.reserve(X.cols() - Y.size());
-  int i, j;
+  unsigned i, j;
 
   // important assumption: points in Y appear in same order in points
   for (i = 0, j = 0; i < X.cols() && j < Y.size(); i++)

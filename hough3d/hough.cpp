@@ -125,7 +125,7 @@ void Hough::vectorPointVote(const  Eigen::Matrix<float, 3, Eigen::Dynamic> &pc, 
     auto offset = (xyp_d.array() * linear_idx_helper.array()).cast<int>();
     Eigen::VectorXi indices = offset.colwise().sum().array() + j;
     // Add votes to each index
-    for(const auto& idx : indices) {
+    for(const unsigned idx : indices) {
       if( (idx >= 0) && (idx < VotingSpace.size()) ){
           VotingSpace[idx] += inc_dir;
       }

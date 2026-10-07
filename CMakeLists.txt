@@ -9,8 +9,8 @@ find_package(LibCamera REQUIRED HINTS cmake)
 find_package(jsoncpp REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBLOCK_ALLOC") # Use custom allocator in default build
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -03")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -g -fsanitize=address -O1 -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -O3")
 if(BUILD_WSL_SIM)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWSL_SIM") 
 endif()
