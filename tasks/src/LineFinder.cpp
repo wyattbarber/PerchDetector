@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <limits>
+#include <functional>
 
 
 /** Selects the best candidate line.
@@ -345,6 +346,7 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
     {
         out << "{";
         out << "\"valid\":true,";
+        out << "\"hash\":" << (int)std::hash<decltype(update)>{}(update) << ",";
         out << "\"distance\":" << a[2] << ",";
         out << "\"anchor\":[" << a[0] << "," << a[1] << "," << a[2] << "], ";
         out << "\"direction\":[" << d[0] << "," << d[1] << "," << d[2] << "], ";
@@ -355,6 +357,7 @@ void report_line_detect(Task* task, std::istream& in, std::ostream& out, const s
         out << "}" << std::endl;
     } else {
         out << "Perch found." << std::endl;
+        out << "\tUpdate Hash: " << (int)std::hash<decltype(update)>{}(update) << std::endl;
         out << "\tDistance: " << a[2] << " mm" << std::endl;
         out << "\tAnchor Point: " << a << std::endl;
         out << "\tPerch Width: " << n.norm() << std::endl;

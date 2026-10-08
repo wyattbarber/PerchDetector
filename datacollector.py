@@ -129,19 +129,22 @@ def parser(args):
     p.add_argument(
         "--offset", 
         type=float,
-        required=True,
+        required=False,
+        default=0,
         help="Horizontal distance to the test object for this trial, in mm."
     )
     p.add_argument(
         "--elevation", 
         type=float,
-        required=True,
+        required=False,
+        default=0,
         help="Angle between the test object and the camera plane for this trial, in degrees."
     )
     p.add_argument(
         "--azimuth", 
         type=float,
-        required=True,
+        required=False,
+        default=0,
         help="Angle between the test object and the camera y axis for this trial, in degrees."
     )
     p.add_argument(
@@ -151,11 +154,11 @@ def parser(args):
         help="Width of the test object, in mm."
     )
     p.add_argument(
-        "--collection-time", 
-        type=float,
+        "--collection-count", 
+        type=int,
         required=False,
-        default=2.0,
-        help="Time to run data collection for, in minutes"
+        default=20,
+        help="Number of samples to collect."
     )
     p.add_argument(
         "--serial-log", 
@@ -176,6 +179,7 @@ if __name__ == "__main__":
     data = {
         "date": str(datetime.date.today()),
         "time": str(datetime.time()),
+        "duration": 0,
         "truth": {
             "distance": args.distance,
             "offset": args.offset,
@@ -206,12 +210,12 @@ if __name__ == "__main__":
         file_base = os.path.splitext(os.path.basename(args.output))[0]
 
         ts = time.time()
-        prev_anchor = None
+        prev_counter = None
         i = 0
-        while (time.time() - ts) <= (args.collection_time * 60):
+        while i < args.collection_count:
             observation = iface.get_detection_status()
-            if observation["anchor"] != prev_anchor:
-                prev_anchor = observation["anchor"]
+            if observation["hash"] != prev_counter:
+                prev_counter = observation["hash"]
                 iface.save_detection(f'/home/wyatt/{file_base}_bin_{len(data["observations"]["distance"])}')
                 data["observations"]["timestamp"].append(time.time())
                 data["observations"]["distance"].append(observation["distance"])
@@ -221,6 +225,10 @@ if __name__ == "__main__":
                 data["observations"]["width"].append(observation["width"])
                 data["observations"]["anchor"].append(observation["anchor"])
                 data["observations"]["direction"].append(observation["direction"])
+                i+=1         
+                print(f"Saved sample {i} out of {args.collection_count}", end='\r')
+        print()  
+        data["duration"] = time.time() - ts
 
     for k in ["distance", "offset", "azimuth", "elevation"]:
         print(f"Average {k}: {np.mean(data['observations'][k])}")
