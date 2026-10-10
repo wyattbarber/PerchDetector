@@ -9,11 +9,16 @@
 #include <chrono>
 
 
+class TaskManager;
+
+
 /** Dynamic pointer base for all tasks.
 
 */
 class Task : public std::enable_shared_from_this<Task>
 {
+    friend class TaskManager;
+
 public:
     Task(const char* name, std::initializer_list<std::shared_ptr<Task>> dependencies) : 
         name(name),
@@ -155,6 +160,8 @@ public:
 
     std::vector<std::string> dependencies();
 
+    float system_tick();
+
 protected:
     /** Adds a CLI action for this task type.
     
@@ -191,12 +198,14 @@ protected:
     */
     void tick();
 
+    void attach_manager(TaskManager* man){ this->taskman = man; }
     bool alive;
     std::map<std::string, command_executor_t> commands;
     std::vector<std::shared_ptr<Task>> depends_on, depended_by;
     bool tick_called_once, tick_called_twice;
     std::chrono::steady_clock::time_point last_tick_call;
     float rate_est;
+    TaskManager* taskman;
 };
 
 

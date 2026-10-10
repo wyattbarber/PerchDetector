@@ -1,4 +1,5 @@
 #include "Task.hpp"
+#include <TaskManager.hpp>
 
 
 void Task::init()
@@ -96,6 +97,9 @@ void Task::declare_dependency_of(std::shared_ptr<Task> task)
 {
     depended_by.push_back(task);
 }
+
+
+float Task::system_tick(){ return taskman->get_tick_period(); }
 
 
 void Task::tick()

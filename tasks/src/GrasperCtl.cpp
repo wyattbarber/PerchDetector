@@ -11,12 +11,13 @@
 #include <softPwm.h>
 #include <thread>
 #include <json_loader.hpp>
+#include <cmath>
 
 
 using namespace std::chrono_literals;
 
 
-void _pwm_mode(unsigned pin)
+static void _pwm_mode(unsigned pin)
 {
     if((pin == 18) || (pin == 19))
     {
@@ -29,7 +30,7 @@ void _pwm_mode(unsigned pin)
 }
 
 
-void _pwm_stop(unsigned pin)
+static void _pwm_stop(unsigned pin)
 {
     if((pin != 18) && (pin != 19))
     {
@@ -72,7 +73,9 @@ bool GrasperController::start_impl()
             std::make_tuple("servo_0"),
             "current_lim_ma", servo_0.current_lim,
             "reverse", servo_0.direction,
-            "speed", servo_0.speed
+            "speed", servo_0.speed,
+            "min_t", servo_0.move_min_t,
+            "max_t", servo_0.move_max_t
         ))
     {
         error("Failed to load servo 0 settings");
@@ -83,7 +86,9 @@ bool GrasperController::start_impl()
             std::make_tuple("servo_1"),
             "current_lim_ma", servo_1.current_lim,
             "reverse", servo_1.direction,
-            "speed", servo_1.speed
+            "speed", servo_1.speed,
+            "min_t", servo_1.move_min_t,
+            "max_t", servo_1.move_max_t
         ))
     {
         error("Failed to load servo 1 settings");
@@ -94,7 +99,9 @@ bool GrasperController::start_impl()
             std::make_tuple("servo_2"),
             "current_lim_ma", servo_2.current_lim,
             "reverse", servo_2.direction,
-            "speed", servo_2.speed
+            "speed", servo_2.speed,
+            "min_t", servo_2.move_min_t,
+            "max_t", servo_2.move_max_t
         ))
     {
         error("Failed to load servo 2 settings");
@@ -276,12 +283,16 @@ void GrasperController::ServoWinder::step(GrasperController* parent)
     {
         case REST:
         {
+            move_max_ticks = static_cast<unsigned>(std::ceil(move_max_t / parent->system_tick()));
+            move_min_ticks = static_cast<unsigned>(std::floor(move_min_t / parent->system_tick()));
+                
             if(request_close)
             { 
                 parent->pwm_write(pin, 1500);
                 parent->acquire_servo_enable();
                 request_close = false;
                 finished_close = false;
+                move_ticks = 0;
                 state = CLOSING; 
             }
             else if(request_open)
@@ -290,6 +301,7 @@ void GrasperController::ServoWinder::step(GrasperController* parent)
                 parent->acquire_servo_enable();
                 request_open = false;
                 finished_open = false;
+                move_ticks = 0;
                 state = OPENING;
             }
             break;
@@ -298,10 +310,11 @@ void GrasperController::ServoWinder::step(GrasperController* parent)
         {
             parent->pwm_write(pin, 1500 + ((direction ? 1 : -1) * speed));
             i = parent->current_convert(adc_chn);
-            if (i > current_lim)
+            if ((i > current_lim && move_ticks > move_min_ticks) || (move_ticks > move_max_ticks))
             {
                 state = CLOSED;
             }
+            ++move_ticks;
             break;
         }
         case CLOSED:
@@ -315,10 +328,11 @@ void GrasperController::ServoWinder::step(GrasperController* parent)
         {
             parent->pwm_write(pin, 1500 - ((direction ? 1 : -1) * speed));
             i = parent->current_convert(adc_chn);
-            if (i > current_lim)
+            if ((i > current_lim && move_ticks > move_min_ticks) || (move_ticks > move_max_ticks))
             {
                 state = OPENED;
             }
+            ++move_ticks;
             break;
         }
         case OPENED:

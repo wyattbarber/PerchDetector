@@ -301,6 +301,11 @@ private:
         bool request_open;
         bool finished_close;
         bool finished_open;
+        float move_min_t;
+        float move_max_t;
+        unsigned move_min_ticks;
+        unsigned move_max_ticks;
+        unsigned move_ticks;
 
         enum State {
             REST,

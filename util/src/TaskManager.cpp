@@ -6,6 +6,7 @@ void TaskManager::launch()
     // Perform post-construction initialization
     for (auto& item : tasks)
     {
+        item.second->attach_manager(this);
         item.second->init();
     }
     // Begin execution
@@ -44,6 +45,9 @@ void TaskManager::kill()
 
 
 void TaskManager::set_tick(float f){ tick_period = 1.0 / f; }
+
+
+float TaskManager::get_tick_period(){ return tick_period; }
 
 
 size_t TaskManager::get_ticks()

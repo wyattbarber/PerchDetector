@@ -70,6 +70,11 @@ public:
     */
     void set_tick(float f);
 
+    /** Get the tick period, in seconds.
+    
+    */
+    float get_tick_period();
+
     /** Helpers for compatibility with existing map iteration code in main.
     */
     const auto begin(){ return tasks.begin(); }
